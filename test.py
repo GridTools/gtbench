@@ -263,6 +263,7 @@ class Benchmark:
         self.dy = 1
         self.dz = 1
         self.dt = 1
+        self.timestep = 0
 
         self.data = np.fromfunction(
             lambda i, j, k: (
@@ -275,7 +276,9 @@ class Benchmark:
             dtype=np.float32,
         )
         self.u = np.ones(self.compute_domain, dtype=np.float32) * 0.5
+        self.u = np.full(self.compute_domain, 1, dtype=np.float32)
         self.v = np.ones(self.compute_domain, dtype=np.float32) * 0.5
+        self.v = np.full(self.compute_domain, -1, dtype=np.float32)
         # w is staggered
         self.w = np.fromfunction(
             lambda i, j, k: (
@@ -298,6 +301,7 @@ class Benchmark:
             )
             * 0.5
         )
+        self.w = np.full(tuple(map(sum, zip(self.compute_domain, (0, 0, 1)))), 1, dtype=np.float32)
         self.data = np.fromfunction(
             lambda i, j, k: (i > 3)
             * (i < 8)
@@ -309,6 +313,7 @@ class Benchmark:
             self.compute_domain,
             dtype=np.float32,
         )
+        self.data = self.exact_solution()
         #  plt.pcolor(self.w[5, :, :].transpose())
         #  plt.colorbar()
         #  plt.figure()
@@ -320,8 +325,6 @@ class Benchmark:
         self.v = add_boundary(self.v, self.boundaries)
         self.w = add_boundary(self.w, self.boundaries)
         self.data = add_boundary(self.data, self.boundaries)
-
-        self.timestep = 0
 
     def advect(self):
         # irk_order=3, irunge_kutta=1
@@ -374,6 +377,11 @@ class Benchmark:
                 axis=(1, 2, 3),
             ),
         )
+
+    def exact_solution(self):
+        i, j, k = np.indices(self.compute_domain)
+        x, y, z, t = i * self.dx, j * self.dy, k * self.dz, self.timestep * self.dt
+        return (np.sin(x - t) * np.sin(y + t) * np.cos(z - t) * np.exp(-t)).astype(np.float32)
 
     def step(self):
         self.timestep += 1
