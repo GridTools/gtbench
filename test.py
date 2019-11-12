@@ -55,28 +55,25 @@ def tridiagonal_solve_periodic(a, b, c, d):
     return x
 
 
-def laplacian(data):
+def laplacian(data, dx, dy):
     return (
-        -4 * data[1:-1, 1:-1, :]
-        + data[:-2, 1:-1, :]
-        + data[2:, 1:-1, :]
-        + data[1:-1, :-2, :]
-        + data[1:-1, 2:, :]
-    ) * 0.25
+        (data[:-2, 1:-1, :] - 2 * data[1:-1, 1:-1, :] + data[2:, 1:-1, :]) / dx
+         + (data[1:-1, :-2, :] - 2 * data[1:-1, 1:-1, :] + data[1:-1, 2:, :]) / dy
+    ) / 4
 
 
-def horizontal_diffusion_fancy(data):
+def horizontal_diffusion_fancy(data, dx, dy, dt):
     K = 0.1
-    lap = laplacian(data[1:-1, 1:-1, :])
+    lap = laplacian(data[1:-1, 1:-1, :], dx, dy)
 
-    flx_x = lap[1:, 1:-1, :] - lap[:-1, 1:-1, :]
+    flx_x = (lap[1:, 1:-1, :] - lap[:-1, 1:-1, :]) / dx
     flx_x *= flx_x[:, :, :] * (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) < 0
 
-    flx_y = lap[1:-1, 1:, :] - lap[1:-1, :-1, :]
+    flx_y = (lap[1:-1, 1:, :] - lap[1:-1, :-1, :]) / dy
     flx_y *= flx_y[:, :, :] * (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) < 0
 
-    return data[3:-3, 3:-3, :] - K * (
-        flx_x[1:, :, :] - flx_x[:-1, :, :] + flx_y[:, 1:, :] - flx_y[:, :-1, :]
+    return data[3:-3, 3:-3, :] - K * dt * (
+        (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx + (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy
     )
 
 
