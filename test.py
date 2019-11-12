@@ -44,7 +44,7 @@ def laplacian(data):
     ) * 0.25
 
 
-def horizontal_diffusion(data):
+def horizontal_diffusion_fancy(data):
     K = 0.1
     lap = laplacian(data[1:-1, 1:-1, :])
 
@@ -57,6 +57,15 @@ def horizontal_diffusion(data):
     return data[3:-3, 3:-3, :] - K * (
         flx_x[1:, :, :] - flx_x[:-1, :, :] + flx_y[:, 1:, :] - flx_y[:, :-1, :]
     )
+
+
+def horizontal_diffusion(data, dx, dy, dt):
+    K = 0.1
+    flx_x = (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) / dx
+    flx_y = (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) / dy
+    return data[3:-3, 3:-3, :] + K * dt * (
+            (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx +
+            (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy)
 
 
 def advection_flux_v(v, data0, data, dy):
@@ -373,7 +382,7 @@ class Benchmark:
 
         periodic_boundary_condition(self.data, self.boundaries)
 
-        self.data[3:-3, 3:-3, :] = horizontal_diffusion(self.data)
+        self.data[3:-3, 3:-3, :] = horizontal_diffusion(self.data, self.dx, self.dy, self.dt)
         periodic_boundary_condition(self.data, self.boundaries)
 
     def get_global_domain(self):
