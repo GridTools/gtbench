@@ -7,6 +7,7 @@ import scipy.sparse as scipy_sparse
 
 
 def tridiagonal_solve(a, b, c, d):
+    d = d.copy()
     c[0] /= b[0]
     d[0] /= b[0]
     for k in range(1, len(a) - 1):
@@ -44,14 +45,14 @@ def laplacian(data):
 
 
 def horizontal_diffusion(data):
-    K = 1 / 32
+    K = 0.1
     lap = laplacian(data[1:-1, 1:-1, :])
 
     flx_x = lap[1:, 1:-1, :] - lap[:-1, 1:-1, :]
-    flx_x *= flx_x[:, :, :] * (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) <= 0
+    flx_x *= flx_x[:, :, :] * (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) < 0
 
     flx_y = lap[1:-1, 1:, :] - lap[1:-1, :-1, :]
-    flx_y *= flx_y[:, :, :] * (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) <= 0
+    flx_y *= flx_y[:, :, :] * (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) < 0
 
     return data[3:-3, 3:-3, :] - K * (
         flx_x[1:, :, :] - flx_x[:-1, :, :] + flx_y[:, 1:, :] - flx_y[:, :-1, :]
@@ -127,8 +128,8 @@ def advection_w_column(w, data0, data, dz, dt):
     c = np.zeros(data.shape)
     d = np.zeros(data.shape)
     # assume zero wind outside...
-    a[0] = 0
-    c[0] = 0.25 * w[0] / dz
+    a[0] = -0.25 * w[0] / dz
+    c[0] = 0.25 * w[1] / dz
     b[0] = 1 / dt - a[0] - c[0]
     d[0] = (
         1 / dt * data[0]
@@ -145,7 +146,7 @@ def advection_w_column(w, data0, data, dz, dt):
             - 0.25 * w[k] * (data[k] - data[k - 1]) / dz
         )
     a[-1] = -0.25 * w[-2] / dz
-    c[-1] = 0
+    c[-1] = 0.25 * w[-1] / dz
     b[-1] = 1 / dt - a[-1] - c[-1]
     d[-1] = (
         1 / dt * data[-1]
@@ -171,7 +172,7 @@ def diffusion_w_column(data, dx, dt):
     b = np.zeros(data.shape)
     c = np.zeros(data.shape)
     d = np.zeros(data.shape)
-    D = 0.1
+    D = 0.3
     # assume zero wind, and zero data outside...
     a[0] = 0
     c[0] = -D / 2 * dt
@@ -205,7 +206,7 @@ def advection_flux(u, v, w, data0, data, dx, dy, dz, dt):
         advection_flux_u(u, data0, data, dx)
         + advection_flux_v(v, data0, data, dy)
         + advection_flux_w(w, data0, data, dz, dt)
-        + diffusion_flux_w(w, data, dx, dt)
+        #  + diffusion_flux_w(w, data, dx, dt)
     )
 
 
@@ -255,7 +256,6 @@ class Benchmark:
         self.dt = 1
 
         self.data = np.fromfunction(
-            #  lambda i, j, k: (i > 10) * (i < 20) * 1,
             lambda i, j, k: (
                 np.sin(2 * math.pi / self.compute_domain[0] * i)
                 * np.sin(math.pi / self.compute_domain[1] * j)
@@ -294,8 +294,8 @@ class Benchmark:
             * (i < 8)
             * (j > 3)
             * (j < 8)
-            * (k > 3)
-            * (k < 8)
+            * (k > 13)
+            * (k < 18)
             * 1,
             self.compute_domain,
             dtype=np.float32,
@@ -321,7 +321,9 @@ class Benchmark:
         # y'' = y^n + 1/2 * dt * f(t^n + 1/3 dt, y')
         # y^{n+1} = y^n + dt * f(t^n + 1/2 dt, y'')
 
-        flux = advection_flux(
+        diff_flux = diffusion_flux_w(self.w, self.data, self.dz, self.dt)
+
+        flux = diff_flux + advection_flux(
             self.u,
             self.v,
             self.w,
@@ -335,13 +337,13 @@ class Benchmark:
         y1 = add_boundary(
             self.data[3:-3, 3:-3, :] + self.dt / 3 * flux, self.boundaries
         )
-        flux = advection_flux(
+        flux = diff_flux + advection_flux(
             self.u, self.v, self.w, self.data, y1, self.dx, self.dy, self.dz, self.dt
         )
         y2 = add_boundary(
             self.data[3:-3, 3:-3, :] + self.dt / 2 * flux, self.boundaries
         )
-        flux = advection_flux(
+        flux = diff_flux + advection_flux(
             self.u, self.v, self.w, self.data, y2, self.dx, self.dy, self.dz, self.dt
         )
         self.data = add_boundary(
@@ -386,11 +388,11 @@ class Benchmark:
         v = self.v[0, 0, 0]
         w = self.w[0, 0, 0]
         x_from = 3 + int(self.dt * self.timestep / self.dx * u) % self.compute_domain[0]
-        x_to = 5 + x_from
-        y_from = 3 + int(self.dt * self.timestep / self.dy * w) % self.compute_domain[1]
-        y_to = 5 + y_from
-        z_from = 3 + int(self.dt * self.timestep / self.dz * w)
-        z_to = 5 + z_from
+        x_to = 5 + x_from + 1
+        y_from = 3 + int(self.dt * self.timestep / self.dy * v) % self.compute_domain[1]
+        y_to = 5 + y_from + 1
+        z_from = 13 + int(self.dt * self.timestep / self.dz * w)
+        z_to = 5 + z_from + 1
         expected = np.fromfunction(
             lambda i, j, k: (
                 (
@@ -451,20 +453,44 @@ class Benchmark:
             ) % (self.compute_domain[1])
 
             ax1.set_title("[" + str(position_x) + ", :, :]")
-            ax1.pcolor(b.data[position_x + 3, 3:-3, :].transpose(), vmin=-1, vmax=1)
-            ax1.contour(expected[position_x, :, :].transpose(), levels=[0.99], corner_mask=True)
+            ax1.pcolor(
+                b.data[position_x + 3, 3:-3, :].transpose(),
+                vmin=-1,
+                vmax=1,
+                cmap="seismic",
+            )
+            ax1.contour(
+                expected[position_x, :, :].transpose(), levels=[0.99], corner_mask=True
+            )
 
             ax2.set_title("[:, " + str(position_y) + ", :]")
-            ax2.pcolor(b.data[3:-3, position_y + 3, :].transpose(), vmin=-1, vmax=1)
-            ax2.contour(expected[:, position_y, :].transpose(), levels=[0.99], corner_mask=True)
+            ax2.pcolor(
+                b.data[3:-3, position_y + 3, :].transpose(),
+                vmin=-1,
+                vmax=1,
+                cmap="seismic",
+            )
+            ax2.contour(
+                expected[:, position_y, :].transpose(), levels=[0.99], corner_mask=True
+            )
             plt.savefig("u" + str(self.timestep) + ".png")
             #  plt.show()
             plt.close("all")
 
 
-b = Benchmark([10, 10, 40])
+b = Benchmark([16, 16, 60])
 b.save_img()
-for i in range(800):
+sums_abs = []
+sums = []
+for i in range(150):
     for i in range(1):
         b.step()
+    sums_abs.append(np.sum(np.abs((b.data[3:-3, 3:-3, :]))))
+    sums.append(np.sum((b.data[3:-3, 3:-3, :])))
+
     b.save_img()
+
+plt.plot(sums)
+plt.plot(sums_abs)
+plt.savefig("numbers.png")
+plt.show()
