@@ -8,6 +8,7 @@ import scipy.sparse as scipy_sparse
 
 def tridiagonal_solve(a, b, c, d):
     d = d.copy()
+    c = c.copy()
     c[0] /= b[0]
     d[0] /= b[0]
     for k in range(1, len(a) - 1):
@@ -33,29 +34,46 @@ assert np.all(
     == np.array([1, -1, 2, 1, 3, -2, 0, 4, 2, -1], dtype=np.float32)
 )
 
+# see http://www.phys.lsu.edu/classes/fall2013/phys7412/lecture10.pdf
+def tridiagonal_solve_periodic(a, b, c, d):
+    alpha = c[-1]
+    beta = a[0]
+    gamma = -b[0]
 
-def laplacian(data):
+    bb = b.copy()
+    bb[0] = b[0] - gamma
+    bb[-1] = b[-1] - alpha * beta / gamma
+    x = tridiagonal_solve(a, bb, c, d)
+
+    u = np.zeros_like(a)
+    u[0] = gamma
+    u[-1] = alpha
+    z = tridiagonal_solve(a, bb, c, u)
+
+    fact = (x[0] + beta * x[-1] / gamma) / (1 + z[0] + beta * z[-1] / gamma)
+    x -= fact * z
+    return x
+
+
+def laplacian(data, dx, dy):
     return (
-        -4 * data[1:-1, 1:-1, :]
-        + data[:-2, 1:-1, :]
-        + data[2:, 1:-1, :]
-        + data[1:-1, :-2, :]
-        + data[1:-1, 2:, :]
-    ) * 0.25
+        (data[:-2, 1:-1, :] - 2 * data[1:-1, 1:-1, :] + data[2:, 1:-1, :]) / dx
+         + (data[1:-1, :-2, :] - 2 * data[1:-1, 1:-1, :] + data[1:-1, 2:, :]) / dy
+    ) / 4
 
 
-def horizontal_diffusion_fancy(data):
+def horizontal_diffusion_fancy(data, dx, dy, dt):
     K = 0.1
-    lap = laplacian(data[1:-1, 1:-1, :])
+    lap = laplacian(data[1:-1, 1:-1, :], dx, dy)
 
-    flx_x = lap[1:, 1:-1, :] - lap[:-1, 1:-1, :]
+    flx_x = (lap[1:, 1:-1, :] - lap[:-1, 1:-1, :]) / dx
     flx_x *= flx_x[:, :, :] * (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) < 0
 
-    flx_y = lap[1:-1, 1:, :] - lap[1:-1, :-1, :]
+    flx_y = (lap[1:-1, 1:, :] - lap[1:-1, :-1, :]) / dy
     flx_y *= flx_y[:, :, :] * (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) < 0
 
-    return data[3:-3, 3:-3, :] - K * (
-        flx_x[1:, :, :] - flx_x[:-1, :, :] + flx_y[:, 1:, :] - flx_y[:, :-1, :]
+    return data[3:-3, 3:-3, :] - K * dt * (
+        (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx + (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy
     )
 
 
@@ -142,8 +160,8 @@ def advection_w_column(w, data0, data, dz, dt):
     b[0] = 1 / dt - a[0] - c[0]
     d[0] = (
         1 / dt * data[0]
-        - 0.25 * w[0] * (data[0] - 0) / dz
-        - 0.25 * w[0 + 1] * (data[0 + 1] - data[0]) / dz
+        - 0.25 * w[1] * (data[1] - data[0]) / dz
+        - 0.25 * w[0] * (data[0] - data[-1]) / dz
     )
     for k in range(1, len(data) - 1):
         a[k] = -0.25 * w[k] / dz
@@ -159,10 +177,10 @@ def advection_w_column(w, data0, data, dz, dt):
     b[-1] = 1 / dt - a[-1] - c[-1]
     d[-1] = (
         1 / dt * data[-1]
-        - 0.25 * w[-1] * (0 - data[-1]) / dz
-        - 0.25 * w[-2] * (data[-1] - data[-2]) / dz
+        - 0.25 * w[0] * (data[0] - data[-1]) / dz
+        - 0.25 * w[-1] * (data[-1] - data[-2]) / dz
     )
-    return tridiagonal_solve(a, b, c, d)
+    return tridiagonal_solve_periodic(a, b, c, d)
 
 
 def advection_flux_w(w, data0, data, dz, dt):
@@ -183,10 +201,10 @@ def diffusion_w_column(data, dx, dt):
     d = np.zeros(data.shape)
     D = 0.3
     # assume zero wind, and zero data outside...
-    a[0] = 0
+    a[0] = -D / 2 * dt
     c[0] = -D / 2 * dt
     b[0] = 1 / dt - a[0] - c[0]
-    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] + 0) / dx
+    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] + data[-1]) / dx
     for k in range(1, len(data) - 1):
         a[k] = -D / 2 * dt
         c[k] = -D / 2 * dt
@@ -195,10 +213,10 @@ def diffusion_w_column(data, dx, dt):
             1 / dt * data[k] + 0.5 * D * (data[k + 1] - 2 * data[k] + data[k - 1]) / dx
         )
     a[-1] = -D / 2 * dt
-    c[-1] = 0
+    c[-1] = -D / 2 * dt
     b[-1] = 1 / dt - a[-1] - c[-1]
-    d[-1] = 1 / dt * data[-1] + 0.5 * D * (0 - 2 * data[-1] + data[-2]) / dx
-    return tridiagonal_solve(a, b, c, d)
+    d[-1] = 1 / dt * data[-1] + 0.5 * D * (data[0] - 2 * data[-1] + data[-2]) / dx
+    return tridiagonal_solve_periodic(a, b, c, d)
 
 
 def diffusion_flux_w(w, data, dx, dt):
@@ -426,8 +444,11 @@ class Benchmark:
                     + (j > y_from - self.compute_domain[1])
                     * (j < y_to - self.compute_domain[1])
                 )
-                * (k > z_from)
-                * (k < z_to)
+                * (
+                    (k > z_from) * (k < z_to)
+                    + (k > z_from - self.compute_domain[2])
+                    * (k < z_to - self.compute_domain[2])
+                )
             ),
             self.compute_domain,
             dtype=np.float32,
