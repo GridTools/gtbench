@@ -279,6 +279,49 @@ def add_boundary(data, boundaries):
     return new_data
 
 
+def step(data, u, v, w, D, dx, dy, dz, dt, boundaries):
+    # irk_order=3, irunge_kutta=1
+    # it is irk_order=3, but not third order... Wicker, Skamarock (2002)
+    # y' = y^n + 1/3 * dt * f(t^n, y)
+    # y'' = y^n + 1/2 * dt * f(t^n + 1/3 dt, y')
+    # y^{n+1} = y^n + dt * f(t^n + 1/2 dt, y'')
+
+    diff_flux = diffusion_flux_w(w, data, D, dz, dt)
+
+    flux = diff_flux + advection_flux(
+        u,
+        v,
+        w,
+        data,
+        data,
+        dx,
+        dy,
+        dz,
+        dt,
+    )
+    y1 = add_boundary(
+        data[3:-3, 3:-3, :] + dt / 3 * flux, boundaries
+    )
+    flux = diff_flux + advection_flux(
+        u, v, w, data, y1, dx, dy, dz, dt
+    )
+    y2 = add_boundary(
+        data[3:-3, 3:-3, :] + dt / 2 * flux, boundaries
+    )
+    flux = diff_flux + advection_flux(
+        u, v, w, data, y2, dx, dy, dz, dt
+    )
+    data = add_boundary(
+        data[3:-3, 3:-3, :] + dt * flux, boundaries
+    )
+
+    periodic_boundary_condition(data, boundaries)
+    data[3:-3, 3:-3, :] = horizontal_diffusion(data, D, dx, dy, dt)
+    periodic_boundary_condition(data, boundaries)
+
+    return data
+
+
 class Benchmark:
     def __init__(self, compute_domain):
         self.compute_domain = compute_domain
@@ -355,79 +398,32 @@ class Benchmark:
         self.w = add_boundary(self.w, self.boundaries)
         self.data = add_boundary(self.data, self.boundaries)
 
-    def advect(self):
-        # irk_order=3, irunge_kutta=1
-        # it is irk_order=3, but not third order... Wicker, Skamarock (2002)
-        # y' = y^n + 1/3 * dt * f(t^n, y)
-        # y'' = y^n + 1/2 * dt * f(t^n + 1/3 dt, y')
-        # y^{n+1} = y^n + dt * f(t^n + 1/2 dt, y'')
-
-        diff_flux = diffusion_flux_w(self.w, self.data, self.D, self.dz, self.dt)
-
-        flux = diff_flux + advection_flux(
-            self.u,
-            self.v,
-            self.w,
-            self.data,
-            self.data,
-            self.dx,
-            self.dy,
-            self.dz,
-            self.dt,
-        )
-        y1 = add_boundary(
-            self.data[3:-3, 3:-3, :] + self.dt / 3 * flux, self.boundaries
-        )
-        flux = diff_flux + advection_flux(
-            self.u, self.v, self.w, self.data, y1, self.dx, self.dy, self.dz, self.dt
-        )
-        y2 = add_boundary(
-            self.data[3:-3, 3:-3, :] + self.dt / 2 * flux, self.boundaries
-        )
-        flux = diff_flux + advection_flux(
-            self.u, self.v, self.w, self.data, y2, self.dx, self.dy, self.dz, self.dt
-        )
-        self.data = add_boundary(
-            self.data[3:-3, 3:-3, :] + self.dt * flux, self.boundaries
-        )
-        print(
-            np.sum(
-                np.stack(
-                    (y1[3:-3, 3:-3, :], y2[3:-3, 3:-3, :], self.data[3:-3, 3:-3, :])
-                ),
-                axis=(1, 2, 3),
-            ),
-            np.sum(
-                np.abs(
-                    np.stack(
-                        (y1[3:-3, 3:-3, :], y2[3:-3, 3:-3, :], self.data[3:-3, 3:-3, :])
-                    )
-                ),
-                axis=(1, 2, 3),
-            ),
-        )
-
     def exact_solution(self):
         i, j, k = np.indices(self.compute_domain)
         x, y, z, t = i * self.dx, j * self.dy, k * self.dz, self.timestep * self.dt
         return (np.sin(x - t) * np.sin(y + t) * np.cos(z - t) * np.exp(-t * self.D * 3)).astype(np.float32)
 
+    @property
+    def cds(self):
+        return tuple(slice(a if a != 0 else None,
+                           -b if b != 0 else None) for a, b in self.boundaries)
+
     def step(self):
         self.timestep += 1
         print(self.timestep)
-        self.advect()
 
-        periodic_boundary_condition(self.data, self.boundaries)
+        self.data = step(self.data, self.u, self.v, self.w, self.D, self.dx, self.dy, self.dz, self.dt, self.boundaries)
 
-        self.data[3:-3, 3:-3, :] = horizontal_diffusion(self.data, self.D, self.dx, self.dy, self.dt)
-        periodic_boundary_condition(self.data, self.boundaries)
+        print('data L2 norm: {:12.6g}'.format(np.sqrt(np.mean(self.data[self.cds]**2))))
+        print('data max norm: {:12.6g}'.format(np.amax(np.abs(self.data[self.cds]))))
 
-        print('diff to exact: {}'.format(np.amax(np.abs(self.data[3:-3, 3:-3, :] - self.exact_solution()))))
+        error = self.data[self.cds] - self.exact_solution()
+        print('error L2 norm: {:12.6g}'.format(np.sqrt(np.mean(error**2))))
+        print('error max norm: {:12.6g}'.format(np.amax(np.abs(error))))
 
-    def get_global_domain(self):
+    @property
+    def global_domain(self):
         return calculate_global_domain(self.compute_domain, self.boundaries)
-
-    global_domain = property(get_global_domain)
 
     def save_img(self):
         #  plt.contourf(self.u[:, :, 0], levels=100)
