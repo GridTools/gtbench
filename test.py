@@ -418,7 +418,7 @@ class Benchmark:
     global_domain = property(get_global_domain)
 
     def save_img(self):
-        #  plt.contourf(b.u[:, :, 0], levels=100)
+        #  plt.contourf(self.u[:, :, 0], levels=100)
         #  plt.colorbar()
         u = self.u[0, 0, 0]
         v = self.v[0, 0, 0]
@@ -454,13 +454,13 @@ class Benchmark:
             self.compute_domain,
             dtype=np.float32,
         )
-        plot = 3
+        plot = 4
         if plot == 1:
             f, (ax1, ax2, ax3) = plt.subplots(1, 3)
-            ax1.pcolor(b.data[3:-3, 3:-3, 5].transpose(), vmin=0, vmax=1)
+            ax1.pcolor(self.data[3:-3, 3:-3, 5].transpose(), vmin=0, vmax=1)
             ax2.pcolor(expected[:, :, 0].transpose(), vmin=0, vmax=1)
             ax3.pcolor(
-                b.data[3:-3, 3:-3, 0].transpose() - expected[:, :, 0].transpose(),
+                self.data[3:-3, 3:-3, 0].transpose() - expected[:, :, 0].transpose(),
                 vmin=0,
                 vmax=1,
             )
@@ -470,7 +470,7 @@ class Benchmark:
             f, ax1 = plt.subplots(1, 1)
             ax1.plot(
                 self.zs,
-                b.data[15, 5, :],
+                self.data[15, 5, :],
                 lw=3,
                 color="#dddddd",
                 markerfacecolor="r",
@@ -482,7 +482,7 @@ class Benchmark:
             #  plt.show()
             plt.close(f)
         if plot == 3:
-            #  ax1.pcolor(b.data[3:-3, 3:-3, 5].transpose(), vmin=0, vmax=1)
+            #  ax1.pcolor(self.data[3:-3, 3:-3, 5].transpose(), vmin=0, vmax=1)
             f, (ax1, ax2) = plt.subplots(1, 2)
             position_x = (
                 int(5.5 + self.dt * self.timestep / self.dx * self.u[0, 0, 0])
@@ -493,7 +493,7 @@ class Benchmark:
 
             ax1.set_title("[" + str(position_x) + ", :, :]")
             ax1.pcolor(
-                b.data[position_x + 3, 3:-3, :].transpose(),
+                self.data[position_x + 3, 3:-3, :].transpose(),
                 vmin=-1,
                 vmax=1,
                 cmap="seismic",
@@ -504,7 +504,7 @@ class Benchmark:
 
             ax2.set_title("[:, " + str(position_y) + ", :]")
             ax2.pcolor(
-                b.data[3:-3, position_y + 3, :].transpose(),
+                self.data[3:-3, position_y + 3, :].transpose(),
                 vmin=-1,
                 vmax=1,
                 cmap="seismic",
@@ -514,6 +514,16 @@ class Benchmark:
             )
             plt.savefig("u" + str(self.timestep) + ".png")
             #  plt.show()
+            plt.close("all")
+        if plot == 4:
+            f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
+            position_y = self.compute_domain[1] // 4
+            data = self.data[3:-3, 3 + position_y, :]
+            exact = self.exact_solution()[:, position_y, :]
+            f.colorbar(ax1.contourf(data, vmin=-1, vmax=1, levels=np.linspace(-1, 1, 11), cmap='seismic'), ax=ax1)
+            f.colorbar(ax2.contourf(exact, vmin=-1, vmax=1, levels=np.linspace(-1, 1, 11), cmap='seismic'), ax=ax2)
+            f.colorbar(ax3.contourf(np.abs(data - exact), cmap='seismic'), ax=ax3)
+            plt.savefig("u" + str(self.timestep) + ".png")
             plt.close("all")
 
 
