@@ -1,11 +1,13 @@
 import numpy as np
 import sys
 import math
+import numba
 import matplotlib.pyplot as plt
 
 import scipy.sparse as scipy_sparse
 
 
+@numba.jit
 def tridiagonal_solve(a, b, c, d):
     d = d.copy()
     c = c.copy()
@@ -35,6 +37,7 @@ assert np.all(
 )
 
 # see http://www.phys.lsu.edu/classes/fall2013/phys7412/lecture10.pdf
+@numba.jit
 def tridiagonal_solve_periodic(a, b, c, d):
     alpha = c[-1]
     beta = a[0]
@@ -55,6 +58,7 @@ def tridiagonal_solve_periodic(a, b, c, d):
     return x
 
 
+@numba.jit
 def laplacian(data, dx, dy):
     return (
         (data[:-2, 1:-1, :] - 2 * data[1:-1, 1:-1, :] + data[2:, 1:-1, :]) / dx
@@ -62,6 +66,7 @@ def laplacian(data, dx, dy):
     ) / 4
 
 
+@numba.jit
 def horizontal_diffusion_fancy(data, dx, dy, dt):
     K = 0.1
     lap = laplacian(data[1:-1, 1:-1, :], dx, dy)
@@ -77,6 +82,7 @@ def horizontal_diffusion_fancy(data, dx, dy, dt):
     )
 
 
+@numba.jit
 def horizontal_diffusion(data, D, dx, dy, dt):
     flx_x = (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) / dx
     flx_y = (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) / dy
@@ -85,9 +91,10 @@ def horizontal_diffusion(data, D, dx, dy, dt):
             (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy)
 
 
+@numba.jit
 def advection_flux_v(v, data0, data, dy):
-    weights = [1.0 / 30, -1.0 / 4, 1, -1.0 / 3, -1.0 / 2, 0]
-    weights[-1] = -sum(weights[:-1])
+    weights = np.array([1.0 / 30, -1.0 / 4, 1, -1.0 / 3, -1.0 / 2, 0])
+    weights[-1] = -np.sum(weights[:-1])
 
     negative_mask = v[3:-3, 3:-3, :] < 0
     positive_mask = v[3:-3, 3:-3, :] > 0
@@ -116,9 +123,10 @@ def advection_flux_v(v, data0, data, dy):
     )
 
 
+@numba.jit
 def advection_flux_u(u, data0, data, dx):
-    weights = [1.0 / 30, -1.0 / 4, 1, -1.0 / 3, -1.0 / 2, 0]
-    weights[-1] = -sum(weights[:-1])
+    weights = np.array([1.0 / 30, -1.0 / 4, 1, -1.0 / 3, -1.0 / 2, 0])
+    weights[-1] = -np.sum(weights[:-1])
 
     negative_mask = u[3:-3, 3:-3, :] < 0
     positive_mask = u[3:-3, 3:-3, :] > 0
@@ -147,6 +155,7 @@ def advection_flux_u(u, data0, data, dx):
     )
 
 
+@numba.jit
 def advection_w_column(w, data0, data, dz, dt):
     assert len(w) == len(data) + 1
     a = np.zeros(data.shape)
@@ -182,6 +191,7 @@ def advection_w_column(w, data0, data, dz, dt):
     return tridiagonal_solve_periodic(a, b, c, d)
 
 
+@numba.jit
 def advection_flux_w(w, data0, data, dz, dt):
     advected = np.zeros_like(data[3:-3, 3:-3, :])
     for i in range(3, data.shape[0] - 3):
@@ -193,6 +203,7 @@ def advection_flux_w(w, data0, data, dz, dt):
     return (advected - data[3:-3, 3:-3, :]) / dt
 
 
+@numba.jit
 def diffusion_w_column(data, D, dx, dt):
     a = np.zeros(data.shape)
     b = np.zeros(data.shape)
@@ -217,6 +228,7 @@ def diffusion_w_column(data, D, dx, dt):
     return tridiagonal_solve_periodic(a, b, c, d)
 
 
+@numba.jit
 def diffusion_flux_w(w, data, D, dx, dt):
     diffused = np.zeros_like(data[3:-3, 3:-3, :])
     for i in range(3, data.shape[0] - 3):
@@ -531,8 +543,8 @@ b = Benchmark([16, 16, 60])
 b.save_img()
 sums_abs = []
 sums = []
-for i in range(150):
-    for i in range(1):
+for i in range(15):
+    for i in range(10):
         b.step()
     sums_abs.append(np.sum(np.abs((b.data[3:-3, 3:-3, :]))))
     sums.append(np.sum((b.data[3:-3, 3:-3, :])))
