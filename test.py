@@ -77,11 +77,10 @@ def horizontal_diffusion_fancy(data, dx, dy, dt):
     )
 
 
-def horizontal_diffusion(data, dx, dy, dt):
-    K = 0.1
+def horizontal_diffusion(data, D, dx, dy, dt):
     flx_x = (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) / dx
     flx_y = (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) / dy
-    return data[3:-3, 3:-3, :] + K * dt * (
+    return data[3:-3, 3:-3, :] + D * dt * (
             (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx +
             (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy)
 
@@ -194,12 +193,11 @@ def advection_flux_w(w, data0, data, dz, dt):
     return (advected - data[3:-3, 3:-3, :]) / dt
 
 
-def diffusion_w_column(data, dx, dt):
+def diffusion_w_column(data, D, dx, dt):
     a = np.zeros(data.shape)
     b = np.zeros(data.shape)
     c = np.zeros(data.shape)
     d = np.zeros(data.shape)
-    D = 0.3
     # assume zero wind, and zero data outside...
     a[0] = -D / 2 * dt
     c[0] = -D / 2 * dt
@@ -219,11 +217,11 @@ def diffusion_w_column(data, dx, dt):
     return tridiagonal_solve_periodic(a, b, c, d)
 
 
-def diffusion_flux_w(w, data, dx, dt):
+def diffusion_flux_w(w, data, D, dx, dt):
     diffused = np.zeros_like(data[3:-3, 3:-3, :])
     for i in range(3, data.shape[0] - 3):
         for j in range(3, data.shape[1] - 3):
-            diffused[i - 3, j - 3, :] = diffusion_w_column(data[i, j, :], dx, dt)
+            diffused[i - 3, j - 3, :] = diffusion_w_column(data[i, j, :], D, dx, dt)
 
     return (diffused - data[3:-3, 3:-3, :]) / dt
 
@@ -277,11 +275,12 @@ class Benchmark:
         self.ys = np.arange(self.compute_domain[1])
         self.zs = np.arange(self.compute_domain[2])
 
-        self.dx = 1
-        self.dy = 1
-        self.dz = 1
-        self.dt = 1
+        self.dx = 2 * np.pi / self.compute_domain[0]
+        self.dy = 2 * np.pi / self.compute_domain[1]
+        self.dz = 2 * np.pi / self.compute_domain[2]
+        self.dt = 1e-2
         self.timestep = 0
+        self.D = 1e-1
 
         self.data = np.fromfunction(
             lambda i, j, k: (
@@ -351,7 +350,7 @@ class Benchmark:
         # y'' = y^n + 1/2 * dt * f(t^n + 1/3 dt, y')
         # y^{n+1} = y^n + dt * f(t^n + 1/2 dt, y'')
 
-        diff_flux = diffusion_flux_w(self.w, self.data, self.dz, self.dt)
+        diff_flux = diffusion_flux_w(self.w, self.data, self.D, self.dz, self.dt)
 
         flux = diff_flux + advection_flux(
             self.u,
@@ -399,7 +398,7 @@ class Benchmark:
     def exact_solution(self):
         i, j, k = np.indices(self.compute_domain)
         x, y, z, t = i * self.dx, j * self.dy, k * self.dz, self.timestep * self.dt
-        return (np.sin(x - t) * np.sin(y + t) * np.cos(z - t) * np.exp(-t)).astype(np.float32)
+        return (np.sin(x - t) * np.sin(y + t) * np.cos(z - t) * np.exp(-t * self.D * 3)).astype(np.float32)
 
     def step(self):
         self.timestep += 1
@@ -408,8 +407,10 @@ class Benchmark:
 
         periodic_boundary_condition(self.data, self.boundaries)
 
-        self.data[3:-3, 3:-3, :] = horizontal_diffusion(self.data, self.dx, self.dy, self.dt)
+        self.data[3:-3, 3:-3, :] = horizontal_diffusion(self.data, self.D, self.dx, self.dy, self.dt)
         periodic_boundary_condition(self.data, self.boundaries)
+
+        print('diff to exact: {}'.format(np.amax(np.abs(self.data[3:-3, 3:-3, :] - self.exact_solution()))))
 
     def get_global_domain(self):
         return calculate_global_domain(self.compute_domain, self.boundaries)
