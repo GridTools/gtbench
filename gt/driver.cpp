@@ -546,26 +546,39 @@ class horizontal_diffusion {
 class vertical_diffusion {
     using p_data_in = gt::arg<0, storage_t>;
     using p_data_out = gt::arg<1, storage_t>;
-    using p_data_top = gt::tmp_arg<2, storage_ij_t>;
-    using p_data_bottom = gt::tmp_arg<3, storage_ij_t>;
+    using p_data_top = gt::arg<2, storage_ij_t>;
+    storage_ij_t data_top_;
+    using p_data_bottom = gt::arg<3, storage_ij_t>;
+    storage_ij_t data_bottom_;
 
     using p_dz = gt::arg<4, global_parameter_t>;
     using p_dt = gt::arg<5, global_parameter_t>;
     using p_coeff = gt::arg<6, global_parameter_t>;
 
-    using p_a = gt::tmp_arg<7, storage_t>;
-    using p_b = gt::tmp_arg<8, storage_t>;
-    using p_c = gt::tmp_arg<9, storage_t>;
-    using p_d = gt::tmp_arg<10, storage_t>;
+    using p_a = gt::arg<7, storage_t>;
+    storage_t a_;
+    using p_b = gt::arg<8, storage_t>;
+    storage_t b_;
+    using p_c = gt::arg<9, storage_t>;
+    storage_t c_;
+    using p_d = gt::arg<10, storage_t>;
+    storage_t d_;
 
-    using p_alpha = gt::tmp_arg<11, storage_ij_t>;
-    using p_beta = gt::tmp_arg<12, storage_ij_t>;
-    using p_gamma = gt::tmp_arg<13, storage_ij_t>;
-    using p_fact = gt::tmp_arg<14, storage_ij_t>;
+    using p_alpha = gt::arg<11, storage_ij_t>;
+    storage_ij_t alpha_;
+    using p_beta = gt::arg<12, storage_ij_t>;
+    storage_ij_t beta_;
+    using p_gamma = gt::arg<13, storage_ij_t>;
+    storage_ij_t gamma_;
+    using p_fact = gt::arg<14, storage_ij_t>;
+    storage_ij_t fact_;
 
-    using p_z = gt::tmp_arg<15, storage_t>;
-    using p_z_top = gt::tmp_arg<16, storage_ij_t>;
-    using p_x = gt::tmp_arg<17, storage_t>;
+    using p_z = gt::arg<15, storage_t>;
+    storage_t z_;
+    using p_z_top = gt::arg<16, storage_ij_t>;
+    storage_ij_t z_top_;
+    using p_x = gt::arg<17, storage_t>;
+    storage_t x_;
 
    public:
     vertical_diffusion(
@@ -573,10 +586,27 @@ class vertical_diffusion {
         real_t dz, real_t dt, real_t coeff,
         storage_t::storage_info_t const& sinfo,
         storage_ij_t::storage_info_t const& sinfo_ij)
-        : comp_(gt::make_computation<backend_t>(
+        : data_top_(sinfo_ij, "data_top"),
+          data_bottom_(sinfo_ij, "data_bottom"),
+          a_(sinfo, "a"),
+          b_(sinfo, "b"),
+          c_(sinfo, "c"),
+          d_(sinfo, "d"),
+          alpha_(sinfo_ij, "alpha"),
+          beta_(sinfo_ij, "beta"),
+          gamma_(sinfo_ij, "gamma"),
+          z_(sinfo, "z"),
+          z_top_(sinfo_ij, "z_top"),
+          x_(sinfo, "x"),
+          fact_(sinfo_ij, "fact"),
+          comp_(gt::make_computation<backend_t>(
               grid, p_dz() = gt::make_global_parameter(dz),
               p_dt() = gt::make_global_parameter(dt),
               p_coeff() = gt::make_global_parameter(coeff),
+              p_data_top() = data_top_, p_data_bottom() = data_bottom_,
+              p_a() = a_, p_b() = b_, p_c() = c_, p_d() = d_,
+              p_alpha() = alpha_, p_beta() = beta_, p_gamma() = gamma_,
+              p_fact() = fact_, p_z() = z_, p_z_top() = z_top_, p_x() = x_,
               gt::make_multistage(gt::execute::forward(),
                                   gt::make_stage<operators::diffusion_w0>(
                                       p_data_top(), p_data_in())),
