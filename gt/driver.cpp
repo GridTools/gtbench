@@ -2,24 +2,29 @@
 #include <gridtools/stencil_composition/stencil_composition.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
 
+#include <gridtools/boundary_conditions/boundary.hpp>
+
+#include <fstream>
 #include <iostream>
 
 static constexpr int halo_i = 3;
 static constexpr int halo_j = 3;
+static constexpr int halo_k = 1;
 
 using real_t = float;
 
-using axis_t = gridtools::axis<1>;
-using full_t = axis_t::full_interval;
+using axis_t = gridtools::axis<1, gridtools::axis_config::offset_limit<3>>;
+using full_t = axis_t::full_interval::modify<halo_k, -halo_k>;
 
 using backend_t = gridtools::backend::x86;
 using storage_tr = gridtools::storage_traits<backend_t>;
 using storage_info_ijk_t =
-    storage_tr::storage_info_t<0, 3, gridtools::halo<halo_i, halo_j, 0>>;
-using storage_info_ijk1_t =
-    storage_tr::storage_info_t<0, 3, gridtools::halo<halo_i, halo_j, 1>>;
-using storage_type = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
-using storage_type_w = storage_tr::data_store_t<real_t, storage_info_ijk1_t>;
+    storage_tr::storage_info_t<0, 3, gridtools::halo<halo_i, halo_j, halo_k>>;
+using storage_info_ij_t =
+    storage_tr::special_storage_info_t<3, gridtools::selector<1, 1, 0>,
+                                       gridtools::halo<halo_i, halo_j, 0>>;
+using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
+using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
 using global_parameter_t = gridtools::global_parameter<backend_t, real_t>;
 
 namespace operators {
@@ -30,81 +35,197 @@ using gridtools::in_accessor;
 using gridtools::inout_accessor;
 using gridtools::make_param_list;
 
-struct forward_thomas {
-    // four vectors: output, and the 3 diagonals
-    using out = inout_accessor<0>;
-    using inf = in_accessor<1>;                                // a
-    using diag = in_accessor<2>;                               // b
-    using sup = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;  // c
-    using rhs = inout_accessor<4, extent<0, 0, 0, 0, -1, 0>>;  // d
-    using param_list = make_param_list<out, inf, diag, sup, rhs>;
+struct tridiagonal_fwd {
+    using a = in_accessor<0>;
+    using b = in_accessor<1>;
+    using c = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
+    using d = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
+    using param_list = make_param_list<a, b, c, d>;
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, 0>) {
-        eval(sup()) = eval(sup() / (diag() - sup(0, 0, -1) * inf()));
-        eval(rhs()) = eval((rhs() - inf() * rhs(0, 0, -1)) /
-                           (diag() - sup(0, 0, -1) * inf()));
+        eval(c()) = eval(c() / (b() - c(0, 0, -1) * a()));
+        eval(d()) = eval((d() - a() * d(0, 0, -1)) / (b() - c(0, 0, -1) * a()));
     }
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-        eval(sup()) = eval(sup()) / eval(diag());
-        eval(rhs()) = eval(rhs()) / eval(diag());
+        eval(c()) = eval(c()) / eval(b());
+        eval(d()) = eval(d()) / eval(b());
     }
 };
 
-struct backward_thomas {
+struct tridiagonal_bwd {
     using out = inout_accessor<0, extent<0, 0, 0, 0, 0, 1>>;
-    using sup = inout_accessor<1>;
-    using rhs = inout_accessor<2>;
-    using param_list = make_param_list<out, sup, rhs>;
+    using c = in_accessor<1>;
+    using d = in_accessor<2>;
+    using param_list = make_param_list<out, c, d>;
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
-        eval(out()) = eval(rhs() - sup() * out(0, 0, 1));
+        eval(out()) = eval(d() - c() * out(0, 0, 1));
     }
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-        eval(out()) = eval(rhs());
+        eval(out()) = eval(d());
     }
 };
 
-struct laplacian {
+/*
+ * tridiagonal_periodic1:
+ * b[0] = b[0] - gamma
+ * b[-1] = b[-1] - alpha * beta / gamma
+ * x = tridiagonal_solve(a, b, c, d)
+ */
+struct tridiagonal_periodic_fwd1 {
+    using a = in_accessor<0>;
+    using b = inout_accessor<1>;
+    using c = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
+    using d = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
+
+    using alpha = in_accessor<4>;
+    using beta = in_accessor<5>;
+    using gamma = in_accessor<6>;
+
+    using param_list = make_param_list<a, b, c, d, alpha, beta, gamma>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
+        eval(b()) -= eval(gamma());
+        gridtools::call_proc<tridiagonal_fwd, full_t::first_level>::with(
+            eval, a(), b(), c(), d());
+    }
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
+        gridtools::call_proc<tridiagonal_fwd, full_t::modify<1, 0>>::with(
+            eval, a(), b(), c(), d());
+    }
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+        eval(b()) -= eval(alpha() * beta() / gamma());
+        gridtools::call_proc<tridiagonal_fwd, full_t::modify<1, 0>>::with(
+            eval, a(), b(), c(), d());
+    }
+};
+using tridiagonal_periodic_bwd1 = tridiagonal_bwd;
+/*
+ * tridiagonal_periodic2:
+ * u = np.zeros_like(a)
+ * u[0] = gamma
+ * u[-1] = alpha
+ * z = tridiagonal_solve(a, b, c, u)
+ * fact = (x[0] + beta * x[-1] / gamma) / (1 + z[0] + beta * z[-1] / gamma)
+ */
+struct tridiagonal_periodic_fwd2 {
+    using a = in_accessor<0>;
+    using b = in_accessor<1>;
+    using c = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
+    using u = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
+
+    using alpha = in_accessor<4>;
+    using gamma = in_accessor<5>;
+
+    using param_list = make_param_list<a, b, c, u, alpha, gamma>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
+        eval(u()) = eval(gamma());
+        gridtools::call_proc<tridiagonal_fwd, full_t::first_level>::with(
+            eval, a(), b(), c(), u());
+    }
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
+        eval(u()) = real_t(0);
+        gridtools::call_proc<tridiagonal_fwd, full_t::modify<1, 0>>::with(
+            eval, a(), b(), c(), u());
+    }
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+        eval(u()) = eval(alpha());
+        gridtools::call_proc<tridiagonal_fwd, full_t::modify<1, 0>>::with(
+            eval, a(), b(), c(), u());
+    }
+};
+struct tridiagonal_periodic_bwd2 {
+    using z = inout_accessor<0>;
+    using c = inout_accessor<1>;
+    using d = inout_accessor<2>;
+    using x = in_accessor<3>;
+
+    using alpha = in_accessor<4>;
+    using beta = in_accessor<5>;
+    using gamma = in_accessor<6>;
+
+    using x_top = inout_accessor<7>;
+    using z_top = inout_accessor<8>;
+    using fact = inout_accessor<9>;
+
+    using param_list =
+        make_param_list<z, c, d, x, alpha, beta, gamma, x_top, z_top, fact>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
+        gridtools::call_proc<tridiagonal_bwd, full_t::modify<0, -1>>::with(
+            eval, z(), c(), d());
+        eval(fact()) = eval((x() + beta() * x_top() / gamma()) /
+                            (1 + z() + beta() * z_top() / gamma()));
+    }
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
+        gridtools::call_proc<tridiagonal_bwd, full_t::modify<0, -1>>::with(
+            eval, z(), c(), d());
+    }
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+        gridtools::call_proc<tridiagonal_bwd, full_t::last_level>::with(
+            eval, z(), c(), d());
+        eval(x_top()) = eval(x());
+        eval(z_top()) = eval(z());
+    }
+};
+/**
+ * tridiagonal_periodic3:
+ * out = x - fact * z
+ */
+struct tridiagonal_periodic3 {
+    using data_out = inout_accessor<0>;
+    using x = in_accessor<1>;
+    using z = in_accessor<2>;
+
+    using fact = in_accessor<3>;
+
+    using param_list = make_param_list<data_out, x, z, fact>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t) {
+        eval(data_out()) = eval(x() - fact() * z());
+    }
+};
+
+struct horizontal_diffusion {
     using out = inout_accessor<0>;
     using in = in_accessor<1, extent<-1, 1, -1, 1>>;
-    using param_list = make_param_list<out, in>;
+
+    using dx = in_accessor<2>;
+    using dy = in_accessor<3>;
+    using dt = in_accessor<4>;
+    using coeff = in_accessor<5>;
+
+    using param_list = make_param_list<out, in, dx, dy, dt, coeff>;
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t) {
-        eval(out()) = eval(-4 * in() + in(-1, 0, 0) + in(1, 0, 0) +
-                           in(0, 1, 0) + in(0, -1, 0));
-    }
-};
+        auto flx_x1 = eval((in(1, 0, 0) - in()) / dx());
+        auto flx_x0 = eval((in() - in(-1, 0, 0)) / dx());
+        auto flx_y1 = eval((in(0, 1, 0) - in()) / dy());
+        auto flx_y0 = eval((in() - in(0, -1, 0)) / dy());
 
-struct flux_stage {
-    using out = inout_accessor<0>;
-    using lap = in_accessor<1, extent<-2, 2, -2, 2>>;
-    using in = in_accessor<2, extent<-1, 1, -1, 1>>;
-    using param_list = make_param_list<out, lap, in>;
-
-    template <typename Evaluation>
-    GT_FUNCTION static void apply(Evaluation eval, full_t) {
-        auto flx_x1 = eval(lap(1, 0, 0) - lap());
-        if (eval(flx_x1 * (in(1, 0, 0) - in())) < 0) flx_x1 = 0;
-
-        auto flx_x0 = eval(lap() - lap(-1, 0, 0));
-        if (eval(flx_x0 * (in() - in(-1, 0, 0))) < 0) flx_x0 = 0;
-
-        auto flx_y1 = eval(lap(0, 1, 0) - lap());
-        if (eval(flx_y1 * (in(0, 1, 0) - in())) < 0) flx_y1 = 0;
-
-        auto flx_y0 = eval(lap() - lap(0, -1, 0));
-        if (eval(flx_y0 * (in() - in(0, -1, 0))) < 0) flx_y0 = 0;
-
-        static constexpr real_t diffusion_coefficient = 0.1;
-        eval(out()) = eval(in() - diffusion_coefficient *
-                                      (flx_x1 - flx_x0 + flx_y1 - flx_y0));
+        eval(out()) = eval(
+            in() + coeff() * dt() *
+                       ((flx_x1 - flx_x0) / dx() + (flx_y1 - flx_y0) / dy()));
     }
 };
 
@@ -145,6 +266,7 @@ struct advection_v {
     using v = in_accessor<1>;
     using in = in_accessor<2, extent<0, 0, -3, 3>>;
     using dy = in_accessor<3>;
+
     using param_list = make_param_list<flux, v, in, dy>;
 
     template <typename Evaluation>
@@ -180,6 +302,7 @@ struct horizontal_advection {
     using in = in_accessor<3>;
     using dx = in_accessor<4>;
     using dy = in_accessor<5>;
+
     using param_list = make_param_list<flux, u, v, in, dx, dy>;
 
     template <typename Evaluation>
@@ -191,79 +314,113 @@ struct horizontal_advection {
     }
 };
 
-struct diffusion_w_fwd {
-    using out = inout_accessor<0>;
+struct diffusion_w0 {
+    using data_top = inout_accessor<0>;
     using data = in_accessor<1>;
-    using dz = in_accessor<2>;
-    using dt = in_accessor<3>;
 
+    using param_list = make_param_list<data_top, data>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+        eval(data_top()) = eval(data());
+    }
+};
+struct diffusion_w_fwd1 {
+    using data_bottom = inout_accessor<0>;
+    using alpha = inout_accessor<1>;
+    using beta = inout_accessor<2>;
+    using gamma = inout_accessor<3>;
     using a = inout_accessor<4>;
     using b = inout_accessor<5>;
     using c = inout_accessor<6, extent<0, 0, 0, 0, -1, 0>>;
     using d = inout_accessor<7, extent<0, 0, 0, 0, -1, 0>>;
 
-    using param_list = make_param_list<out, data, dz, dt, a, b, c, d>;
-    static constexpr real_t diffusion_coefficient = 0.1;
+    using data = in_accessor<8, extent<0, 0, 0, 0, -1, 1>>;
+    using data_top = in_accessor<9>;
+
+    using dz = in_accessor<10>;
+    using dt = in_accessor<11>;
+    using coeff = in_accessor<12>;
+
+    using param_list = make_param_list<data_bottom, alpha, beta, gamma, a, b, c,
+                                       d, data, data_top, dz, dt, coeff>;
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
+        eval(data_bottom()) = eval(data());
+
         eval(a()) = real_t(0);
-        eval(c()) = -diffusion_coefficient / real_t(2) * eval(dt());
+        eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
         eval(b()) = eval(real_t(1) / dt() - a() - c());
         eval(d()) = eval(real_t(1) / dt() * data() +
-                         real_t(0.5) * diffusion_coefficient *
-                             (data(0, 0, 1) - real_t(2) * (data())) / dz());
-        gridtools::call_proc<forward_thomas, full_t::first_level>::with(
-            eval, out(), a(), b(), c(), d());
+                         real_t(0.5) * coeff() *
+                             (data_top() - real_t(2) * data() + data(0, 0, 1)) /
+                             (dz() * dz()));
+
+        eval(alpha()) = eval(beta()) =
+            eval(-coeff() / (real_t(2) * dz() * dz()));
+        eval(gamma()) = eval(-b());
+
+        gridtools::call_proc<tridiagonal_periodic_fwd1,
+                             full_t::first_level>::with(eval, a(), b(), c(),
+                                                        d(), alpha(), beta(),
+                                                        gamma());
     }
+
     template <typename Evaluation>
-    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-        eval(a()) = -diffusion_coefficient / real_t(2) * eval(dt());
-        eval(c()) = -diffusion_coefficient / real_t(2) * eval(dt());
+    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, 0>) {
+        eval(a()) = eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
         eval(b()) = eval(real_t(1) / dt() - a() - c());
-        eval(d()) = eval(
-            real_t(1) / dt() * data() +
-            real_t(0.5) * diffusion_coefficient *
-                (data(0, 0, 1) - real_t(2) * (data() + data(0, 0, -1))) / dz());
-        gridtools::call_proc<forward_thomas, full_t::modify<1, 0>>::with(
-            eval, out(), a(), b(), c(), d());
+        eval(d()) =
+            eval(real_t(1) / dt() * data() +
+                 real_t(0.5) * coeff() *
+                     (data(0, 0, -1) - real_t(2) * data() + data(0, 0, 1)) /
+                     (dz() * dz()));
+
+        gridtools::call_proc<tridiagonal_periodic_fwd1,
+                             full_t::modify<1, -1>>::with(eval, a(), b(), c(),
+                                                          d(), alpha(), beta(),
+                                                          gamma());
     }
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-        eval(a()) = -diffusion_coefficient / real_t(2) * eval(dt());
+        eval(a()) = eval(-coeff() / (real_t(2) * dz() * dz()));
         eval(c()) = real_t(0);
         eval(b()) = eval(real_t(1) / dt() - a() - c());
-        eval(d()) = eval(real_t(1) / dt() * data() +
-                         real_t(0.5) * diffusion_coefficient *
-                             (-real_t(2) * (data() + data(0, 0, -1))) / dz());
-        gridtools::call_proc<forward_thomas, full_t::modify<1, 0>>::with(
-            eval, out(), a(), b(), c(), d());
+        eval(d()) =
+            eval(real_t(1) / dt() * data() +
+                 real_t(0.5) * coeff() *
+                     (data(0, 0, -1) - real_t(2) * data() + data_bottom()) /
+                     (dz() * dz()));
+        gridtools::call_proc<tridiagonal_periodic_fwd1,
+                             full_t::last_level>::with(eval, a(), b(), c(), d(),
+                                                       alpha(), beta(),
+                                                       gamma());
     }
 };
-struct diffusion_w_bwd {
+using diffusion_w_bwd1 = tridiagonal_periodic_bwd1;
+using diffusion_w_fwd2 = tridiagonal_periodic_fwd2;
+using diffusion_w_bwd2 = tridiagonal_periodic_bwd2;
+struct diffusion_w3 {
     using out = inout_accessor<0>;
-    using data = in_accessor<1>;
-    using dt = in_accessor<2>;
+    using x = in_accessor<1>;
+    using z = in_accessor<2>;
+    using fact = in_accessor<3>;
+    using in = in_accessor<4>;
 
-    using c = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
-    using d = inout_accessor<4, extent<0, 0, 0, 0, -1, 0>>;
+    using dt = in_accessor<5>;
 
-    using param_list = make_param_list<out, data, dt, c, d>;
+    using param_list = make_param_list<out, x, z, fact, in, dt>;
 
     template <typename Evaluation>
-    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
-        gridtools::call_proc<backward_thomas, full_t::modify<0, -1>>::with(
-            eval, out(), c(), d());
-        eval(out()) = eval((out() - data()) / dt());
-    }
-    template <typename Evaluation>
-    GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-        gridtools::call_proc<backward_thomas, full_t::last_level>::with(
-            eval, out(), c(), d());
-        eval(out()) = eval((out() - data()) / dt());
+    GT_FUNCTION static void apply(Evaluation eval, full_t) {
+        gridtools::call_proc<tridiagonal_periodic3, full_t>::with(
+            eval, out(), x(), z(), fact());
+        // eval(out()) = eval((out() - in()) / dt());
     }
 };
 
+/*
 struct advection_w_fwd {
     using out = inout_accessor<0>;
     using data = in_accessor<1, extent<0, 0, 0, 0, -1, 1>>;
@@ -286,8 +443,8 @@ struct advection_w_fwd {
         eval(d()) = eval(
             real_t(1) / dt() * data() - real_t(0.25) * w() * data() / dz() -
             real_t(0.25) * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz());
-        gridtools::call_proc<forward_thomas, full_t::first_level>::with(
-            eval, out(), a(), b(), c(), d());
+        gridtools::call_proc<tridiagonal_fwd, full_t::first_level>::with(
+            eval, a(), b(), c(), d());
     }
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
@@ -298,8 +455,8 @@ struct advection_w_fwd {
             eval(real_t(1) / dt() * data() -
                  real_t(0.25) * w() * (data() - data(0, 0, -1)) / dz() -
                  real_t(0.25) * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz());
-        gridtools::call_proc<forward_thomas, full_t::modify<1, 0>>::with(
-            eval, out(), a(), b(), c(), d());
+        gridtools::call_proc<tridiagonal_fwd, full_t::modify<1, 0>>::with(
+            eval, a(), b(), c(), d());
     }
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -309,8 +466,8 @@ struct advection_w_fwd {
         eval(d()) = eval(real_t(1) / dt() * data() -
                          real_t(0.25) * w() * (data() - data(0, 0, -1)) / dz() -
                          real_t(0.25) * w(0, 0, 1) * -data() / dz());
-        gridtools::call_proc<forward_thomas, full_t::first_level>::with(
-            eval, out(), a(), b(), c(), d());
+        gridtools::call_proc<tridiagonal_fwd, full_t::first_level>::with(
+            eval, a(), b(), c(), d());
     }
 };
 struct advection_w_bwd {
@@ -325,13 +482,13 @@ struct advection_w_bwd {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
-        gridtools::call_proc<backward_thomas, full_t::modify<0, -1>>::with(
+        gridtools::call_proc<tridiagonal_bwd, full_t::modify<0, -1>>::with(
             eval, out(), c(), d());
         eval(out()) = eval((out() - data()) / dt());
     }
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-        gridtools::call_proc<backward_thomas, full_t::last_level>::with(
+        gridtools::call_proc<tridiagonal_bwd, full_t::last_level>::with(
             eval, out(), c(), d());
         eval(out()) = eval((out() - data()) / dt());
     }
@@ -350,73 +507,126 @@ struct time_integrator {
         eval(out()) = eval(in() + dt() * flux());
     }
 };
+*/
 
 }  // namespace operators
 
 namespace gt = gridtools;
 
 class horizontal_diffusion {
-    using p_out = gt::arg<0, storage_type>;
-    using p_in = gt::arg<1, storage_type>;
-    using p_lap = gt::tmp_arg<2, storage_type>;
+    using p_out = gt::arg<0, storage_t>;
+    using p_in = gt::arg<1, storage_t>;
+    using p_dx = gt::arg<2, global_parameter_t>;
+    using p_dy = gt::arg<3, global_parameter_t>;
+    using p_dt = gt::arg<4, global_parameter_t>;
+    using p_coeff = gt::arg<5, global_parameter_t>;
 
    public:
-    horizontal_diffusion(gridtools::grid<axis_t::axis_interval_t> const& grid)
+    horizontal_diffusion(
+        gridtools::grid<typename axis_t::axis_interval_t> const& grid,
+        real_t dx, real_t dy, real_t dt, real_t coeff)
         : comp_(gt::make_computation<backend_t>(
-              grid, gt::make_multistage(
-                        gt::execute::parallel(),
-                        gt::make_stage<operators::laplacian>(p_lap(), p_in()),
-                        gt::make_stage<operators::flux_stage>(p_out(), p_lap(),
-                                                              p_in())))) {}
+              grid, p_dx() = gt::make_global_parameter(dx),
+              p_dy() = gt::make_global_parameter(dy),
+              p_dt() = gt::make_global_parameter(dt),
+              p_coeff() = gt::make_global_parameter(coeff),
+              gt::make_multistage(
+                  gt::execute::parallel(),
+                  gt::make_stage<operators::horizontal_diffusion>(
+                      p_out(), p_in(), p_dx(), p_dy(), p_dt(), p_coeff())))) {}
+
+    void run(storage_t& out, storage_t const& in) {
+        comp_.run(p_out() = out, p_in() = in);
+    }
 
    private:
     gridtools::computation<p_out, p_in> comp_;
 };
 
 class vertical_diffusion {
-    using p_flux = gt::arg<0, storage_type>;
-    using p_in = gt::arg<1, storage_type>;
+    using p_data_in = gt::arg<0, storage_t>;
+    using p_data_out = gt::arg<1, storage_t>;
+    using p_data_top = gt::tmp_arg<2, storage_ij_t>;
+    using p_data_bottom = gt::tmp_arg<3, storage_ij_t>;
 
-    using p_dz = gt::arg<2, global_parameter_t>;
-    using p_dt = gt::arg<3, global_parameter_t>;
+    using p_dz = gt::arg<4, global_parameter_t>;
+    using p_dt = gt::arg<5, global_parameter_t>;
+    using p_coeff = gt::arg<6, global_parameter_t>;
 
-    using p_a = gt::tmp_arg<4, storage_type>;
-    using p_b = gt::tmp_arg<5, storage_type>;
-    using p_c = gt::tmp_arg<6, storage_type>;
-    using p_d = gt::tmp_arg<7, storage_type>;
+    using p_a = gt::tmp_arg<7, storage_t>;
+    using p_b = gt::tmp_arg<8, storage_t>;
+    using p_c = gt::tmp_arg<9, storage_t>;
+    using p_d = gt::tmp_arg<10, storage_t>;
+
+    using p_alpha = gt::tmp_arg<11, storage_ij_t>;
+    using p_beta = gt::tmp_arg<12, storage_ij_t>;
+    using p_gamma = gt::tmp_arg<13, storage_ij_t>;
+    using p_fact = gt::tmp_arg<14, storage_ij_t>;
+
+    using p_z = gt::tmp_arg<15, storage_t>;
+    using p_z_top = gt::tmp_arg<16, storage_ij_t>;
+    using p_x = gt::tmp_arg<17, storage_t>;
 
    public:
-    vertical_diffusion(gridtools::grid<axis_t::axis_interval_t> const& grid)
+    vertical_diffusion(
+        gridtools::grid<typename axis_t::axis_interval_t> const& grid,
+        real_t dz, real_t dt, real_t coeff,
+        storage_t::storage_info_t const& sinfo,
+        storage_ij_t::storage_info_t const& sinfo_ij)
         : comp_(gt::make_computation<backend_t>(
-              grid,
+              grid, p_dz() = gt::make_global_parameter(dz),
+              p_dt() = gt::make_global_parameter(dt),
+              p_coeff() = gt::make_global_parameter(coeff),
               gt::make_multistage(gt::execute::forward(),
-                                  gt::make_stage<operators::diffusion_w_fwd>(
-                                      p_flux(), p_in(), p_dz(), p_dt(), p_a(),
-                                      p_b(), p_c(), p_d())),
+                                  gt::make_stage<operators::diffusion_w0>(
+                                      p_data_top(), p_data_in())),
+              gt::make_multistage(
+                  gt::execute::forward(),
+                  gt::make_stage<operators::diffusion_w_fwd1>(
+                      p_data_bottom(), p_alpha(), p_beta(), p_gamma(), p_a(),
+                      p_b(), p_c(), p_d(), p_data_in(), p_data_top(), p_dz(),
+                      p_dt(), p_coeff())),
+              gt::make_multistage(gt::execute::backward(),
+                                  gt::make_stage<operators::diffusion_w_bwd1>(
+                                      p_x(), p_c(), p_d())),
+              gt::make_multistage(
+                  gt::execute::forward(),
+                  gt::make_stage<operators::diffusion_w_fwd2>(
+                      p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
               gt::make_multistage(
                   gt::execute::backward(),
-                  gt::make_stage<operators::diffusion_w_bwd>(
-                      p_flux(), p_in(), p_dt(), p_c(), p_d())))) {}
+                  gt::make_stage<operators::diffusion_w_bwd2>(
+                      p_z(), p_c(), p_d(), p_x(), p_alpha(), p_beta(),
+                      p_gamma(), p_data_top(), p_z_top(), p_fact())),
+              gt::make_multistage(gt::execute::parallel(),
+                                  gt::make_stage<operators::diffusion_w3>(
+                                      p_data_out(), p_x(), p_z(), p_fact(),
+                                      p_data_in(), p_dt())))) {}
+
+    void run(storage_t& flux, storage_t const& in) {
+        comp_.run(p_data_out() = flux, p_data_in() = in);
+    }
 
    private:
-    gridtools::computation<p_flux, p_in, p_dz, p_dt> comp_;
+    gridtools::computation<p_data_in, p_data_out> comp_;
 };
 
+/*
 class advection {
-    using p_flux = gt::arg<0, storage_type>;
-    using p_u = gt::arg<1, storage_type>;
-    using p_v = gt::arg<2, storage_type>;
-    using p_w = gt::arg<3, storage_type_w>;
-    using p_in = gt::arg<4, storage_type>;
+    using p_flux = gt::arg<0, storage_t>;
+    using p_u = gt::arg<1, storage_t>;
+    using p_v = gt::arg<2, storage_t>;
+    using p_w = gt::arg<3, storage_t>;
+    using p_in = gt::arg<4, storage_t>;
     using p_dx = gt::arg<5, global_parameter_t>;
     using p_dy = gt::arg<6, global_parameter_t>;
     using p_dz = gt::arg<7, global_parameter_t>;
     using p_dt = gt::arg<8, global_parameter_t>;
 
-    using p_a = gt::tmp_arg<9, storage_type>;
-    using p_b = gt::tmp_arg<10, storage_type>;
-    using p_c = gt::tmp_arg<11, storage_type>;
-    using p_d = gt::tmp_arg<12, storage_type>;
+    using p_a = gt::tmp_arg<9, storage_t>;
+    using p_b = gt::tmp_arg<10, storage_t>;
+    using p_c = gt::tmp_arg<11, storage_t>;
+    using p_d = gt::tmp_arg<12, storage_t>;
 
    public:
     advection(gridtools::grid<axis_t::axis_interval_t> const& grid)
@@ -440,6 +650,7 @@ class advection {
     gridtools::computation<p_flux, p_u, p_v, p_in, p_dx, p_dy> horizontal_comp_;
     gridtools::computation<p_flux, p_w, p_in, p_dz, p_dt> vertical_comp_;
 };
+*/
 
 template <typename T>
 void dump(std::ostream& os, T const& storage) {
@@ -447,38 +658,80 @@ void dump(std::ostream& os, T const& storage) {
     os << '\n';
 
     auto v = gt::make_host_view(storage);
-    for (int i0 = 0; i0 < storage.template total_length<0>(); ++i0) {
+    for (int i0 = 0; i0 < storage.template total_length<2>(); ++i0) {
         for (int i1 = 0; i1 < storage.template total_length<1>(); ++i1) {
-            for (int i2 = 0; i2 < storage.template total_length<2>(); ++i2)
-                os << v(i0, i1, i2) << " ";
+            for (int i2 = 0; i2 < storage.template total_length<0>(); ++i2)
+                os << v(i2, i1, i0) << " ";
             os << '\n';
         }
         os << '\n';
     }
 }
 
+struct periodic_boundary {
+    template <gt::sign I, gt::sign J, gt::sign K, typename DataField>
+    GT_FUNCTION void operator()(gt::direction<I, J, K>, DataField& data,
+                                gt::uint_t i, gt::uint_t j,
+                                gt::uint_t k) const {
+        auto const& si = data.storage_info();
+        data(i, j, k) = data(
+            (i + si.template length<0>() - halo_i) % si.template length<0>() +
+                halo_i,
+            (j + si.template length<1>() - halo_j) % si.template length<1>() +
+                halo_j,
+            (k + si.template length<2>() - halo_k) % si.template length<2>() +
+                halo_k);
+    }
+};
+
 int main() {
-    static constexpr int isize = 10, jsize = 10, ksize = 10;
+    static constexpr int isize = 30, jsize = 30, ksize = 30;
+    real_t const dx = 1, dy = 1, dz = 1, dt = 1;
+    real_t const diffusion_coefficient = 0.2;
 
-    storage_type::storage_info_t sinfo{isize, jsize, ksize};
-    storage_type_w::storage_info_t sinfo_w{isize, jsize, ksize};
+    storage_t::storage_info_t sinfo{isize + 2 * halo_i, jsize + 2 * halo_j,
+                                    ksize + 2 * halo_k};
+    storage_ij_t::storage_info_t sinfo_ij{isize + 2 * halo_i,
+                                          jsize + 2 * halo_j, 1};
 
-    storage_type u{sinfo, real_t(1), "u"}, v{sinfo, real_t(1), "v"};
-    storage_type_w w{sinfo_w, real_t(1), "w"};
-    storage_type data{sinfo,
+    storage_t u{sinfo, real_t(1), "u"}, v{sinfo, real_t(1), "v"};
+    storage_t w{sinfo, real_t(1), "w"};
+    storage_t data_in{sinfo,
                       [](int i, int j, int k) {
-                          return i > 3 && i < 8 && j > 3 && j < 8 && k > 3 &&
+                          return i > 5 && i < 8 && j > 5 && j < 8 && k > 1 &&
                                          k < 8
                                      ? real_t(1)
                                      : real_t(0);
                       },
                       "data"};
+    storage_t data_out{sinfo, "data2"};
+    storage_t flux{sinfo, "flux"};
 
-    auto grid = gt::make_grid(
-        {halo_i, halo_i, halo_i, halo_i + isize - 1, halo_i + isize + halo_i},
-        {halo_j, halo_j, halo_j, halo_j + jsize - 1, halo_j + jsize + halo_j},
-        10);
-    horizontal_diffusion hdiff(grid);
+    gt::array<gt::halo_descriptor, 3> halos{
+        {{halo_i, halo_i, halo_i, halo_i + isize - 1, halo_i + isize + halo_i},
+         {halo_j, halo_j, halo_j, halo_j + jsize - 1, halo_j + jsize + halo_j},
+         {halo_k, halo_k, halo_k, halo_k + ksize - 1,
+          halo_k + ksize + halo_k}}};
+    auto grid = gt::make_grid(halos[0], halos[1], axis_t{ksize + 2 * halo_k});
+    horizontal_diffusion hdiff(grid, dx, dy, dt, diffusion_coefficient);
+    vertical_diffusion vdiff(grid, dz, dt, diffusion_coefficient, sinfo,
+                             sinfo_ij);
 
-    dump(std::cout, data);
+    gt::boundary<periodic_boundary, backend_t> boundary(halos,
+                                                        periodic_boundary{});
+
+    boundary.apply(data_in);
+
+    for (int ts = 0; ts < 10; ++ts) {
+        std::ofstream of{"out" + std::to_string(ts)};
+        dump(of, data_in);
+
+        hdiff.run(data_out, data_in);
+        boundary.apply(data_out);
+        std::swap(data_out, data_in);
+
+        vdiff.run(data_out, data_in);
+        boundary.apply(data_out);
+        std::swap(data_out, data_in);
+    }
 }
