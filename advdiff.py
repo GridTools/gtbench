@@ -84,6 +84,19 @@ def horizontal_diffusion(data, D, dx, dy, dt):
         (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy)
 
 
+def full_diffusion(data, D, dx, dy, dz, dt):
+    flx_x = (data[3:-2, 3:-3, :] - data[2:-3, 3:-3, :]) / dx
+    flx_y = (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) / dy
+    boundary_flx_z = (data[3:-3, 3:-3, :1] - data[3:-3, 3:-3, -1:]) / dz
+    inner_flx_z = (data[3:-3, 3:-3, 1:] - data[3:-3, 3:-3, :-1]) / dz
+    flx_z = np.concatenate([boundary_flx_z, inner_flx_z, boundary_flx_z], axis=2)
+    return data[3:-3, 3:-3, :] + D * dt * (
+        (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx +
+        (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy +
+        (flx_z[:, :, 1:] - flx_z[:, :, :-1]) / dz)
+
+
+
 @numba.jit
 def advection_flux_v(v, data0, data, dy):
     weights = np.array([1.0 / 30, -1.0 / 4, 1, -1.0 / 3, -1.0 / 2, 0])
@@ -170,21 +183,21 @@ def diffusion_w_column(data, D, dx, dt):
     c = np.zeros(data.shape)
     d = np.zeros(data.shape)
     # assume zero wind, and zero data outside...
-    a[0] = -D / 2 * dt
-    c[0] = -D / 2 * dt
+    a[0] = -D / (2 * dx**2)
+    c[0] = -D / (2 * dx**2)
     b[0] = 1 / dt - a[0] - c[0]
-    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] + data[-1]) / dx
+    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] + data[-1]) / dx**2
     for k in range(1, len(data) - 1):
-        a[k] = -D / 2 * dt
-        c[k] = -D / 2 * dt
+        a[k] = -D / (2 * dx**2)
+        c[k] = -D / (2 * dx**2)
         b[k] = 1 / dt - a[k] - c[k]
         d[k] = (1 / dt * data[k] + 0.5 * D *
-                (data[k + 1] - 2 * data[k] + data[k - 1]) / dx)
-    a[-1] = -D / 2 * dt
-    c[-1] = -D / 2 * dt
+                (data[k + 1] - 2 * data[k] + data[k - 1]) / dx**2)
+    a[-1] = -D / (2 * dx**2)
+    c[-1] = -D / (2 * dx**2)
     b[-1] = 1 / dt - a[-1] - c[-1]
     d[-1] = 1 / dt * data[-1] + 0.5 * D * (data[0] - 2 * data[-1] +
-                                           data[-2]) / dx
+                                           data[-2]) / dx**2
     return tridiagonal_solve_periodic(a, b, c, d)
 
 
@@ -222,6 +235,8 @@ def periodic_boundary_condition(data, boundaries):
     data[-x2:, -y2:, :] = data[x1:x1 + x2, y1:y1 + y2, :]
     data[:x1, -y2:, :] = data[-x1 - x2:-x2, y1:y1 + y2, :]
     data[-x2:, :y1, :] = data[x1:y1 + x2, -y1 - y2:-y2, :]
+
+    return data
 
 
 def calculate_global_domain(compute_domain, boundaries):
