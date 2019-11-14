@@ -89,12 +89,12 @@ def full_diffusion(data, D, dx, dy, dz, dt):
     flx_y = (data[3:-3, 3:-2, :] - data[3:-3, 2:-3, :]) / dy
     boundary_flx_z = (data[3:-3, 3:-3, :1] - data[3:-3, 3:-3, -1:]) / dz
     inner_flx_z = (data[3:-3, 3:-3, 1:] - data[3:-3, 3:-3, :-1]) / dz
-    flx_z = np.concatenate([boundary_flx_z, inner_flx_z, boundary_flx_z], axis=2)
+    flx_z = np.concatenate([boundary_flx_z, inner_flx_z, boundary_flx_z],
+                           axis=2)
     return data[3:-3, 3:-3, :] + D * dt * (
         (flx_x[1:, :, :] - flx_x[:-1, :, :]) / dx +
         (flx_y[:, 1:, :] - flx_y[:, :-1, :]) / dy +
         (flx_z[:, :, 1:] - flx_z[:, :, :-1]) / dz)
-
 
 
 @numba.jit
@@ -186,7 +186,8 @@ def diffusion_w_column(data, D, dx, dt):
     a[0] = -D / (2 * dx**2)
     c[0] = -D / (2 * dx**2)
     b[0] = 1 / dt - a[0] - c[0]
-    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] + data[-1]) / dx**2
+    d[0] = 1 / dt * data[0] + 0.5 * D * (data[1] - 2 * data[0] +
+                                         data[-1]) / dx**2
     for k in range(1, len(data) - 1):
         a[k] = -D / (2 * dx**2)
         c[k] = -D / (2 * dx**2)
