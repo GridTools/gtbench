@@ -368,7 +368,7 @@ struct diffusion_w_fwd1 {
     }
 
     template <typename Evaluation>
-    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, 0>) {
+    GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
         eval(a()) = eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
         eval(b()) = eval(real_t(1) / dt() - a() - c());
         eval(d()) =
@@ -555,14 +555,10 @@ class vertical_diffusion {
     using p_dt = gt::arg<5, global_parameter_t>;
     using p_coeff = gt::arg<6, global_parameter_t>;
 
-    using p_a = gt::arg<7, storage_t>;
-    storage_t a_;
-    using p_b = gt::arg<8, storage_t>;
-    storage_t b_;
-    using p_c = gt::arg<9, storage_t>;
-    storage_t c_;
-    using p_d = gt::arg<10, storage_t>;
-    storage_t d_;
+    using p_a = gt::tmp_arg<7, storage_t>;
+    using p_b = gt::tmp_arg<8, storage_t>;
+    using p_c = gt::tmp_arg<9, storage_t>;
+    using p_d = gt::tmp_arg<10, storage_t>;
 
     using p_alpha = gt::arg<11, storage_ij_t>;
     storage_ij_t alpha_;
@@ -573,40 +569,30 @@ class vertical_diffusion {
     using p_fact = gt::arg<14, storage_ij_t>;
     storage_ij_t fact_;
 
-    using p_z = gt::arg<15, storage_t>;
-    storage_t z_;
+    using p_z = gt::tmp_arg<15, storage_t>;
     using p_z_top = gt::arg<16, storage_ij_t>;
     storage_ij_t z_top_;
-    using p_x = gt::arg<17, storage_t>;
-    storage_t x_;
+    using p_x = gt::tmp_arg<17, storage_t>;
 
    public:
     vertical_diffusion(
         gridtools::grid<typename axis_t::axis_interval_t> const& grid,
         real_t dz, real_t dt, real_t coeff,
-        storage_t::storage_info_t const& sinfo,
         storage_ij_t::storage_info_t const& sinfo_ij)
         : data_top_(sinfo_ij, "data_top"),
           data_bottom_(sinfo_ij, "data_bottom"),
-          a_(sinfo, "a"),
-          b_(sinfo, "b"),
-          c_(sinfo, "c"),
-          d_(sinfo, "d"),
           alpha_(sinfo_ij, "alpha"),
           beta_(sinfo_ij, "beta"),
           gamma_(sinfo_ij, "gamma"),
-          z_(sinfo, "z"),
-          z_top_(sinfo_ij, "z_top"),
-          x_(sinfo, "x"),
           fact_(sinfo_ij, "fact"),
+          z_top_(sinfo_ij, "z_top"),
           comp_(gt::make_computation<backend_t>(
               grid, p_dz() = gt::make_global_parameter(dz),
               p_dt() = gt::make_global_parameter(dt),
               p_coeff() = gt::make_global_parameter(coeff),
               p_data_top() = data_top_, p_data_bottom() = data_bottom_,
-              p_a() = a_, p_b() = b_, p_c() = c_, p_d() = d_,
               p_alpha() = alpha_, p_beta() = beta_, p_gamma() = gamma_,
-              p_fact() = fact_, p_z() = z_, p_z_top() = z_top_, p_x() = x_,
+              p_fact() = fact_, p_z_top() = z_top_,
               gt::make_multistage(gt::execute::forward(),
                                   gt::make_stage<operators::diffusion_w0>(
                                       p_data_top(), p_data_in())),
@@ -744,8 +730,7 @@ int main() {
           halo_k + ksize + halo_k}}};
     auto grid = gt::make_grid(halos[0], halos[1], axis_t{ksize + 2 * halo_k});
     horizontal_diffusion hdiff(grid, dx, dy, dt, diffusion_coefficient);
-    vertical_diffusion vdiff(grid, dz, dt, diffusion_coefficient, sinfo,
-                             sinfo_ij);
+    vertical_diffusion vdiff(grid, dz, dt, diffusion_coefficient, sinfo_ij);
 
     gt::boundary<periodic_boundary, backend_t> boundary(halos,
                                                         periodic_boundary{});
