@@ -3,5 +3,8 @@ project(benchmark LANGUAGES CXX)
 
 find_package(GridTools 1.1.0)
 
+add_library(diffusion diffusion.cpp)
+target_link_libraries(diffusion GridTools::gridtools)
+
 add_executable(driver driver.cpp)
-target_link_libraries(driver GridTools::gridtools)
+target_link_libraries(driver diffusion GridTools::gridtools)
