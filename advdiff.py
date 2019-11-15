@@ -160,8 +160,8 @@ def advection_w_column(w, data0, data, dz, dt):
     a[-1] = -0.25 * w[-2] / dz
     c[-1] = 0.25 * w[-1] / dz
     b[-1] = 1 / dt - a[-1] - c[-1]
-    d[-1] = (1 / dt * data[-1] - 0.25 * w[0] * (data[0] - data[-1]) / dz -
-             0.25 * w[-1] * (data[-1] - data[-2]) / dz)
+    d[-1] = (1 / dt * data[-1] - 0.25 * w[-1] * (data[0] - data[-1]) / dz -
+             0.25 * w[-2] * (data[-1] - data[-2]) / dz)
     return tridiagonal_solve_periodic(a, b, c, d)
 
 
