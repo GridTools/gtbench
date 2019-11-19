@@ -1,6 +1,8 @@
 #pragma once
 
+#include "boundary.hpp"
 #include "common.hpp"
+#include "solver_state.hpp"
 
 namespace diffusion {
 
@@ -15,13 +17,15 @@ class horizontal {
 public:
   horizontal(grid_t const &grid, real_t dx, real_t dy, real_t dt, real_t coeff);
 
-  void operator()(storage_t &out, storage_t const &in);
+  void operator()(solver_state &state);
 
 private:
   gt::computation<p_out, p_in> comp_;
 };
 
 class vertical {
+  storage_ij_t::storage_info_t sinfo_ij_;
+
   using p_data_in = gt::arg<0, storage_t>;
   using p_data_out = gt::arg<1, storage_t>;
   using p_data_top = gt::arg<2, storage_ij_t>;
@@ -53,10 +57,9 @@ class vertical {
   using p_x = gt::tmp_arg<17, storage_t>;
 
 public:
-  vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff,
-           storage_ij_t::storage_info_t const &sinfo_ij);
+  vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff);
 
-  void operator()(storage_t &flux, storage_t const &in);
+  void operator()(solver_state &state);
 
 private:
   gt::computation<p_data_in, p_data_out> comp_;

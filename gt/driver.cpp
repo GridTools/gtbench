@@ -1,8 +1,11 @@
+#include <cmath>
 #include <fstream>
 #include <iostream>
 
-#include "common.hpp"
 #include "diffusion.hpp"
+#include "solver_state.hpp"
+#include "verification/analytical.hpp"
+#include "verification/convergence.hpp"
 
 template <typename T> void dump(std::ostream &os, T const &storage) {
   for (auto const &l : storage.total_lengths())
@@ -20,66 +23,97 @@ template <typename T> void dump(std::ostream &os, T const &storage) {
   }
 }
 
-struct periodic_boundary {
-  template <gt::sign I, gt::sign J, gt::sign K, typename DataField>
-  GT_FUNCTION void operator()(gt::direction<I, J, K>, DataField &data,
-                              gt::uint_t i, gt::uint_t j, gt::uint_t k) const {
-    auto const &si = data.storage_info();
-    data(i, j, k) =
-        data((i + si.template length<0>() - halo_i) % si.template length<0>() +
-                 halo_i,
-             (j + si.template length<1>() - halo_j) % si.template length<1>() +
-                 halo_j,
-             (k + si.template length<2>() - halo_k) % si.template length<2>() +
-                 halo_k);
+template <class Stepper, class Analytical>
+double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
+           Analytical &&exact) {
+  const auto initial =
+      analytical::to_domain(exact, resolution, resolution, resolution, 0);
+  solver_state state{resolution,  resolution,  resolution, initial.data(),
+                     initial.u(), initial.v(), initial.w()};
+
+  const gt::array<gt::halo_descriptor, 3> halos{
+      {{halo_i, halo_i, halo_i, halo_i + gt::uint_t(resolution) - 1,
+        halo_i + gt::uint_t(resolution) + halo_i},
+       {halo_j, halo_j, halo_j, halo_j + gt::uint_t(resolution) - 1,
+        halo_j + gt::uint_t(resolution) + halo_j},
+       {halo_k, halo_k, halo_k, halo_k + gt::uint_t(resolution) - 1,
+        halo_k + gt::uint_t(resolution) + halo_k}}};
+
+  const auto grid =
+      gt::make_grid(halos[0], halos[1], axis_t{resolution + 2 * halo_k});
+  const real_t dx = initial.dx;
+  const real_t dy = initial.dy;
+  const real_t dz = initial.dz;
+  auto step = stepper(grid, halos, dx, dy, dz, dt);
+
+  real_t t;
+  for (t = 0; t < tmax; t += dt)
+    step(state);
+
+  auto view = gt::make_host_view(state.data);
+
+  const auto expected =
+      analytical::to_domain(exact, resolution, resolution, resolution, t)
+          .data();
+  double error = 0.0;
+#pragma omp parallel for reduction(+ : error)
+  for (std::size_t i = halo_i; i < halo_i + resolution; ++i) {
+    for (std::size_t j = halo_j; j < halo_j + resolution; ++j) {
+      for (std::size_t k = halo_k; k < halo_k + resolution; ++k) {
+        double diff = view(i, j, k) - expected(i, j, k);
+        error += diff * diff * dx * dy * dz;
+      }
+    }
   }
+  return std::sqrt(error);
+}
+
+struct hdiff_stepper_f {
+  void operator()(solver_state &state) {
+    hdiff(state);
+    boundary.apply(state.data);
+  }
+
+  diffusion::horizontal hdiff;
+  gt::boundary<periodic_boundary, backend_t> boundary;
 };
 
-int main() {
-  static constexpr int isize = 30, jsize = 30, ksize = 30;
-  real_t const dx = 1, dy = 1, dz = 1, dt = 1;
-  real_t const diffusion_coefficient = 0.2;
+auto hdiff_stepper(real_t diffusion_coeff) {
+  return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
+                           real_t dz, real_t dt) {
+    return hdiff_stepper_f{{grid, dx, dy, dt, diffusion_coeff},
+                           {halos, periodic_boundary{}}};
+  };
+}
 
-  storage_t::storage_info_t sinfo{isize + 2 * halo_i, jsize + 2 * halo_j,
-                                  ksize + 2 * halo_k};
-  storage_ij_t::storage_info_t sinfo_ij{isize + 2 * halo_i, jsize + 2 * halo_j,
-                                        1};
-
-  storage_t u{sinfo, real_t(1), "u"}, v{sinfo, real_t(1), "v"};
-  storage_t w{sinfo, real_t(1), "w"};
-  storage_t data_in{sinfo,
-                    [](int i, int j, int k) {
-                      return i > 5 && i < 8 && j > 5 && j < 8 && k > 1 && k < 8
-                                 ? real_t(1)
-                                 : real_t(0);
-                    },
-                    "data"};
-  storage_t data_out{sinfo, "data2"};
-  storage_t flux{sinfo, "flux"};
-
-  gt::array<gt::halo_descriptor, 3> halos{
-      {{halo_i, halo_i, halo_i, halo_i + isize - 1, halo_i + isize + halo_i},
-       {halo_j, halo_j, halo_j, halo_j + jsize - 1, halo_j + jsize + halo_j},
-       {halo_k, halo_k, halo_k, halo_k + ksize - 1, halo_k + ksize + halo_k}}};
-  auto grid = gt::make_grid(halos[0], halos[1], axis_t{ksize + 2 * halo_k});
-  diffusion::horizontal hdiff(grid, dx, dy, dt, diffusion_coefficient);
-  diffusion::vertical vdiff(grid, dz, dt, diffusion_coefficient, sinfo_ij);
-
-  gt::boundary<periodic_boundary, backend_t> boundary(halos,
-                                                      periodic_boundary{});
-
-  boundary.apply(data_in);
-
-  for (int ts = 0; ts < 10; ++ts) {
-    std::ofstream of{"out" + std::to_string(ts)};
-    dump(of, data_in);
-
-    hdiff(data_out, data_in);
-    boundary.apply(data_out);
-    std::swap(data_out, data_in);
-
-    vdiff(data_out, data_in);
-    boundary.apply(data_out);
-    std::swap(data_out, data_in);
+struct vdiff_stepper_f {
+  void operator()(solver_state &state) {
+    vdiff(state);
+    boundary.apply(state.data);
   }
+
+  diffusion::vertical vdiff;
+  gt::boundary<periodic_boundary, backend_t> boundary;
+};
+
+auto vdiff_stepper(real_t diffusion_coeff) {
+  return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
+                           real_t dz, real_t dt) {
+    return vdiff_stepper_f{{grid, dz, dt, diffusion_coeff},
+                           {halos, periodic_boundary{}}};
+  };
+}
+
+int main() {
+  std::cout << "HORIZONTAL DIFFUSION" << std::endl;
+
+  analytical::horizontal_diffusion exact{0.01};
+  auto error_f = [exact](std::size_t resolution) {
+    return run(hdiff_stepper(exact.diffusion_coeff), resolution, 1e-3, 1e-4,
+               exact);
+  };
+
+  std::vector<std::size_t> ns;
+  std::vector<double> errors, orders;
+  print_order_verification_result(order_verification(error_f, 4, 128));
 }

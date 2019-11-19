@@ -1,6 +1,5 @@
 #include "diffusion.hpp"
 
-#include "common.hpp"
 #include "tridiagonal.hpp"
 
 namespace diffusion {
@@ -153,16 +152,17 @@ horizontal::horizontal(gt::grid<typename axis_t::axis_interval_t> const &grid,
               gt::make_stage<stage_horizontal>(p_out(), p_in(), p_dx(), p_dy(),
                                                p_dt(), p_coeff())))) {}
 
-void horizontal::operator()(storage_t &out, storage_t const &in) {
-  comp_.run(p_out() = out, p_in() = in);
+void horizontal::operator()(solver_state &state) {
+  comp_.run(p_out() = state.tmp, p_in() = state.data);
+  std::swap(state.tmp, state.data);
 }
 
-vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff,
-                   storage_ij_t::storage_info_t const &sinfo_ij)
-    : data_top_(sinfo_ij, "data_top"), data_bottom_(sinfo_ij, "data_bottom"),
-      alpha_(sinfo_ij, "alpha"), beta_(sinfo_ij, "beta"),
-      gamma_(sinfo_ij, "gamma"), fact_(sinfo_ij, "fact"),
-      z_top_(sinfo_ij, "z_top"),
+vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff)
+    : sinfo_ij_(grid.i_size(), grid.j_size(), 1),
+      data_top_(sinfo_ij_, "data_top"), data_bottom_(sinfo_ij_, "data_bottom"),
+      alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
+      gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
+      z_top_(sinfo_ij_, "z_top"),
       comp_(gt::make_computation<backend_t>(
           grid, p_dz() = gt::make_global_parameter(dz),
           p_dt() = gt::make_global_parameter(dt),
@@ -196,8 +196,9 @@ vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff,
                                   p_data_out(), p_x(), p_z(), p_fact(),
                                   p_data_in(), p_dt())))) {}
 
-void vertical::operator()(storage_t &flux, storage_t const &in) {
-  comp_.run(p_data_out() = flux, p_data_in() = in);
+void vertical::operator()(solver_state &state) {
+  comp_.run(p_data_out() = state.tmp, p_data_in() = state.data);
+  std::swap(state.tmp, state.data);
 }
 
 } // namespace diffusion

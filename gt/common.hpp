@@ -1,5 +1,6 @@
 #pragma once
 
+#include <gridtools/common/gt_math.hpp>
 #include <gridtools/stencil_composition/expressions/expressions.hpp>
 #include <gridtools/stencil_composition/stencil_composition.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
@@ -10,7 +11,7 @@ static constexpr int halo_i = 3;
 static constexpr int halo_j = 3;
 static constexpr int halo_k = 1;
 
-using real_t = float;
+using real_t = double;
 
 namespace gt = gridtools;
 
@@ -28,3 +29,5 @@ using storage_info_ij_t =
 using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
 using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
 using global_parameter_t = gt::global_parameter<backend_t, real_t>;
+
+template <class T> struct vec { T x, y, z; };
