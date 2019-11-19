@@ -1,6 +1,5 @@
 #pragma once
 
-#include "boundary.hpp"
 #include "common.hpp"
 #include "solver_state.hpp"
 

@@ -156,7 +156,7 @@ void horizontal::operator()(solver_state &state) {
 }
 
 vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff)
-    : sinfo_ij_(grid.i_size() + 2 * halo_i, grid.j_size() + 2 * halo_j, 1),
+    : sinfo_ij_(grid.i_size() + 2 * halo, grid.j_size() + 2 * halo, 1),
       data_top_(sinfo_ij_, "data_top"), data_bottom_(sinfo_ij_, "data_bottom"),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),

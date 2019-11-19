@@ -89,7 +89,7 @@ template <class Analytical> struct to_domain_wrapper {
   template <class F> auto remap(F &&f) const {
     return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,
             t = t](gt::int_t i, gt::int_t j, gt::int_t k) {
-      return f((i - halo_i) * dx, (j - halo_j) * dy, (k - halo_k) * dz, t);
+      return f((i - halo) * dx, (j - halo) * dy, k * dz, t);
     };
   }
 
