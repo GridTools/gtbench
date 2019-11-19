@@ -1,97 +1,29 @@
 #pragma once
 
-namespace operators {
-using namespace gridtools::expressions;
+#include "common.hpp"
+#include "solver_state.hpp"
 
-using gridtools::extent;
-using gridtools::in_accessor;
-using gridtools::inout_accessor;
-using gridtools::make_param_list;
+namespace advection {
 
-struct advection_u {
-  using flux = inout_accessor<0>;
-  using u = in_accessor<1>;
-  using in = in_accessor<2, extent<-3, 3, 0, 0>>;
-  using dx = in_accessor<3>;
-  using param_list = make_param_list<flux, u, in, dx>;
+class horizontal {
+  using p_out = gt::arg<0, storage_t>;
+  using p_in = gt::arg<1, storage_t>;
+  using p_u = gt::arg<2, storage_t>;
+  using p_v = gt::arg<3, storage_t>;
+  using p_dx = gt::arg<4, global_parameter_t>;
+  using p_dy = gt::arg<5, global_parameter_t>;
+  using p_dt = gt::arg<6, global_parameter_t>;
 
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    static constexpr real_t weights[] = {real_t(1) / 30, -real_t(1) / 4,
-                                         real_t(1),      -real_t(1) / 3,
-                                         -real_t(1) / 2, real_t(1) / 20};
+public:
+  horizontal(grid_t const &grid, real_t dx, real_t dy, real_t dt);
 
-    if (eval(u()) < 0) {
-      eval(flux()) =
-          eval(u() *
-               -(weights[0] * in(-3, 0, 0) + weights[1] * in(-2, 0, 0) +
-                 weights[2] * in(-1, 0, 0) + weights[3] * in() +
-                 weights[4] * in(1, 0, 0) + weights[5] * in(2, 0, 0)) /
-               dx());
-    } else if (eval(u()) > 0) {
-      eval(flux()) =
-          eval(u() *
-               (weights[5] * in(-2, 0, 0) + weights[4] * in(-1, 0, 0) +
-                weights[3] * in() + weights[2] * in(1, 0, 0) +
-                weights[1] * in(2, 0, 0) + weights[0] * in(3, 0, 0)) /
-               dx());
-    } else {
-      eval(flux()) = real_t(0);
-    }
-  }
-};
-struct advection_v {
-  using flux = inout_accessor<0>;
-  using v = in_accessor<1>;
-  using in = in_accessor<2, extent<0, 0, -3, 3>>;
-  using dy = in_accessor<3>;
+  void operator()(solver_state &state);
 
-  using param_list = make_param_list<flux, v, in, dy>;
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    static constexpr real_t weights[] = {real_t(1) / 30, -real_t(1) / 4,
-                                         real_t(1),      -real_t(1) / 3,
-                                         -real_t(1) / 2, real_t(1) / 20};
-
-    if (eval(v()) < 0) {
-      eval(flux()) =
-          eval(v() *
-               -(weights[0] * in(0, -3, 0) + weights[1] * in(0, -2, 0) +
-                 weights[2] * in(0, -1, 0) + weights[3] * in() +
-                 weights[4] * in(0, 1, 0) + weights[5] * in(0, 2, 0)) /
-               dy());
-    } else if (eval(v()) > 0) {
-      eval(flux()) =
-          eval(v() *
-               (weights[5] * in(0, -2, 0) + weights[4] * in(0, -1, 0) +
-                weights[3] * in() + weights[2] * in(0, 1, 0) +
-                weights[1] * in(0, 2, 0) + weights[0] * in(0, 3, 0)) /
-               dy());
-    } else {
-      eval(flux()) = real_t(0);
-    }
-  }
+private:
+  gt::computation<p_out, p_in, p_u, p_v> comp_;
 };
 
-struct horizontal_advection {
-  using flux = inout_accessor<0>;
-  using u = in_accessor<1, extent<-3, 3, 0, 0>>;
-  using v = in_accessor<2, extent<0, 0, -3, 3>>;
-  using in = in_accessor<3>;
-  using dx = in_accessor<4>;
-  using dy = in_accessor<5>;
-
-  using param_list = make_param_list<flux, u, v, in, dx, dy>;
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    eval(flux()) =
-        gridtools::call<advection_u, full_t>::with(eval, u(), in(), dx());
-    eval(flux()) +=
-        gridtools::call<advection_v, full_t>::with(eval, v(), in(), dy());
-  }
-};
+} // namespace advection
 
 /*
 struct advection_w_fwd {
@@ -181,10 +113,6 @@ struct time_integrator {
     }
 };
 */
-
-} // namespace operators
-
-namespace gt = gridtools;
 
 /*
 class advection {

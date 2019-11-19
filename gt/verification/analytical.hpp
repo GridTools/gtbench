@@ -85,6 +85,30 @@ struct full_diffusion {
   real_t diffusion_coeff;
 };
 
+struct horizontal_advection {
+  auto data() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return sin(x - t) * cos(y + 2 * t);
+    };
+  }
+
+  auto u() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 1; };
+  }
+
+  auto v() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return -2; };
+  }
+  auto w() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
+  }
+
+  constexpr real_t domain_x() const { return 2 * M_PI; }
+  constexpr real_t domain_y() const { return 2 * M_PI; }
+  constexpr real_t domain_z() const { return 2 * M_PI; }
+};
+
 template <class Analytical> struct to_domain_wrapper {
   template <class F> auto remap(F &&f) const {
     return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,

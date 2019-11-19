@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "advection.hpp"
 #include "boundary.hpp"
 #include "diffusion.hpp"
 #include "solver_state.hpp"
@@ -114,6 +115,22 @@ auto diff_stepper(real_t diffusion_coeff) {
   };
 }
 
+struct hadv_stepper_f {
+  void operator()(solver_state &state) {
+    boundary.apply(state.data);
+    hadv(state);
+  }
+
+  advection::horizontal hadv;
+  gt::boundary<periodic_boundary, backend_t> boundary;
+};
+
+auto hadv_stepper() {
+  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz, real_t dt) {
+    return hadv_stepper_f{{grid, dx, dy, dt}, {halos, periodic_boundary{}}};
+  };
+}
+
 int main() {
   {
     std::cout << "HORIZONTAL DIFFUSION: Spatial Convergence" << std::endl;
@@ -168,6 +185,23 @@ int main() {
     auto error_f = [exact](std::size_t resolution) {
       return run(diff_stepper(exact.diffusion_coeff), resolution, 1e-2,
                  1e-3 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
+
+  {
+    std::cout << "HORIZONTAL ADVECTION: Spatial Convergence" << std::endl;
+    analytical::horizontal_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(hadv_stepper(), resolution, 1e-5, 1e-6, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 4, 128));
+  }
+  {
+    std::cout << "HORIZONTAL ADVECTION: Space-Time Convergence" << std::endl;
+    analytical::horizontal_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(hadv_stepper(), resolution, 1e-4, 1e-5 / resolution, exact);
     };
     print_order_verification_result(order_verification(error_f, 8, 64));
   }
