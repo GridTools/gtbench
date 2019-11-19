@@ -12,6 +12,7 @@ namespace gt = gridtools;
 using real_t = double;
 
 static constexpr gt::int_t halo = 3;
+static constexpr gt::int_t huge_offset = 10000;
 
 using axis_t = gt::axis<1, gt::axis_config::offset_limit<3>>;
 using full_t = axis_t::full_interval;
@@ -27,3 +28,4 @@ using storage_info_ij_t =
 using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
 using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
 using global_parameter_t = gt::global_parameter<backend_t, real_t>;
+using global_parameter_int_t = gt::global_parameter<backend_t, gt::int_t>;

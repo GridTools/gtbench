@@ -235,12 +235,12 @@ vertical::vertical(grid_t const &grid, real_t dz, real_t dt)
       data_top_(sinfo_ij_, "data_top"), data_bottom_(sinfo_ij_, "data_bottom"),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
-      z_top_(sinfo_ij_, "z_top"),
       comp_(gt::make_computation<backend_t>(
           grid, p_dz() = gt::make_global_parameter(dz),
           p_dt() = gt::make_global_parameter(dt), p_data_top() = data_top_,
           p_data_bottom() = data_bottom_, p_alpha() = alpha_, p_beta() = beta_,
-          p_gamma() = gamma_, p_fact() = fact_, p_z_top() = z_top_,
+          p_gamma() = gamma_, p_fact() = fact_,
+          p_k_size() = gt::make_global_parameter(grid.k_size()),
           gt::make_multistage(
               gt::execute::forward(),
               gt::make_stage<stage_advection_w0>(p_data_top(), p_data_in())),
@@ -259,9 +259,8 @@ vertical::vertical(grid_t const &grid, real_t dz, real_t dt)
                   p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_advection_w_backward2>(
-                                  p_z(), p_c(), p_d(), p_x(), p_alpha(),
-                                  p_beta(), p_gamma(), p_data_top(), p_z_top(),
-                                  p_fact())),
+                                  p_z(), p_c(), p_d(), p_x(), p_beta(),
+                                  p_gamma(), p_fact(), p_k_size())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3>(
                                   p_data_out(), p_x(), p_z(), p_fact(),

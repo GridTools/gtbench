@@ -52,11 +52,11 @@ class vertical {
   storage_ij_t fact_;
 
   using p_z = gt::tmp_arg<15, storage_t>;
-  using p_z_top = gt::arg<16, storage_ij_t>;
-  storage_ij_t z_top_;
-  using p_x = gt::tmp_arg<17, storage_t>;
+  using p_x = gt::tmp_arg<16, storage_t>;
 
-  using p_w = gt::arg<18, storage_t>;
+  using p_w = gt::arg<17, storage_t>;
+
+  using p_k_size = gt::arg<18, global_parameter_int_t>;
 
 public:
   vertical(grid_t const &grid, real_t dz, real_t dt);
