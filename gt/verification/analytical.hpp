@@ -89,7 +89,7 @@ struct horizontal_advection {
   auto data() const {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
       using namespace gt::math;
-      return sin(x - t) * cos(y + 2 * t);
+      return sin(x - t) * cos(y + 2 * t) * cos(z);
     };
   }
 
@@ -102,6 +102,30 @@ struct horizontal_advection {
   }
   auto w() const {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
+  }
+
+  constexpr real_t domain_x() const { return 2 * M_PI; }
+  constexpr real_t domain_y() const { return 2 * M_PI; }
+  constexpr real_t domain_z() const { return 2 * M_PI; }
+};
+
+struct vertical_advection {
+  auto data() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return sin(x) * cos(y) * cos(z - 0.5 * t);
+    };
+  }
+
+  auto u() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
+  }
+
+  auto v() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
+  }
+  auto w() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0.5; };
   }
 
   constexpr real_t domain_x() const { return 2 * M_PI; }

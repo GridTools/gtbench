@@ -7,7 +7,8 @@ struct solver_state {
   solver_state(std::size_t resolution_x, std::size_t resolution_y,
                std::size_t resolution_z, DataInit &&data_init, UInit &&u_init,
                VInit &&v_init, WInit &&w_init)
-      : sinfo(resolution_x + 2 * halo, resolution_y + 2 * halo, resolution_z),
+      : sinfo(resolution_x + 2 * halo, resolution_y + 2 * halo,
+              resolution_z + 1),
         data(sinfo, std::forward<DataInit>(data_init), "data"),
         u(sinfo, std::forward<UInit>(u_init), "u"),
         v(sinfo, std::forward<VInit>(v_init), "v"),

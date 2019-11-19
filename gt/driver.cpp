@@ -131,6 +131,12 @@ auto hadv_stepper() {
   };
 }
 
+auto vadv_stepper() {
+  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz, real_t dt) {
+    return advection::vertical{grid, dz, dt};
+  };
+}
+
 int main() {
   {
     std::cout << "HORIZONTAL DIFFUSION: Spatial Convergence" << std::endl;
@@ -202,6 +208,23 @@ int main() {
     analytical::horizontal_advection exact;
     auto error_f = [exact](std::size_t resolution) {
       return run(hadv_stepper(), resolution, 1e-4, 1e-5 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
+
+  {
+    std::cout << "VERTICAL ADVECTION: Spatial Convergence" << std::endl;
+    analytical::vertical_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(vadv_stepper(), resolution, 1e-5, 1e-6, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 4, 128));
+  }
+  {
+    std::cout << "VERTICAL ADVECTION: Space-Time Convergence" << std::endl;
+    analytical::vertical_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(vadv_stepper(), resolution, 1e-4, 1e-5 / resolution, exact);
     };
     print_order_verification_result(order_verification(error_f, 8, 64));
   }
