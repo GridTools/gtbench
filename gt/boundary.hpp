@@ -12,7 +12,6 @@ struct periodic_boundary {
                  halo_i,
              (j + si.template length<1>() - halo_j) % si.template length<1>() +
                  halo_j,
-             (k + si.template length<2>() - halo_k) % si.template length<2>() +
-                 halo_k);
+             k);
   }
 };

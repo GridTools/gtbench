@@ -9,14 +9,14 @@
 
 static constexpr int halo_i = 3;
 static constexpr int halo_j = 3;
-static constexpr int halo_k = 1;
+static constexpr int halo_k = 0;
 
 using real_t = double;
 
 namespace gt = gridtools;
 
 using axis_t = gt::axis<1, gt::axis_config::offset_limit<3>>;
-using full_t = axis_t::full_interval::modify<halo_k, -halo_k>;
+using full_t = axis_t::full_interval;
 using grid_t = gt::grid<axis_t::axis_interval_t>;
 
 using backend_t = gt::backend::x86;

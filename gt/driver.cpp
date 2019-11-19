@@ -36,11 +36,9 @@ double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
         halo_i + gt::uint_t(resolution) + halo_i},
        {halo_j, halo_j, halo_j, halo_j + gt::uint_t(resolution) - 1,
         halo_j + gt::uint_t(resolution) + halo_j},
-       {halo_k, halo_k, halo_k, halo_k + gt::uint_t(resolution) - 1,
-        halo_k + gt::uint_t(resolution) + halo_k}}};
+       {0, 0, 0, gt::uint_t(resolution) - 1, gt::uint_t(resolution)}}};
 
-  const auto grid =
-      gt::make_grid(halos[0], halos[1], axis_t{resolution + 2 * halo_k});
+  const auto grid = gt::make_grid(halos[0], halos[1], axis_t{resolution});
   const real_t dx = initial.dx;
   const real_t dy = initial.dy;
   const real_t dz = initial.dz;
@@ -61,11 +59,12 @@ double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
     for (std::size_t j = halo_j; j < halo_j + resolution; ++j) {
       for (std::size_t k = halo_k; k < halo_k + resolution; ++k) {
         double diff = view(i, j, k) - expected(i, j, k);
-        error += diff * diff * dx * dy * dz;
+        error += diff * diff;
       }
     }
   }
-  return std::sqrt(error);
+
+  return std::sqrt(error * dx * dy * dz);
 }
 
 struct hdiff_stepper_f {
@@ -86,34 +85,49 @@ auto hdiff_stepper(real_t diffusion_coeff) {
   };
 }
 
-struct vdiff_stepper_f {
-  void operator()(solver_state &state) {
-    vdiff(state);
-    boundary.apply(state.data);
-  }
-
-  diffusion::vertical vdiff;
-  gt::boundary<periodic_boundary, backend_t> boundary;
-};
-
 auto vdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
                            real_t dz, real_t dt) {
-    return vdiff_stepper_f{{grid, dz, dt, diffusion_coeff},
-                           {halos, periodic_boundary{}}};
+    return diffusion::vertical{grid, dz, dt, diffusion_coeff};
   };
 }
 
 int main() {
-  std::cout << "HORIZONTAL DIFFUSION" << std::endl;
+  {
+    std::cout << "HORIZONTAL DIFFUSION: Spatial Convergence" << std::endl;
+    analytical::horizontal_diffusion exact{0.1};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(hdiff_stepper(exact.diffusion_coeff), resolution, 1e-3, 1e-4,
+                 exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 128));
+  }
+  {
+    std::cout << "HORIZONTAL DIFFUSION: Space-Time Convergence" << std::endl;
+    analytical::horizontal_diffusion exact{0.1};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(hdiff_stepper(exact.diffusion_coeff), resolution, 1e-2,
+                 1e-3 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
 
-  analytical::horizontal_diffusion exact{0.01};
-  auto error_f = [exact](std::size_t resolution) {
-    return run(hdiff_stepper(exact.diffusion_coeff), resolution, 1e-3, 1e-4,
-               exact);
-  };
-
-  std::vector<std::size_t> ns;
-  std::vector<double> errors, orders;
-  print_order_verification_result(order_verification(error_f, 4, 128));
+  {
+    std::cout << "VERTICAL DIFFUSION: Spatial Convergence" << std::endl;
+    analytical::vertical_diffusion exact{0.05};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(vdiff_stepper(exact.diffusion_coeff), resolution, 1e-4, 1e-5,
+                 exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 128));
+  }
+  {
+    std::cout << "VERTICAL DIFFUSION: Space-Time Convergence" << std::endl;
+    analytical::vertical_diffusion exact{0.05};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(vdiff_stepper(exact.diffusion_coeff), resolution, 1e-2,
+                 1e-3 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
 }
