@@ -141,10 +141,17 @@ template <class Analytical> struct to_domain_wrapper {
     };
   }
 
+  template <class F> auto remap_staggered_z(F &&f) const {
+    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,
+            t = t](gt::int_t i, gt::int_t j, gt::int_t k) {
+      return f((i - halo) * dx, (j - halo) * dy, k * dz - real_t(0.5) * dz, t);
+    };
+  }
+
   auto data() const { return remap(analytical.data()); }
   auto u() const { return remap(analytical.u()); }
   auto v() const { return remap(analytical.v()); }
-  auto w() const { return remap(analytical.w()); }
+  auto w() const { return remap_staggered_z(analytical.w()); }
 
   Analytical analytical;
   real_t dx, dy, dz, t;
