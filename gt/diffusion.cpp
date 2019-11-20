@@ -131,29 +131,26 @@ struct stage_diffusion_w3 {
 } // namespace
 
 horizontal::horizontal(gt::grid<typename axis_t::axis_interval_t> const &grid,
-                       real_t dx, real_t dy, real_t dt, real_t coeff)
+                       real_t dx, real_t dy, real_t coeff)
     : comp_(gt::make_computation<backend_t>(
           grid, p_dx() = gt::make_global_parameter(dx),
           p_dy() = gt::make_global_parameter(dy),
-          p_dt() = gt::make_global_parameter(dt),
           p_coeff() = gt::make_global_parameter(coeff),
           gt::make_multistage(
               gt::execute::parallel(),
               gt::make_stage<stage_horizontal>(p_out(), p_in(), p_dx(), p_dy(),
                                                p_dt(), p_coeff())))) {}
 
-void horizontal::operator()(solver_state &state) {
-  comp_.run(p_out() = state.tmp, p_in() = state.data);
-  std::swap(state.tmp, state.data);
+void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
+  comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
 }
 
-vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff)
+vertical::vertical(grid_t const &grid, real_t dz, real_t coeff)
     : sinfo_ij_(grid.i_size() + 2 * halo, grid.j_size() + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
       comp_(gt::make_computation<backend_t>(
           grid, p_dz() = gt::make_global_parameter(dz),
-          p_dt() = gt::make_global_parameter(dt),
           p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(grid.k_size()),
@@ -178,9 +175,9 @@ vertical::vertical(grid_t const &grid, real_t dz, real_t dt, real_t coeff)
                                   p_data_out(), p_x(), p_z(), p_fact(),
                                   p_data_in(), p_dt())))) {}
 
-void vertical::operator()(solver_state &state) {
-  comp_.run(p_data_out() = state.tmp, p_data_in() = state.data);
-  std::swap(state.tmp, state.data);
+void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
+  comp_.run(p_data_out() = out, p_data_in() = in,
+            p_dt() = gt::make_global_parameter(dt));
 }
 
 } // namespace diffusion

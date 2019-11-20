@@ -29,3 +29,5 @@ using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
 using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
 using global_parameter_t = gt::global_parameter<backend_t, real_t>;
 using global_parameter_int_t = gt::global_parameter<backend_t, gt::int_t>;
+
+using halos_t = gt::array<gt::halo_descriptor, 3>;

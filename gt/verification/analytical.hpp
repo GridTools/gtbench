@@ -133,6 +133,68 @@ struct vertical_advection {
   constexpr real_t domain_z() const { return 2 * M_PI; }
 };
 
+struct full_advection {
+  auto data() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return sin(x - t) * cos(y + 2 * t) * cos(z - 0.5 * t);
+    };
+  }
+
+  auto u() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 1; };
+  }
+
+  auto v() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return -2; };
+  }
+  auto w() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0.5; };
+  }
+
+  constexpr real_t domain_x() const { return 2 * M_PI; }
+  constexpr real_t domain_y() const { return 2 * M_PI; }
+  constexpr real_t domain_z() const { return 2 * M_PI; }
+};
+
+struct advection_diffusion {
+  static constexpr real_t phi = M_PI / 4;
+
+  auto data() const {
+    return [d = diffusion_coeff](real_t x, real_t y, real_t z,
+                                 real_t t) -> real_t {
+      using namespace gt::math;
+      return -sin(x) * sin(y * sin(phi) - z * cos(phi)) * exp(-2 * d * t);
+    };
+  }
+
+  auto u() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return -sin(x) * cos(y * sin(phi) - z * cos(phi));
+    };
+  }
+
+  auto v() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return sin(phi) * cos(x) * sin(y * sin(phi) - z * cos(phi));
+    };
+  }
+  auto w() const {
+    return [](real_t x, real_t y, real_t z, real_t t) -> real_t {
+      using namespace gt::math;
+      return -cos(phi) * cos(x) * sin(y * sin(phi) - z * cos(phi));
+    };
+  }
+
+  constexpr real_t domain_x() const { return 2 * M_PI; }
+  constexpr real_t domain_y() const { return 2 * M_PI * gt::math::sqrt(2.0); }
+  constexpr real_t domain_z() const { return 2 * M_PI * gt::math::sqrt(2.0); }
+
+  real_t diffusion_coeff;
+};
+
 template <class Analytical> struct to_domain_wrapper {
   template <class F> auto remap(F &&f) const {
     return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,

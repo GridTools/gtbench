@@ -33,7 +33,7 @@ double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
   solver_state state{resolution,  resolution,  resolution, initial.data(),
                      initial.u(), initial.v(), initial.w()};
 
-  const gt::array<gt::halo_descriptor, 3> halos{
+  const halos_t halos{
       {{halo, halo, halo, halo + gt::uint_t(resolution) - 1,
         halo + gt::uint_t(resolution) + halo},
        {halo, halo, halo, halo + gt::uint_t(resolution) - 1,
@@ -44,11 +44,11 @@ double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
   const real_t dx = initial.dx;
   const real_t dy = initial.dy;
   const real_t dz = initial.dz;
-  auto step = stepper(grid, halos, dx, dy, dz, dt);
+  auto step = stepper(grid, halos, dx, dy, dz);
 
   real_t t;
   for (t = 0; t < tmax; t += dt)
-    step(state);
+    step(state, dt);
 
   auto view = gt::make_host_view(state.data);
 
@@ -70,9 +70,10 @@ double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
 }
 
 struct hdiff_stepper_f {
-  void operator()(solver_state &state) {
+  void operator()(solver_state &state, real_t dt) {
     boundary.apply(state.data);
-    hdiff(state);
+    hdiff(state.data1, state.data, dt);
+    std::swap(state.data1, state.data);
   }
 
   diffusion::horizontal hdiff;
@@ -81,24 +82,33 @@ struct hdiff_stepper_f {
 
 auto hdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
-                           real_t dz, real_t dt) {
-    return hdiff_stepper_f{{grid, dx, dy, dt, diffusion_coeff},
+                           real_t dz) {
+    return hdiff_stepper_f{{grid, dx, dy, diffusion_coeff},
                            {halos, periodic_boundary{}}};
   };
 }
 
+struct vdiff_stepper_f {
+  void operator()(solver_state &state, real_t dt) {
+    vdiff(state.data1, state.data, dt);
+    std::swap(state.data1, state.data);
+  }
+
+  diffusion::vertical vdiff;
+};
+
 auto vdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
-                           real_t dz, real_t dt) {
-    return diffusion::vertical{grid, dz, dt, diffusion_coeff};
+                           real_t dz) {
+    return vdiff_stepper_f{{grid, dz, diffusion_coeff}};
   };
 }
 
 struct diff_stepper_f {
-  void operator()(solver_state &state) {
+  void operator()(solver_state &state, real_t dt) {
     boundary.apply(state.data);
-    hdiff(state);
-    vdiff(state);
+    hdiff(state.data1, state.data, dt);
+    vdiff(state.data, state.data1, dt);
   }
 
   diffusion::horizontal hdiff;
@@ -108,17 +118,18 @@ struct diff_stepper_f {
 
 auto diff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
-                           real_t dz, real_t dt) {
-    return diff_stepper_f{{grid, dx, dy, dt, diffusion_coeff},
-                          {grid, dz, dt, diffusion_coeff},
+                           real_t dz) {
+    return diff_stepper_f{{grid, dx, dy, diffusion_coeff},
+                          {grid, dz, diffusion_coeff},
                           {halos, periodic_boundary{}}};
   };
 }
 
 struct hadv_stepper_f {
-  void operator()(solver_state &state) {
+  void operator()(solver_state &state, real_t dt) {
     boundary.apply(state.data);
-    hadv(state);
+    hadv(state.data1, state.data, state.u, state.v, dt);
+    std::swap(state.data1, state.data);
   }
 
   advection::horizontal hadv;
@@ -126,14 +137,83 @@ struct hadv_stepper_f {
 };
 
 auto hadv_stepper() {
-  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz, real_t dt) {
-    return hadv_stepper_f{{grid, dx, dy, dt}, {halos, periodic_boundary{}}};
+  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz) {
+    return hadv_stepper_f{{grid, dx, dy}, {halos, periodic_boundary{}}};
   };
 }
 
+struct vadv_stepper_f {
+  void operator()(solver_state &state, real_t dt) {
+    vadv(state.data1, state.data, state.w, dt);
+    std::swap(state.data1, state.data);
+  }
+
+  advection::vertical vadv;
+};
+
 auto vadv_stepper() {
-  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz, real_t dt) {
-    return advection::vertical{grid, dz, dt};
+  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz) {
+    return vadv_stepper_f{{grid, dz}};
+  };
+}
+
+struct rkadv_stepper_f {
+  void operator()(solver_state &state, real_t dt) {
+    boundary.apply(state.data);
+    rk_step(state.data1, state.data, state.data, state.u, state.v, state.w,
+            dt / 3);
+    boundary.apply(state.data1);
+    rk_step(state.data2, state.data1, state.data, state.u, state.v, state.w,
+            dt / 2);
+    boundary.apply(state.data2);
+    rk_step(state.data, state.data2, state.data, state.u, state.v, state.w, dt);
+  }
+
+  advection::runge_kutta_step rk_step;
+  gt::boundary<periodic_boundary, backend_t> boundary;
+};
+
+auto rkadv_stepper() {
+  return [](auto grid, auto halos, real_t dx, real_t dy, real_t dz) {
+    return rkadv_stepper_f{{grid, dx, dy, dz}, {halos, periodic_boundary{}}};
+  };
+}
+
+struct full_stepper_f {
+  void operator()(solver_state &state, real_t dt) {
+    // VDIFF
+    vdiff(state.data1, state.data, dt);
+    std::swap(state.data1, state.data);
+
+    // ADV
+    boundary.apply(state.data);
+    rk_step(state.data1, state.data, state.data, state.u, state.v, state.w,
+            dt / 3);
+    boundary.apply(state.data1);
+    rk_step(state.data2, state.data1, state.data, state.u, state.v, state.w,
+            dt / 2);
+    boundary.apply(state.data2);
+    rk_step(state.data, state.data2, state.data, state.u, state.v, state.w, dt);
+
+    // HDIFF
+    boundary.apply(state.data);
+    hdiff(state.data1, state.data, dt);
+    std::swap(state.data1, state.data);
+  }
+
+  diffusion::horizontal hdiff;
+  diffusion::vertical vdiff;
+  advection::runge_kutta_step rk_step;
+  gt::boundary<periodic_boundary, backend_t> boundary;
+};
+
+auto full_stepper(real_t diffusion_coeff) {
+  return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
+                           real_t dz) {
+    return full_stepper_f{{grid, dx, dy, diffusion_coeff},
+                          {grid, dz, diffusion_coeff},
+                          {grid, dx, dy, dz},
+                          {halos, periodic_boundary{}}};
   };
 }
 
@@ -225,6 +305,42 @@ int main() {
     analytical::vertical_advection exact;
     auto error_f = [exact](std::size_t resolution) {
       return run(vadv_stepper(), resolution, 1e-4, 1e-5 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
+
+  {
+    std::cout << "RUNGE-KUTTA ADVECTION: Spatial Convergence" << std::endl;
+    analytical::full_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(rkadv_stepper(), resolution, 1e-5, 1e-6, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 4, 128));
+  }
+  {
+    std::cout << "RUNGE-KUTTA ADVECTION: Space-Time Convergence" << std::endl;
+    analytical::full_advection exact;
+    auto error_f = [exact](std::size_t resolution) {
+      return run(rkadv_stepper(), resolution, 1e-4, 1e-5 / resolution, exact);
+    };
+    print_order_verification_result(order_verification(error_f, 8, 64));
+  }
+
+  {
+    std::cout << "ADVECTION-DIFFUSION: Spatial Convergence" << std::endl;
+    analytical::advection_diffusion exact{0.05};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(full_stepper(exact.diffusion_coeff), resolution, 1e-5, 1e-6,
+                 exact);
+    };
+    print_order_verification_result(order_verification(error_f, 4, 128));
+  }
+  {
+    std::cout << "ADVECTION-DIFFUSION: Space-Time Convergence" << std::endl;
+    analytical::advection_diffusion exact{0.05};
+    auto error_f = [exact](std::size_t resolution) {
+      return run(full_stepper(exact.diffusion_coeff), resolution, 1e-4,
+                 1e-5 / resolution, exact);
     };
     print_order_verification_result(order_verification(error_f, 8, 64));
   }

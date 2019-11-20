@@ -79,8 +79,8 @@ struct stage_v {
 struct stage_horizontal {
   using out = inout_accessor<0>;
   using in = in_accessor<1, extent<-3, 3, -3, 3>>;
-  using u = in_accessor<2, extent<-3, 3, 0, 0>>;
-  using v = in_accessor<3, extent<0, 0, -3, 3>>;
+  using u = in_accessor<2>;
+  using v = in_accessor<3>;
 
   using dx = in_accessor<4>;
   using dy = in_accessor<5>;
@@ -119,7 +119,7 @@ struct stage_advection_w_forward1 {
 
   using dz = in_accessor<8>;
   using dt = in_accessor<9>;
-  using w = in_accessor<10>;
+  using w = in_accessor<10, extent<0, 0, 0, 0, -1, 1>>;
 
   using k_size = in_accessor<11>;
 
@@ -202,31 +202,56 @@ struct stage_advection_w3 {
   }
 };
 
+struct stage_advection_w3_rk {
+  using out = inout_accessor<0>;
+  using x = in_accessor<1>;
+  using z = in_accessor<2>;
+  using fact = in_accessor<3>;
+  using in = in_accessor<4, extent<-3, 3, -3, 3>>;
+  using in0 = in_accessor<5>;
+
+  using u = in_accessor<6>;
+  using v = in_accessor<7>;
+  using dx = in_accessor<8>;
+  using dy = in_accessor<9>;
+  using dt = in_accessor<10>;
+
+  using param_list =
+      make_param_list<out, x, z, fact, in, in0, u, v, dx, dy, dt>;
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t) {
+    auto vout = gridtools::call<tridiagonal::periodic3, full_t>::with(
+        eval, x(), z(), fact());
+    auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
+    auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
+    eval(out()) = eval(in0() - dt() * (flx + fly) + (vout - in()));
+  }
+};
+
 } // namespace
 
-horizontal::horizontal(grid_t const &grid, real_t dx, real_t dy, real_t dt)
+horizontal::horizontal(grid_t const &grid, real_t dx, real_t dy)
     : comp_(gt::make_computation<backend_t>(
           grid, p_dx() = gt::make_global_parameter(dx),
           p_dy() = gt::make_global_parameter(dy),
-          p_dt() = gt::make_global_parameter(dt),
           gt::make_multistage(
               gt::execute::parallel(),
               gt::make_stage<stage_horizontal>(p_out(), p_in(), p_u(), p_v(),
                                                p_dx(), p_dy(), p_dt())))) {}
 
-void horizontal::operator()(solver_state &state) {
-  comp_.run(p_out() = state.tmp, p_in() = state.data, p_u() = state.u,
-            p_v() = state.v);
-  std::swap(state.tmp, state.data);
+void horizontal::operator()(storage_t &out, storage_t const &in,
+                            storage_t const &u, storage_t const &v, real_t dt) {
+  comp_.run(p_out() = out, p_in() = in, p_u() = u, p_v() = v,
+            p_dt() = gt::make_global_parameter(dt));
 }
 
-vertical::vertical(grid_t const &grid, real_t dz, real_t dt)
+vertical::vertical(grid_t const &grid, real_t dz)
     : sinfo_ij_(grid.i_size() + 2 * halo, grid.j_size() + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
       comp_(gt::make_computation<backend_t>(
-          grid, p_dz() = gt::make_global_parameter(dz),
-          p_dt() = gt::make_global_parameter(dt), p_alpha() = alpha_,
+          grid, p_dz() = gt::make_global_parameter(dz), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(grid.k_size()),
           gt::make_multistage(gt::execute::forward(),
@@ -250,10 +275,51 @@ vertical::vertical(grid_t const &grid, real_t dz, real_t dt)
                                   p_data_out(), p_x(), p_z(), p_fact(),
                                   p_data_in(), p_dt())))) {}
 
-void vertical::operator()(solver_state &state) {
-  comp_.run(p_data_out() = state.tmp, p_data_in() = state.data,
-            p_w() = state.w);
-  std::swap(state.tmp, state.data);
+void vertical::operator()(storage_t &out, storage_t const &in,
+                          storage_t const &w, real_t dt) {
+  comp_.run(p_data_out() = out, p_data_in() = in, p_w() = w,
+            p_dt() = gt::make_global_parameter(dt));
+}
+
+runge_kutta_step::runge_kutta_step(grid_t const &grid, real_t dx, real_t dy,
+                                   real_t dz)
+    : sinfo_ij_(grid.i_size() + 2 * halo, grid.j_size() + 2 * halo, 1),
+      alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
+      gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
+      comp_(gt::make_computation<backend_t>(
+          grid, p_dx() = gt::make_global_parameter(dx),
+          p_dy() = gt::make_global_parameter(dy),
+          p_dz() = gt::make_global_parameter(dz), p_alpha() = alpha_,
+          p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
+          p_k_size() = gt::make_global_parameter(grid.k_size()),
+          gt::make_multistage(gt::execute::forward(),
+                              gt::make_stage<stage_advection_w_forward1>(
+                                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),
+                                  p_c(), p_d(), p_data_in(), p_dz(), p_dt(),
+                                  p_w(), p_k_size())),
+          gt::make_multistage(
+              gt::execute::backward(),
+              gt::make_stage<stage_advection_w_backward1>(p_x(), p_c(), p_d())),
+          gt::make_multistage(
+              gt::execute::forward(),
+              gt::make_stage<stage_advection_w_forward2>(
+                  p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
+          gt::make_multistage(gt::execute::backward(),
+                              gt::make_stage<stage_advection_w_backward2>(
+                                  p_z(), p_c(), p_d(), p_x(), p_beta(),
+                                  p_gamma(), p_fact(), p_k_size())),
+          gt::make_multistage(gt::execute::parallel(),
+                              gt::make_stage<stage_advection_w3_rk>(
+                                  p_data_out(), p_x(), p_z(), p_fact(),
+                                  p_data_in(), p_data_in0(), p_u(), p_v(),
+                                  p_dx(), p_dy(), p_dt())))) {}
+
+void runge_kutta_step::operator()(storage_t &out, storage_t const &in,
+                                  storage_t const &in0, storage_t const &u,
+                                  storage_t const &v, storage_t const &w,
+                                  real_t dt) {
+  comp_.run(p_data_out() = out, p_data_in() = in, p_data_in0() = in0, p_u() = u,
+            p_v() = v, p_w() = w, p_dt() = gt::make_global_parameter(dt));
 }
 
 } // namespace advection
