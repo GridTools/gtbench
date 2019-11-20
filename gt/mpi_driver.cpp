@@ -6,65 +6,77 @@
 
 #include "common.hpp"
 
-MPI_Datatype cube_dtype(gt::array<gt::uint_t, 3> strides,
-                        gt::array<gt::uint_t, 3> sizes) {
-  for (int i = 0; i < 3; ++i) {
-    for (int j = i; j > 0 && strides[j - 1] > strides[j]; --j) {
-      std::swap(strides[j], strides[j - 1]);
-      std::swap(sizes[j], sizes[j - 1]);
+struct halo_exchange_f {
+  halo_exchange_f(MPI_Comm comm_cart, storage_t::storage_info_t const &sinfo)
+      : comm_cart(comm_cart), send_offsets{{{0, 0}, {0, 0}}},
+        recv_offsets{{{0, 0}, {0, 0}}} {
+    auto strides = sinfo.strides();
+    auto sizes = sinfo.total_lengths();
+
+    gt::array<decltype(sizes), 2> halo_sizes;
+    for (int dim = 0; dim < 2; ++dim) {
+      halo_sizes[dim] = sizes;
+      for (int i = 0; i < 2; ++i)
+        halo_sizes[dim][i] = i == dim ? halo : sizes[i] - 2 * halo;
+
+      for (int i = 0; i < 2; ++i) {
+        if (i == dim) {
+          send_offsets[dim].first += halo * strides[i];
+          send_offsets[dim].second += (sizes[i] - 2 * halo) * strides[i];
+          recv_offsets[dim].first += 0 * strides[i];
+          recv_offsets[dim].second += (sizes[i] - halo) * strides[i];
+        } else {
+          send_offsets[dim].first += halo * strides[i];
+          send_offsets[dim].second += halo * strides[i];
+          recv_offsets[dim].first += halo * strides[i];
+          recv_offsets[dim].second += halo * strides[i];
+        }
+      }
+    }
+
+    // sort strides and halo_sizes by strides
+    for (int i = 0; i < 3; ++i) {
+      for (int j = i; j > 0 && strides[j - 1] > strides[j]; --j) {
+        std::swap(strides[j], strides[j - 1]);
+        for (int dim = 0; dim < 2; ++dim)
+          std::swap(halo_sizes[dim][j], halo_sizes[dim][j - 1]);
+      }
+    }
+
+    MPI_Datatype mpi_real_dtype;
+    MPI_Type_match_size(MPI_TYPECLASS_REAL, sizeof(real_t), &mpi_real_dtype);
+
+    for (int dim = 0; dim < 2; ++dim) {
+      MPI_Datatype plane;
+      MPI_Type_hvector(halo_sizes[dim][1], halo_sizes[dim][0],
+                       strides[1] * sizeof(real_t), mpi_real_dtype, &plane);
+      MPI_Type_hvector(halo_sizes[dim][2], 1, strides[2] * sizeof(real_t),
+                       plane, &halo_dtypes[dim]);
+      MPI_Type_commit(&halo_dtypes[dim]);
+      MPI_Type_free(&plane);
     }
   }
 
-  auto mpi_type = std::is_same<real_t, double>::value ? MPI_DOUBLE : MPI_FLOAT;
-
-  MPI_Datatype plane;
-  MPI_Type_hvector(sizes[1], sizes[0], strides[1] * sizeof(real_t), mpi_type,
-                   &plane);
-  MPI_Type_commit(&plane);
-  MPI_Datatype cube;
-  MPI_Type_hvector(sizes[2], 1, strides[2] * sizeof(real_t), plane, &cube);
-  MPI_Type_commit(&cube);
-  return cube;
-}
-
-struct halo_exchange_f {
   void operator()(storage_t &storage) const {
-    real_t *ptr = storage.get_storage_ptr()->get_target_ptr();
-    auto strides = storage.strides();
-    gt::uint_t size_x = storage.total_length<0>();
-    gt::uint_t size_y = storage.total_length<1>();
-    gt::uint_t size_z = storage.total_length<2>();
+    auto ptr = storage.get_storage_ptr()->get_target_ptr();
+    for (int dim = 0; dim < 2; ++dim) {
+      int lower, upper;
+      MPI_Cart_shift(comm_cart, dim, 1, &lower, &upper);
 
-    auto halo_x = cube_dtype(strides, {halo, size_y - 2 * halo, size_z});
-    auto halo_y = cube_dtype(strides, {size_x - 2 * halo, halo, size_z});
+      MPI_Sendrecv(ptr + send_offsets[dim].first, 1, halo_dtypes[dim], lower, 0,
+                   ptr + recv_offsets[dim].second, 1, halo_dtypes[dim], upper,
+                   0, comm_cart, MPI_STATUS_IGNORE);
 
-    auto start = [&](gt::uint_t i, gt::uint_t j) {
-      return ptr + i * strides[0] + j * strides[1];
-    };
-
-    int lower_x, upper_x;
-    MPI_Cart_shift(comm_cart, 0, 1, &lower_x, &upper_x);
-    int lower_y, upper_y;
-    MPI_Cart_shift(comm_cart, 1, 1, &lower_y, &upper_y);
-
-    MPI_Sendrecv(start(halo, halo), 1, halo_x, lower_x, 0,
-                 start(size_x - halo, halo), 1, halo_x, upper_x, 0, comm_cart,
-                 MPI_STATUS_IGNORE);
-
-    MPI_Sendrecv(start(size_x - 2 * halo, halo), 1, halo_x, upper_x, 1,
-                 start(0, halo), 1, halo_x, lower_x, 1, comm_cart,
-                 MPI_STATUS_IGNORE);
-
-    MPI_Sendrecv(start(halo, halo), 1, halo_y, lower_y, 2,
-                 start(halo, size_y - halo), 1, halo_y, upper_y, 2, comm_cart,
-                 MPI_STATUS_IGNORE);
-
-    MPI_Sendrecv(start(halo, size_y - 2 * halo), 1, halo_y, upper_y, 3,
-                 start(halo, 0), 1, halo_y, lower_y, 3, comm_cart,
-                 MPI_STATUS_IGNORE);
+      MPI_Sendrecv(ptr + send_offsets[dim].second, 1, halo_dtypes[dim], upper,
+                   1, ptr + recv_offsets[dim].first, 1, halo_dtypes[dim], lower,
+                   1, comm_cart, MPI_STATUS_IGNORE);
+    }
   }
 
   MPI_Comm comm_cart;
+  std::array<MPI_Datatype, 2> halo_dtypes;
+  std::array<std::pair<std::size_t, std::size_t>, 2> send_offsets;
+  std::array<std::pair<std::size_t, std::size_t>, 2> recv_offsets;
 };
 
 int main(int argc, char **argv) {
@@ -113,10 +125,10 @@ int main(int argc, char **argv) {
         halo + gt::uint_t(resolution_y) + halo},
        {0, 0, 0, gt::uint_t(resolution_z) - 1, gt::uint_t(resolution_z)}}};
 
-  halo_exchange_f exchange{comm_cart};
-
   storage_t::storage_info_t sinfo(resolution_x + 2 * halo,
                                   resolution_y + 2 * halo, resolution_z);
+
+  halo_exchange_f exchange{comm_cart, sinfo};
 
   storage_t storage(sinfo, rank, "storage");
 
