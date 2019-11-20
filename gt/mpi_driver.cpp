@@ -5,6 +5,7 @@
 #include <mpi.h>
 
 #include "common.hpp"
+#include "solver_state.hpp"
 #include "verification/analytical.hpp"
 
 struct halo_exchange_f {
@@ -104,6 +105,7 @@ struct mpi_setup {
     auto next_offset_x = global_resolution_x * (coords[0] + 1) / procs_x;
     offset_y = global_resolution_y * coords[1] / procs_y;
     auto next_offset_y = global_resolution_y * (coords[1] + 1) / procs_y;
+    offset_z = 0;
 
     resolution_x = next_offset_x - offset_x;
     resolution_y = next_offset_y - offset_y;
@@ -122,9 +124,59 @@ struct mpi_setup {
 };
 
 template <class Stepper, class Analytical>
-double run(Stepper &&stepper, std::size_t resolution_x,
-           std::size_t resolution_y, std::size_t resolution_z, real_t tmax,
-           real_t dt, Analytical &&analytical) {}
+double run(Stepper &&stepper, mpi_setup const &setup, real_t tmax, real_t dt,
+           Analytical &&exact) {
+  const auto initial = analytical::to_domain(
+      exact, setup.global_resolution_x, setup.global_resolution_y,
+      setup.global_resolution_z, 0, setup.offset_x, setup.offset_y,
+      setup.offset_z);
+  solver_state state(setup.resolution_x, setup.resolution_y, setup.resolution_z,
+                     initial.data(), initial.u(), initial.v(), initial.w());
+
+  const halos_t halos{
+      {{halo, halo, halo, halo + gt::uint_t(setup.resolution_x) - 1,
+        halo + gt::uint_t(setup.resolution_x) + halo},
+       {halo, halo, halo, halo + gt::uint_t(setup.resolution_y) - 1,
+        halo + gt::uint_t(setup.resolution_y) + halo},
+       {0, 0, 0, gt::uint_t(setup.resolution_z) - 1,
+        gt::uint_t(setup.resolution_z)}}};
+
+  const auto grid =
+      gt::make_grid(halos[0], halos[1], axis_t{setup.resolution_z});
+  const real_t dx = initial.dx;
+  const real_t dy = initial.dy;
+  const real_t dz = initial.dz;
+
+  halo_exchange_f exchange{setup.comm_cart, state.sinfo};
+
+  auto step = stepper(grid, exchange, dx, dy, dz);
+
+  real_t t;
+  for (t = 0; t < tmax; t += dt)
+    step(state, dt);
+
+  auto view = gt::make_host_view(state.data);
+
+  const auto expected =
+      analytical::to_domain(exact, setup.global_resolution_x,
+                            setup.global_resolution_y,
+                            setup.global_resolution_z, t, setup.offset_x,
+                            setup.offset_y, setup.offset_z)
+          .data();
+  double error = 0.0;
+#pragma omp parallel for reduction(+ : error)
+  for (std::size_t i = halo; i < halo + resolution; ++i) {
+    for (std::size_t j = halo; j < halo + resolution; ++j) {
+      for (std::size_t k = 0; k < resolution; ++k) {
+        double diff = view(i, j, k) - expected(i, j, k);
+        error += diff * diff;
+      }
+    }
+  }
+
+  MPI_Allreduce(&error, &error, 1, MPI_DOUBLE, MPI_SUM, setup.comm_cart);
+  return error;
+}
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
