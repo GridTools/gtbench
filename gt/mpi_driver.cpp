@@ -5,6 +5,7 @@
 #include <mpi.h>
 
 #include "common.hpp"
+#include "verification/analytical.hpp"
 
 struct halo_exchange_f {
   halo_exchange_f(MPI_Comm comm_cart, storage_t::storage_info_t const &sinfo)
@@ -59,17 +60,20 @@ struct halo_exchange_f {
 
   void operator()(storage_t &storage) const {
     auto ptr = storage.get_storage_ptr()->get_target_ptr();
+    int tag = 0;
     for (int dim = 0; dim < 2; ++dim) {
       int lower, upper;
       MPI_Cart_shift(comm_cart, dim, 1, &lower, &upper);
 
-      MPI_Sendrecv(ptr + send_offsets[dim].first, 1, halo_dtypes[dim], lower, 0,
-                   ptr + recv_offsets[dim].second, 1, halo_dtypes[dim], upper,
-                   0, comm_cart, MPI_STATUS_IGNORE);
+      MPI_Sendrecv(ptr + send_offsets[dim].first, 1, halo_dtypes[dim], lower,
+                   tag, ptr + recv_offsets[dim].second, 1, halo_dtypes[dim],
+                   upper, tag, comm_cart, MPI_STATUS_IGNORE);
+      ++tag;
 
       MPI_Sendrecv(ptr + send_offsets[dim].second, 1, halo_dtypes[dim], upper,
-                   1, ptr + recv_offsets[dim].first, 1, halo_dtypes[dim], lower,
-                   1, comm_cart, MPI_STATUS_IGNORE);
+                   tag, ptr + recv_offsets[dim].first, 1, halo_dtypes[dim],
+                   lower, tag, comm_cart, MPI_STATUS_IGNORE);
+      ++tag;
     }
   }
 
@@ -79,6 +83,49 @@ struct halo_exchange_f {
   std::array<std::pair<std::size_t, std::size_t>, 2> recv_offsets;
 };
 
+struct mpi_setup {
+  mpi_setup(std::size_t global_resolution_x, std::size_t global_resolution_y,
+            std::size_t global_resolution_z, int procs_x, int procs_y)
+      : global_resolution_x(global_resolution_x),
+        global_resolution_y(global_resolution_y),
+        global_resolution_z(global_resolution_z) {
+    std::array<int, 2> dims = {procs_x, procs_y}, periods = {1, 1};
+    MPI_Cart_create(MPI_COMM_WORLD, 2, dims.data(), periods.data(), 1,
+                    &comm_cart);
+
+    int rank, size;
+    MPI_Comm_rank(comm_cart, &rank);
+    MPI_Comm_size(comm_cart, &size);
+
+    std::array<int, 2> coords;
+    MPI_Cart_coords(comm_cart, rank, 2, coords.data());
+
+    offset_x = global_resolution_x * coords[0] / procs_x;
+    auto next_offset_x = global_resolution_x * (coords[0] + 1) / procs_x;
+    offset_y = global_resolution_y * coords[1] / procs_y;
+    auto next_offset_y = global_resolution_y * (coords[1] + 1) / procs_y;
+
+    resolution_x = next_offset_x - offset_x;
+    resolution_y = next_offset_y - offset_y;
+    resolution_z = global_resolution_z;
+
+    if (resolution_x < halo || resolution_y < halo) {
+      std::cerr << "too few grid points per process" << std::endl;
+      MPI_Abort(comm_cart, 2);
+    }
+  }
+
+  MPI_Comm comm_cart;
+  std::size_t global_resolution_x, global_resolution_y, global_resolution_z;
+  std::size_t resolution_x, resolution_y, resolution_z;
+  std::size_t offset_x, offset_y, offset_z;
+};
+
+template <class Stepper, class Analytical>
+double run(Stepper &&stepper, std::size_t resolution_x,
+           std::size_t resolution_y, std::size_t resolution_z, real_t tmax,
+           real_t dt, Analytical &&analytical) {}
+
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
 
@@ -87,61 +134,36 @@ int main(int argc, char **argv) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  const std::size_t nx = std::atoll(argv[1]);
-  const std::size_t ny = std::atoll(argv[2]);
-  const std::size_t nz = std::atoll(argv[3]);
-  const int px = std::atoi(argv[4]);
-  const int py = std::atoi(argv[5]);
+  mpi_setup setup(std::atoll(argv[1]), std::atoll(argv[2]), std::atoll(argv[3]),
+                  std::atoi(argv[4]), std::atoi(argv[5]));
 
-  std::array<int, 2> dims = {px, py}, periods = {1, 1};
-  MPI_Comm comm_cart;
-  MPI_Cart_create(MPI_COMM_WORLD, 2, dims.data(), periods.data(), 1,
-                  &comm_cart);
-  int rank, size;
-  MPI_Comm_rank(comm_cart, &rank);
-  MPI_Comm_size(comm_cart, &size);
+  storage_t::storage_info_t sinfo(setup.resolution_x + 2 * halo,
+                                  setup.resolution_y + 2 * halo,
+                                  setup.resolution_z);
 
-  std::array<int, 2> coords;
-  MPI_Cart_coords(comm_cart, rank, 2, coords.data());
+  halo_exchange_f exchange{setup.comm_cart, sinfo};
 
-  std::size_t begin_x = nx * coords[0] / px;
-  std::size_t end_x = nx * (coords[0] + 1) / px;
-  std::size_t begin_y = ny * coords[1] / py;
-  std::size_t end_y = ny * (coords[1] + 1) / py;
+  analytical::horizontal_diffusion exact{0.1};
 
-  std::size_t resolution_x = end_x - begin_x;
-  std::size_t resolution_y = end_y - begin_y;
-  std::size_t resolution_z = nz;
+  auto initial = analytical::to_domain(
+      exact, setup.global_resolution_x, setup.global_resolution_y,
+      setup.global_resolution_z, 0, setup.offset_x, setup.offset_y);
 
-  if (resolution_x < 3 || resolution_y < 3) {
-    std::cerr << "too few grid points per process" << std::endl;
-    MPI_Abort(comm_cart, 2);
-  }
-
-  halos_t halos{
-      {{halo, halo, halo, halo + gt::uint_t(resolution_x) - 1,
-        halo + gt::uint_t(resolution_x) + halo},
-       {halo, halo, halo, halo + gt::uint_t(resolution_y) - 1,
-        halo + gt::uint_t(resolution_y) + halo},
-       {0, 0, 0, gt::uint_t(resolution_z) - 1, gt::uint_t(resolution_z)}}};
-
-  storage_t::storage_info_t sinfo(resolution_x + 2 * halo,
-                                  resolution_y + 2 * halo, resolution_z);
-
-  halo_exchange_f exchange{comm_cart, sinfo};
-
-  storage_t storage(sinfo, rank, "storage");
+  storage_t storage(sinfo, initial.data(), "storage");
 
   exchange(storage);
 
   auto view = gt::make_host_view(storage);
 
+  int rank, size;
+  MPI_Comm_rank(setup.comm_cart, &rank);
+  MPI_Comm_size(setup.comm_cart, &size);
   for (int r = 0; r < size; ++r) {
     if (r == rank) {
       std::cout << "rank " << rank << std::endl;
-      for (std::size_t k = 0; k < resolution_z; ++k) {
-        for (std::size_t j = 0; j < resolution_y + 2 * halo; ++j) {
-          for (std::size_t i = 0; i < resolution_x + 2 * halo; ++i)
+      for (std::size_t k = 0; k < setup.resolution_z; ++k) {
+        for (std::size_t j = 0; j < setup.resolution_y + 2 * halo; ++j) {
+          for (std::size_t i = 0; i < setup.resolution_x + 2 * halo; ++i)
             std::cout << view(i, j, k) << " ";
           std::cout << std::endl;
         }
@@ -149,7 +171,7 @@ int main(int argc, char **argv) {
       }
       std::cout.flush();
     }
-    MPI_Barrier(comm_cart);
+    MPI_Barrier(setup.comm_cart);
   }
 
   MPI_Finalize();
