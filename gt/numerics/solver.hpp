@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../common.hpp"
 #include "advection.hpp"
-#include "common.hpp"
 #include "diffusion.hpp"
 
 struct solver_state {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.hpp"
+#include "../common.hpp"
 
 namespace diffusion {
 
@@ -15,7 +15,7 @@ class horizontal {
 public:
   horizontal(grid_t const &grid, real_t dx, real_t dy, real_t coeff);
 
-  void operator()(storage_t& out, storage_t const& in, real_t dt);
+  void operator()(storage_t &out, storage_t const &in, real_t dt);
 
 private:
   gt::computation<p_out, p_in, p_dt> comp_;
@@ -53,7 +53,7 @@ class vertical {
 public:
   vertical(grid_t const &grid, real_t dz, real_t coeff);
 
-  void operator()(storage_t& out, storage_t const &in, real_t dt);
+  void operator()(storage_t &out, storage_t const &in, real_t dt);
 
 private:
   gt::computation<p_data_in, p_data_out, p_dt> comp_;

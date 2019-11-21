@@ -4,7 +4,7 @@
 
 #include "boundary.hpp"
 #include "common.hpp"
-#include "solver.hpp"
+#include "numerics/solver.hpp"
 #include "verification/analytical.hpp"
 #include "verification/convergence.hpp"
 
