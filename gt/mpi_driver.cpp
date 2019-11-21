@@ -165,9 +165,9 @@ double run(Stepper &&stepper, mpi_setup const &setup, real_t tmax, real_t dt,
           .data();
   double error = 0.0;
 #pragma omp parallel for reduction(+ : error)
-  for (std::size_t i = halo; i < halo + resolution; ++i) {
-    for (std::size_t j = halo; j < halo + resolution; ++j) {
-      for (std::size_t k = 0; k < resolution; ++k) {
+  for (std::size_t i = halo; i < halo + setup.resolution_x; ++i) {
+    for (std::size_t j = halo; j < halo + setup.resolution_y; ++j) {
+      for (std::size_t k = 0; k < setup.resolution_z; ++k) {
         double diff = view(i, j, k) - expected(i, j, k);
         error += diff * diff;
       }
