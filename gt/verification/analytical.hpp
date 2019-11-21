@@ -197,18 +197,20 @@ struct advection_diffusion {
 
 template <class Analytical> struct to_domain_wrapper {
   template <class F> auto remap(F &&f) const {
-    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,
-            t = t, offset_i = offset_i, offset_j = offset_j](gt::int_t i, gt::int_t j, gt::int_t k) {
-      return f((i - halo + offset_i) * dx, (j - halo + offset_j) * dy, k * dz,
-               t);
+    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz, t = t,
+            offset_i = offset_i, offset_j = offset_j,
+            offset_k = offset_k](gt::int_t i, gt::int_t j, gt::int_t k) {
+      return f((i - halo + offset_i) * dx, (j - halo + offset_j) * dy,
+               (k + offset_k) * dz, t);
     };
   }
 
   template <class F> auto remap_staggered_z(F &&f) const {
-    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz,
-            t = t, offset_i = offset_i, offset_j = offset_j](gt::int_t i, gt::int_t j, gt::int_t k) {
+    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz, t = t,
+            offset_i = offset_i, offset_j = offset_j,
+            offset_k = offset_k](gt::int_t i, gt::int_t j, gt::int_t k) {
       return f((i - halo + offset_i) * dx, (j - halo + offset_j) * dy,
-               k * dz - real_t(0.5) * dz, t);
+               (k + offset_k) * dz - real_t(0.5) * dz, t);
     };
   }
 
@@ -219,21 +221,23 @@ template <class Analytical> struct to_domain_wrapper {
 
   Analytical analytical;
   real_t dx, dy, dz, t;
-  gt::int_t offset_i, offset_j;
+  gt::int_t offset_i, offset_j, offset_k;
 };
 
 template <class Analytical>
 to_domain_wrapper<Analytical>
 to_domain(Analytical &&analytical, std::size_t resolution_x,
           std::size_t resolution_y, std::size_t resolution_z, real_t t,
-          gt::int_t offset_i = 0, gt::int_t offset_j = 0) {
+          gt::int_t offset_i = 0, gt::int_t offset_j = 0,
+          gt::int_t offset_k = 0) {
   return {std::forward<Analytical>(analytical),
           analytical.domain_x() / resolution_x,
           analytical.domain_y() / resolution_y,
           analytical.domain_z() / resolution_z,
           t,
           offset_i,
-          offset_j};
+          offset_j,
+          offset_k};
 }
 
 } // namespace analytical

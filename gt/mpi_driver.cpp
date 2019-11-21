@@ -5,8 +5,9 @@
 #include <mpi.h>
 
 #include "common.hpp"
-#include "solver_state.hpp"
+#include "solver.hpp"
 #include "verification/analytical.hpp"
+#include "verification/convergence.hpp"
 
 struct halo_exchange_f {
   halo_exchange_f(MPI_Comm comm_cart, storage_t::storage_info_t const &sinfo)
@@ -50,36 +51,41 @@ struct halo_exchange_f {
 
     for (int dim = 0; dim < 2; ++dim) {
       MPI_Datatype plane;
+      halo_dtypes[dim] = std::shared_ptr<MPI_Datatype>(new MPI_Datatype,
+                                                       [](MPI_Datatype *type) {
+                                                         MPI_Type_free(type);
+                                                         delete type;
+                                                       });
       MPI_Type_hvector(halo_sizes[dim][1], halo_sizes[dim][0],
                        strides[1] * sizeof(real_t), mpi_real_dtype, &plane);
       MPI_Type_hvector(halo_sizes[dim][2], 1, strides[2] * sizeof(real_t),
-                       plane, &halo_dtypes[dim]);
-      MPI_Type_commit(&halo_dtypes[dim]);
+                       plane, halo_dtypes[dim].get());
+      MPI_Type_commit(halo_dtypes[dim].get());
       MPI_Type_free(&plane);
     }
   }
 
   void operator()(storage_t &storage) const {
-    auto ptr = storage.get_storage_ptr()->get_target_ptr();
+    real_t *ptr = storage.get_storage_ptr()->get_target_ptr();
     int tag = 0;
     for (int dim = 0; dim < 2; ++dim) {
       int lower, upper;
       MPI_Cart_shift(comm_cart, dim, 1, &lower, &upper);
 
-      MPI_Sendrecv(ptr + send_offsets[dim].first, 1, halo_dtypes[dim], lower,
-                   tag, ptr + recv_offsets[dim].second, 1, halo_dtypes[dim],
+      MPI_Sendrecv(ptr + send_offsets[dim].first, 1, *halo_dtypes[dim], lower,
+                   tag, ptr + recv_offsets[dim].second, 1, *halo_dtypes[dim],
                    upper, tag, comm_cart, MPI_STATUS_IGNORE);
       ++tag;
 
-      MPI_Sendrecv(ptr + send_offsets[dim].second, 1, halo_dtypes[dim], upper,
-                   tag, ptr + recv_offsets[dim].first, 1, halo_dtypes[dim],
+      MPI_Sendrecv(ptr + send_offsets[dim].second, 1, *halo_dtypes[dim], upper,
+                   tag, ptr + recv_offsets[dim].first, 1, *halo_dtypes[dim],
                    lower, tag, comm_cart, MPI_STATUS_IGNORE);
       ++tag;
     }
   }
 
   MPI_Comm comm_cart;
-  std::array<MPI_Datatype, 2> halo_dtypes;
+  std::array<std::shared_ptr<MPI_Datatype>, 2> halo_dtypes;
   std::array<std::pair<std::size_t, std::size_t>, 2> send_offsets;
   std::array<std::pair<std::size_t, std::size_t>, 2> recv_offsets;
 };
@@ -117,6 +123,11 @@ struct mpi_setup {
     }
   }
 
+  ~mpi_setup() {
+    MPI_Barrier(comm_cart);
+    MPI_Comm_free(&comm_cart);
+  }
+
   MPI_Comm comm_cart;
   std::size_t global_resolution_x, global_resolution_y, global_resolution_z;
   std::size_t resolution_x, resolution_y, resolution_z;
@@ -124,8 +135,10 @@ struct mpi_setup {
 };
 
 template <class Stepper, class Analytical>
-double run(Stepper &&stepper, mpi_setup const &setup, real_t tmax, real_t dt,
-           Analytical &&exact) {
+double run(Stepper &&stepper, std::size_t resolution, real_t tmax, real_t dt,
+           Analytical &&exact, int procs_x, int procs_y) {
+  mpi_setup setup(resolution, resolution, resolution, procs_x, procs_y);
+
   const auto initial = analytical::to_domain(
       exact, setup.global_resolution_x, setup.global_resolution_y,
       setup.global_resolution_z, 0, setup.offset_x, setup.offset_y,
@@ -173,57 +186,53 @@ double run(Stepper &&stepper, mpi_setup const &setup, real_t tmax, real_t dt,
       }
     }
   }
+  error *= dx * dy * dz;
 
   MPI_Allreduce(&error, &error, 1, MPI_DOUBLE, MPI_SUM, setup.comm_cart);
-  return error;
+  return std::sqrt(error);
 }
 
 int main(int argc, char **argv) {
   MPI_Init(&argc, &argv);
 
-  if (argc != 6) {
-    std::cerr << "usage: " << argv[0] << " NX NY NZ PX PY" << std::endl;
+  if (argc != 3) {
+    std::cerr << "usage: " << argv[0] << " PX PY" << std::endl;
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  mpi_setup setup(std::atoll(argv[1]), std::atoll(argv[2]), std::atoll(argv[3]),
-                  std::atoi(argv[4]), std::atoi(argv[5]));
+  const int procs_x = std::atoi(argv[1]);
+  const int procs_y = std::atoi(argv[2]);
 
-  storage_t::storage_info_t sinfo(setup.resolution_x + 2 * halo,
-                                  setup.resolution_y + 2 * halo,
-                                  setup.resolution_z);
+  const std::size_t min_resolution = std::max(procs_x, procs_y) * halo;
 
-  halo_exchange_f exchange{setup.comm_cart, sinfo};
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  analytical::horizontal_diffusion exact{0.1};
+  {
+    if (rank == 0)
+      std::cout << "ADVECTION-DIFFUSION: Spatial Convergence" << std::endl;
+    analytical::advection_diffusion exact{0.05};
+    auto error_f = [exact, procs_x, procs_y](std::size_t resolution) {
+      return run(full_stepper(exact.diffusion_coeff), resolution, 1e-5, 1e-6,
+                 exact, procs_x, procs_y);
+    };
 
-  auto initial = analytical::to_domain(
-      exact, setup.global_resolution_x, setup.global_resolution_y,
-      setup.global_resolution_z, 0, setup.offset_x, setup.offset_y);
+    auto result = order_verification(error_f, min_resolution, 128);
+    if (rank == 0)
+      print_order_verification_result(result);
+  }
+  {
+    if (rank == 0)
+      std::cout << "ADVECTION-DIFFUSION: Space-Time Convergence" << std::endl;
+    analytical::advection_diffusion exact{0.05};
+    auto error_f = [exact, procs_x, procs_y](std::size_t resolution) {
+      return run(full_stepper(exact.diffusion_coeff), resolution, 1e-4,
+                 1e-5 / resolution, exact, procs_x, procs_y);
+    };
 
-  storage_t storage(sinfo, initial.data(), "storage");
-
-  exchange(storage);
-
-  auto view = gt::make_host_view(storage);
-
-  int rank, size;
-  MPI_Comm_rank(setup.comm_cart, &rank);
-  MPI_Comm_size(setup.comm_cart, &size);
-  for (int r = 0; r < size; ++r) {
-    if (r == rank) {
-      std::cout << "rank " << rank << std::endl;
-      for (std::size_t k = 0; k < setup.resolution_z; ++k) {
-        for (std::size_t j = 0; j < setup.resolution_y + 2 * halo; ++j) {
-          for (std::size_t i = 0; i < setup.resolution_x + 2 * halo; ++i)
-            std::cout << view(i, j, k) << " ";
-          std::cout << std::endl;
-        }
-        std::cout << std::endl;
-      }
-      std::cout.flush();
-    }
-    MPI_Barrier(setup.comm_cart);
+    auto result = order_verification(error_f, min_resolution, 128);
+    if (rank == 0)
+      print_order_verification_result(result);
   }
 
   MPI_Finalize();
