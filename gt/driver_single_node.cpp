@@ -2,10 +2,7 @@
 #include "numerics/convergence_tests.hpp"
 
 int main(int argc, char **argv) {
-  auto comm_world =
-      communication::world(communication::single_node::tag{}, argc, argv);
-
-  run_convergence_tests(comm_world);
+  run_convergence_tests(communication::single_node::world{});
 
   return 0;
 }

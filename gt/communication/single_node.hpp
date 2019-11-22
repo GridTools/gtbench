@@ -6,13 +6,13 @@ namespace communication {
 
 namespace single_node {
 
-struct tag {};
+struct world {};
 
 struct grid {
   vec<std::size_t, 3> resolution;
 };
 
-inline grid comm_grid(tag, vec<std::size_t, 3> const &resolution) {
+inline grid comm_grid(world, vec<std::size_t, 3> const &resolution) {
   return {resolution};
 }
 

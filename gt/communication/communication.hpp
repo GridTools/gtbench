@@ -6,10 +6,6 @@
 
 namespace communication {
 
-template <class CommTag> CommTag comm_world(CommTag, int &, char **&) {
-  return {};
-}
-
 template <class CommGrid>
 vec<std::size_t, 3> comm_global_resolution(CommGrid const &grid) {
   return {grid.global_resolution.x, grid.global_resolution.y,
@@ -24,10 +20,6 @@ vec<std::size_t, 3> comm_resolution(CommGrid const &grid) {
 template <class CommGrid>
 vec<std::size_t, 2> comm_offset(CommGrid const &grid) {
   return grid.offset;
-}
-
-template <class CommTag> auto world(CommTag &&tag, int &argc, char **&argv) {
-  return comm_world(std::forward<CommTag>(tag), argc, argv);
 }
 
 template <class CommWorld>

@@ -8,8 +8,6 @@ namespace communication {
 
 namespace simple_mpi {
 
-struct tag {};
-
 struct world {
   world(int &argc, char **&argv);
   world(world const &) = delete;
@@ -18,10 +16,6 @@ struct world {
   world &operator=(world &&) = default;
   ~world();
 };
-
-inline world comm_world(tag, int &argc, char **&argv) {
-  return world(argc, argv);
-}
 
 struct grid {
   grid(vec<std::size_t, 3> const &global_resolution);
