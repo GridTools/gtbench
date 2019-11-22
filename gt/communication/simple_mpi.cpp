@@ -1,4 +1,4 @@
-#include "mpi_comm.hpp"
+#include "simple_mpi.hpp"
 
 #include <array>
 #include <iostream>
@@ -7,7 +7,7 @@
 
 namespace communication {
 
-namespace mpi {
+namespace simple_mpi {
 
 world::world(int &argc, char **&argv) {
   MPI_Init(&argc, &argv);
@@ -143,6 +143,6 @@ double comm_global_sum(grid const &grid, double t) {
   return t;
 }
 
-} // namespace mpi
+} // namespace simple_mpi
 
 } // namespace communication

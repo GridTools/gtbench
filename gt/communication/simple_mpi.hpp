@@ -6,7 +6,7 @@
 
 namespace communication {
 
-namespace mpi {
+namespace simple_mpi {
 
 struct tag {};
 
@@ -49,6 +49,6 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
 double comm_global_sum(grid const &grid, double t);
 
-} // namespace mpi
+} // namespace simple_mpi
 
 } // namespace communication

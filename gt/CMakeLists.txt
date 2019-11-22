@@ -11,4 +11,4 @@ add_executable(driver driver.cpp)
 target_link_libraries(driver advection diffusion communication_single_node)
 
 add_executable(mpi_driver mpi_driver.cpp)
-target_link_libraries(mpi_driver advection diffusion communication_mpi)
+target_link_libraries(mpi_driver advection diffusion communication_simple_mpi)
