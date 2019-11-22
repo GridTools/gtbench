@@ -24,24 +24,20 @@ inline world comm_world(tag, int &argc, char **&argv) {
 }
 
 struct grid {
-  grid(std::size_t global_resolution_x, std::size_t global_resolution_y,
-       std::size_t resolution_z);
+  grid(vec<std::size_t, 3> const &global_resolution);
   grid(grid const &) = delete;
   grid(grid &&) = default;
   grid &operator=(grid const &) = delete;
   grid &operator=(grid &&) = default;
   ~grid();
 
-  std::size_t resolution_x, resolution_y, resolution_z;
-  std::size_t global_resolution_x, global_resolution_y;
-  std::size_t offset_x, offset_y;
+  vec<std::size_t, 3> resolution;
+  vec<std::size_t, 2> global_resolution, offset;
   MPI_Comm comm_cart;
 };
 
-inline grid comm_grid(world &, std::size_t global_resolution_x,
-                      std::size_t global_resolution_y,
-                      std::size_t resolution_z) {
-  return {global_resolution_x, global_resolution_y, resolution_z};
+inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution) {
+  return {global_resolution};
 }
 
 std::function<void(storage_t &)>

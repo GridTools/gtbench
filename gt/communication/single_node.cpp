@@ -20,9 +20,9 @@ struct periodic_boundary {
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo) {
-  gt::uint_t nx = resolution_x(grid);
-  gt::uint_t ny = resolution_y(grid);
-  gt::uint_t nz = resolution_z(grid);
+  gt::uint_t nx = grid.resolution.x;
+  gt::uint_t ny = grid.resolution.y;
+  gt::uint_t nz = grid.resolution.z;
   const gt::array<gt::halo_descriptor, 3> halos{
       {{halo, halo, halo, halo + nx - 1, halo + nx + halo},
        {halo, halo, halo, halo + ny - 1, halo + ny + halo},

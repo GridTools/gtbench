@@ -21,10 +21,8 @@ world::world(int &argc, char **&argv) {
 
 world::~world() { MPI_Finalize(); }
 
-grid::grid(std::size_t global_resolution_x, std::size_t global_resolution_y,
-           std::size_t resolution_z)
-    : global_resolution_x(global_resolution_x),
-      global_resolution_y(global_resolution_y), resolution_z(resolution_z) {
+grid::grid(vec<std::size_t, 3> const &global_resolution)
+    : global_resolution{global_resolution.x, global_resolution.y} {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -36,16 +34,18 @@ grid::grid(std::size_t global_resolution_x, std::size_t global_resolution_y,
   std::array<int, 2> coords;
   MPI_Cart_coords(comm_cart, rank, 2, coords.data());
 
-  offset_x = global_resolution_x * coords[0] / dims[0];
-  offset_y = global_resolution_y * coords[1] / dims[1];
+  offset.x = global_resolution.x * coords[0] / dims[0];
+  offset.y = global_resolution.y * coords[1] / dims[1];
 
-  auto next_offset_x = global_resolution_x * (coords[0] + 1) / dims[0];
-  auto next_offset_y = global_resolution_y * (coords[1] + 1) / dims[1];
+  vec<std::size_t, 2> next_offset = {
+      global_resolution.x * (coords[0] + 1) / dims[0],
+      global_resolution.y * (coords[1] + 1) / dims[1]};
 
-  resolution_x = next_offset_x - offset_x;
-  resolution_y = next_offset_y - offset_y;
+  resolution.x = next_offset.x - offset.x;
+  resolution.y = next_offset.y - offset.y;
+  resolution.z = global_resolution.z;
 
-  if (resolution_x < halo || resolution_y < halo)
+  if (resolution.x < halo || resolution.y < halo)
     throw std::runtime_error("local resolution is smaller than halo size!");
 } // namespace mpi
 

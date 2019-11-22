@@ -19,3 +19,7 @@ using storage_info_ij_t =
                                        gt::halo<halo, halo, 0>>;
 using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
 using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
+
+template <class T, std::size_t N> struct vec;
+template <class T> struct vec<T, 3> { T x, y, z; };
+template <class T> struct vec<T, 2> { T x, y; };
