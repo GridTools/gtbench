@@ -236,12 +236,12 @@ struct stage_advection_w3_rk {
 
 } // namespace
 
-horizontal::horizontal(std::size_t resolution_x, std::size_t resolution_y,
-                       std::size_t resolution_z, real_t dx, real_t dy)
+horizontal::horizontal(vec<std::size_t, 3> const &resolution,
+                       vec<real_t, 3> const &delta)
     : comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution_x, resolution_y, resolution_z),
-          p_dx() = gt::make_global_parameter(dx),
-          p_dy() = gt::make_global_parameter(dy),
+          computation_grid(resolution.x, resolution.y, resolution.z),
+          p_dx() = gt::make_global_parameter(delta.x),
+          p_dy() = gt::make_global_parameter(delta.y),
           gt::make_multistage(
               gt::execute::parallel(),
               gt::make_stage<stage_horizontal>(p_out(), p_in(), p_u(), p_v(),
@@ -253,16 +253,16 @@ void horizontal::operator()(storage_t &out, storage_t const &in,
             p_dt() = gt::make_global_parameter(dt));
 }
 
-vertical::vertical(std::size_t resolution_x, std::size_t resolution_y,
-                   std::size_t resolution_z, real_t dz)
-    : sinfo_ij_(resolution_x + 2 * halo, resolution_y + 2 * halo, 1),
+vertical::vertical(vec<std::size_t, 3> const &resolution,
+                   vec<real_t, 3> const &delta)
+    : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
       comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution_x, resolution_y, resolution_z),
-          p_dz() = gt::make_global_parameter(dz), p_alpha() = alpha_,
+          computation_grid(resolution.x, resolution.y, resolution.z),
+          p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
-          p_k_size() = gt::make_global_parameter(gt::int_t(resolution_z)),
+          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(gt::execute::forward(),
                               gt::make_stage<stage_advection_w_forward1>(
                                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),
@@ -290,20 +290,18 @@ void vertical::operator()(storage_t &out, storage_t const &in,
             p_dt() = gt::make_global_parameter(dt));
 }
 
-runge_kutta_step::runge_kutta_step(std::size_t resolution_x,
-                                   std::size_t resolution_y,
-                                   std::size_t resolution_z, real_t dx,
-                                   real_t dy, real_t dz)
-    : sinfo_ij_(resolution_x + 2 * halo, resolution_y + 2 * halo, 1),
+runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
+                                   vec<real_t, 3> const &delta)
+    : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
       comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution_x, resolution_y, resolution_z),
-          p_dx() = gt::make_global_parameter(dx),
-          p_dy() = gt::make_global_parameter(dy),
-          p_dz() = gt::make_global_parameter(dz), p_alpha() = alpha_,
+          computation_grid(resolution.x, resolution.y, resolution.z),
+          p_dx() = gt::make_global_parameter(delta.x),
+          p_dy() = gt::make_global_parameter(delta.y),
+          p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
-          p_k_size() = gt::make_global_parameter(gt::int_t(resolution_z)),
+          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(gt::execute::forward(),
                               gt::make_stage<stage_advection_w_forward1>(
                                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),

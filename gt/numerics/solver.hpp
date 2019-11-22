@@ -33,9 +33,7 @@ struct hdiff_stepper_f {
 auto hdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
-    return hdiff_stepper_f{{resolution.x, resolution.y, resolution.z, delta.x,
-                            delta.y, diffusion_coeff},
-                           {exchange}};
+    return hdiff_stepper_f{{resolution, delta, diffusion_coeff}, {exchange}};
   };
 }
 
@@ -51,8 +49,7 @@ struct vdiff_stepper_f {
 auto vdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
-    return vdiff_stepper_f{
-        {resolution.x, resolution.y, resolution.z, delta.z, diffusion_coeff}};
+    return vdiff_stepper_f{{resolution, delta, diffusion_coeff}};
   };
 }
 
@@ -71,11 +68,9 @@ struct diff_stepper_f {
 auto diff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
-    return diff_stepper_f{
-        {resolution.x, resolution.y, resolution.z, delta.x, delta.y,
-         diffusion_coeff},
-        {resolution.x, resolution.y, resolution.z, delta.z, diffusion_coeff},
-        {exchange}};
+    return diff_stepper_f{{resolution, delta, diffusion_coeff},
+                          {resolution, delta, diffusion_coeff},
+                          {exchange}};
   };
 }
 
@@ -93,9 +88,7 @@ struct hadv_stepper_f {
 auto hadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
             auto exchange) {
-    return hadv_stepper_f{
-        {resolution.x, resolution.y, resolution.z, delta.x, delta.y},
-        {exchange}};
+    return hadv_stepper_f{{resolution, delta}, {exchange}};
   };
 }
 
@@ -111,7 +104,7 @@ struct vadv_stepper_f {
 auto vadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
             auto exchange) {
-    return vadv_stepper_f{{resolution.x, resolution.y, resolution.z, delta.z}};
+    return vadv_stepper_f{{resolution, delta}};
   };
 }
 
@@ -134,9 +127,7 @@ struct rkadv_stepper_f {
 auto rkadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
             auto exchange) {
-    return rkadv_stepper_f{
-        {resolution.x, resolution.y, resolution.z, delta.x, delta.y, delta.z},
-        {exchange}};
+    return rkadv_stepper_f{{resolution, delta}, {exchange}};
   };
 }
 
@@ -171,11 +162,9 @@ struct full_stepper_f {
 auto full_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
-    return full_stepper_f{
-        {resolution.x, resolution.y, resolution.z, delta.x, delta.y,
-         diffusion_coeff},
-        {resolution.x, resolution.y, resolution.z, delta.z, diffusion_coeff},
-        {resolution.x, resolution.y, resolution.z, delta.x, delta.y, delta.z},
-        {exchange}};
+    return full_stepper_f{{resolution, delta, diffusion_coeff},
+                          {resolution, delta, diffusion_coeff},
+                          {resolution, delta},
+                          {exchange}};
   };
 }

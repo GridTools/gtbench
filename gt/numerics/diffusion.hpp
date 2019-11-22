@@ -13,8 +13,8 @@ class horizontal {
   using p_coeff = gt::arg<5, global_parameter_t>;
 
 public:
-  horizontal(std::size_t resolution_x, std::size_t resolution_y,
-             std::size_t resolution_z, real_t dx, real_t dy, real_t coeff);
+  horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+             real_t coeff);
 
   void operator()(storage_t &out, storage_t const &in, real_t dt);
 
@@ -52,8 +52,8 @@ class vertical {
   using p_k_size = gt::arg<15, global_parameter_int_t>;
 
 public:
-  vertical(std::size_t resolution_x, std::size_t resolution_y,
-           std::size_t resolution_z, real_t dz, real_t coeff);
+  vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+           real_t coeff);
 
   void operator()(storage_t &out, storage_t const &in, real_t dt);
 
