@@ -22,8 +22,8 @@ vec<std::size_t, 3> comm_resolution(CommGrid const &grid) {
 }
 
 template <class CommGrid>
-vec<std::size_t, 2> comm_offset(CommGrid const &grid) {
-  return grid.offset;
+vec<std::size_t, 3> comm_offset(CommGrid const &grid) {
+  return {grid.offset.x, grid.offset.y, 0};
 }
 
 template <class CommTag> auto world(CommTag &&tag, int &argc, char **&argv) {
@@ -44,7 +44,7 @@ template <class CommGrid> vec<std::size_t, 3> resolution(CommGrid &&grid) {
   return comm_resolution(std::forward<CommGrid>(grid));
 }
 
-template <class CommGrid> vec<std::size_t, 2> offset(CommGrid &&grid) {
+template <class CommGrid> vec<std::size_t, 3> offset(CommGrid &&grid) {
   return comm_offset(std::forward<CommGrid>(grid));
 }
 

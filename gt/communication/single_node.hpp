@@ -20,7 +20,7 @@ inline vec<std::size_t, 3> comm_global_resolution(grid const &grid) {
   return grid.resolution;
 }
 
-constexpr vec<std::size_t, 2> comm_offset(grid) { return {0, 0}; }
+constexpr vec<std::size_t, 3> comm_offset(grid) { return {0, 0, 0}; }
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
