@@ -4,10 +4,11 @@ project(benchmark LANGUAGES CXX)
 find_package(GridTools 1.1.0)
 find_package(MPI)
 
+add_subdirectory(communication)
 add_subdirectory(numerics)
 
 add_executable(driver driver.cpp)
-target_link_libraries(driver advection diffusion GridTools::gridtools)
+target_link_libraries(driver advection diffusion communication_single_node)
 
 add_executable(mpi_driver mpi_driver.cpp)
-target_link_libraries(mpi_driver advection diffusion GridTools::gridtools MPI::MPI_CXX)
+target_link_libraries(mpi_driver advection diffusion communication_mpi)
