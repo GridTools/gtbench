@@ -7,11 +7,9 @@
 template <class CommGrid, class Stepper, class Analytical>
 double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
            Analytical &&exact) {
-  const auto initial = analytical::to_domain(
-      exact, communication::global_resolution(comm_grid).x,
-      communication::global_resolution(comm_grid).y,
-      communication::global_resolution(comm_grid).z, 0,
-      communication::offset(comm_grid).x, communication::offset(comm_grid).y);
+  const auto initial =
+      analytical::to_domain(exact, communication::global_resolution(comm_grid),
+                            communication::offset(comm_grid), 0);
 
   const auto n = communication::resolution(comm_grid);
 
@@ -30,12 +28,10 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto view = gt::make_host_view(state.data);
 
-  auto expected = analytical::to_domain(
-                      exact, communication::global_resolution(comm_grid).x,
-                      communication::global_resolution(comm_grid).y, n.z, t,
-                      communication::offset(comm_grid).x,
-                      communication::offset(comm_grid).y)
-                      .data();
+  auto expected =
+      analytical::to_domain(exact, communication::global_resolution(comm_grid),
+                            communication::offset(comm_grid), t)
+          .data();
   double error = 0.0;
 #pragma omp parallel for reduction(+ : error)
   for (std::size_t i = halo; i < halo + n.x; ++i) {
