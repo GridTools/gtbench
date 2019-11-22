@@ -6,38 +6,40 @@
 
 template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap(F &&f) const {
-    return [f = std::forward<F>(f), delta = delta,
-            offset = offset](gt::int_t i, gt::int_t j, gt::int_t k) {
-      return f((i - halo + offset.x) * delta.x, (j - halo + offset.y) * delta.y,
-               k * delta.z);
+    return [f = std::forward<F>(f), delta = delta, offset = offset,
+            t = t](gt::int_t i, gt::int_t j, gt::int_t k) {
+      return f({(i - halo + offset.x) * delta.x,
+                (j - halo + offset.y) * delta.y, k * delta.z},
+               t);
     };
   }
 
   template <class F> auto remap_staggered_z(F &&f) const {
-    return remap(
-        [f = std::forward<F>(f), delta = delta](real_t x, real_t y, real_t z) {
-          return f(x, y, z - 0.5 * delta.z);
-        });
+    return remap([f = std::forward<F>(f),
+                  delta = delta](vec<real_t, 3> const &p, real_t t) {
+      return f({p.x, p.y, p.z - 0.5 * delta.z}, t);
+    });
   }
 
-  auto data() const { return remap(analytical.data()); }
-  auto u() const { return remap(analytical.u()); }
-  auto v() const { return remap(analytical.v()); }
-  auto w() const { return remap_staggered_z(analytical.w()); }
+  auto data() const { return remap(analytical::data(exact)); }
+  auto u() const { return remap(analytical::u(exact)); }
+  auto v() const { return remap(analytical::v(exact)); }
+  auto w() const { return remap_staggered_z(analytical::w(exact)); }
 
-  Analytical analytical;
+  Analytical exact;
   vec<real_t, 3> delta;
   vec<gt::int_t, 2> offset;
+  real_t t;
 };
 
 template <class Analytical>
 on_domain_wrapper<Analytical>
-on_domain(Analytical &&analytical, vec<std::size_t, 3> const &resolution,
+on_domain(Analytical const &exact, vec<std::size_t, 3> const &resolution,
           vec<std::size_t, 2> const &offset, real_t t) {
-  return {std::forward<Analytical>(analytical),
-          {analytical.domain().x / resolution.x,
-           analytical.domain().y / resolution.y,
-           analytical.domain().z / resolution.z},
+  return {exact,
+          {analytical::domain(exact).x / resolution.x,
+           analytical::domain(exact).y / resolution.y,
+           analytical::domain(exact).z / resolution.z},
           {gt::int_t(offset.x), gt::int_t(offset.y)},
           t};
 }
@@ -45,9 +47,9 @@ on_domain(Analytical &&analytical, vec<std::size_t, 3> const &resolution,
 template <class CommGrid, class Stepper, class Analytical>
 double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
            Analytical &&exact) {
-  const auto initial = on_domain(analytical::at_time(exact, 0),
-                                 communication::global_resolution(comm_grid),
-                                 communication::offset(comm_grid));
+  const auto initial =
+      on_domain(exact, communication::global_resolution(comm_grid),
+                communication::offset(comm_grid), 0);
 
   const auto n = communication::resolution(comm_grid);
 
@@ -65,9 +67,8 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto view = gt::make_host_view(state.data);
 
-  auto expected = on_domain(analytical::at_time(exact, t),
-                            communication::global_resolution(comm_grid),
-                            communication::offset(comm_grid))
+  auto expected = on_domain(exact, communication::global_resolution(comm_grid),
+                            communication::offset(comm_grid), t)
                       .data();
   double error = 0.0;
 #pragma omp parallel for reduction(+ : error)
