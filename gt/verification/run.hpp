@@ -15,7 +15,7 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   solver_state state{n, initial.data(), initial.u(), initial.v(), initial.w()};
 
-  const vec<real_t, 3> delta = {initial.dx, initial.dy, initial.dz};
+  const vec<real_t, 3> delta = initial.delta;
 
   auto exchange = communication::halo_exchanger(comm_grid, state.sinfo);
 

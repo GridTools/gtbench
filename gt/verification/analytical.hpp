@@ -26,9 +26,9 @@ struct horizontal_diffusion {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 
   real_t diffusion_coeff;
 };
@@ -53,9 +53,9 @@ struct vertical_diffusion {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 
   real_t diffusion_coeff;
 };
@@ -80,9 +80,9 @@ struct full_diffusion {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 
   real_t diffusion_coeff;
 };
@@ -106,9 +106,9 @@ struct horizontal_advection {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 };
 
 struct vertical_advection {
@@ -130,9 +130,9 @@ struct vertical_advection {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0.5; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 };
 
 struct full_advection {
@@ -154,9 +154,9 @@ struct full_advection {
     return [](real_t x, real_t y, real_t z, real_t t) -> real_t { return 0.5; };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI; }
-  constexpr real_t domain_z() const { return 2 * M_PI; }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  }
 };
 
 struct advection_diffusion {
@@ -190,30 +190,28 @@ struct advection_diffusion {
     };
   }
 
-  constexpr real_t domain_x() const { return 2 * M_PI; }
-  constexpr real_t domain_y() const { return 2 * M_PI * gt::math::sqrt(2.0); }
-  constexpr real_t domain_z() const { return 2 * M_PI * gt::math::sqrt(2.0); }
+  constexpr vec<real_t, 3> domain() const {
+    return {2 * M_PI, 2 * M_PI * gt::math::sqrt(2),
+            2 * M_PI * gt::math::sqrt(2)};
+  }
 
   real_t diffusion_coeff;
 };
 
 template <class Analytical> struct to_domain_wrapper {
   template <class F> auto remap(F &&f) const {
-    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz, t = t,
-            offset_i = offset_i, offset_j = offset_j,
-            offset_k = offset_k](gt::int_t i, gt::int_t j, gt::int_t k) {
-      return f((i - halo + offset_i) * dx, (j - halo + offset_j) * dy,
-               (k + offset_k) * dz, t);
+    return [f = std::forward<F>(f), delta = delta, offset = offset,
+            t = t](gt::int_t i, gt::int_t j, gt::int_t k) {
+      return f((i - halo + offset.x) * delta.x, (j - halo + offset.y) * delta.y,
+               k * delta.z, t);
     };
   }
 
   template <class F> auto remap_staggered_z(F &&f) const {
-    return [f = std::forward<F>(f), dx = dx, dy = dy, dz = dz, t = t,
-            offset_i = offset_i, offset_j = offset_j,
-            offset_k = offset_k](gt::int_t i, gt::int_t j, gt::int_t k) {
-      return f((i - halo + offset_i) * dx, (j - halo + offset_j) * dy,
-               (k + offset_k) * dz - real_t(0.5) * dz, t);
-    };
+    return remap([f = std::forward<F>(f), delta = delta](real_t x, real_t y,
+                                                         real_t z, real_t t) {
+      return f(x, y, z - 0.5 * delta.z, t);
+    });
   }
 
   auto data() const { return remap(analytical.data()); }
@@ -222,22 +220,21 @@ template <class Analytical> struct to_domain_wrapper {
   auto w() const { return remap_staggered_z(analytical.w()); }
 
   Analytical analytical;
-  real_t dx, dy, dz, t;
-  gt::int_t offset_i, offset_j, offset_k;
+  vec<real_t, 3> delta;
+  vec<gt::int_t, 2> offset;
+  real_t t;
 };
 
 template <class Analytical>
 to_domain_wrapper<Analytical>
 to_domain(Analytical &&analytical, vec<std::size_t, 3> const &resolution,
-          vec<std::size_t, 3> const &offset, real_t t) {
+          vec<std::size_t, 2> const &offset, real_t t) {
   return {std::forward<Analytical>(analytical),
-          analytical.domain_x() / resolution.x,
-          analytical.domain_y() / resolution.y,
-          analytical.domain_z() / resolution.z,
-          t,
-          gt::int_t(offset.x),
-          gt::int_t(offset.y),
-          gt::int_t(offset.z)};
+          {analytical.domain().x / resolution.x,
+           analytical.domain().y / resolution.y,
+           analytical.domain().z / resolution.z},
+          {gt::int_t(offset.x), gt::int_t(offset.y)},
+          t};
 }
 
 } // namespace analytical
