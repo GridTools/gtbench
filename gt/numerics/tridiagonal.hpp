@@ -1,6 +1,10 @@
 #pragma once
 
-#include "../common.hpp"
+#include <gridtools/stencil_composition/expressions/expressions.hpp>
+#include <gridtools/stencil_composition/stencil_composition.hpp>
+#include <gridtools/stencil_composition/stencil_functions.hpp>
+
+#include "computation.hpp"
 
 namespace tridiagonal {
 using gt::extent;

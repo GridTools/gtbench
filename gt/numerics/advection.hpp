@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../common.hpp"
+#include "computation.hpp"
 
 namespace advection {
 
@@ -14,7 +14,8 @@ class horizontal {
   using p_dt = gt::arg<6, global_parameter_t>;
 
 public:
-  horizontal(grid_t const &grid, real_t dx, real_t dy);
+  horizontal(std::size_t resolution_x, std::size_t resolution_y,
+             std::size_t resolution_z, real_t dx, real_t dy);
 
   void operator()(storage_t &out, storage_t const &in, storage_t const &u,
                   storage_t const &v, real_t dt);
@@ -54,7 +55,8 @@ class vertical {
   using p_k_size = gt::arg<15, global_parameter_int_t>;
 
 public:
-  vertical(grid_t const &grid, real_t dz);
+  vertical(std::size_t resolution_x, std::size_t resolution_y,
+           std::size_t resolution_z, real_t dz);
 
   void operator()(storage_t &out, storage_t const &in, storage_t const &w,
                   real_t dt);
@@ -99,7 +101,8 @@ class runge_kutta_step {
   using p_k_size = gt::arg<20, global_parameter_int_t>;
 
 public:
-  runge_kutta_step(grid_t const &grid, real_t dx, real_t dy, real_t dz);
+  runge_kutta_step(std::size_t resolution_x, std::size_t resolution_y,
+                   std::size_t resolution_z, real_t dx, real_t dy, real_t dz);
 
   void operator()(storage_t &out, storage_t const &in, storage_t const &in0,
                   storage_t const &u, storage_t const &v, storage_t const &w,

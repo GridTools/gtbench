@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../common.hpp"
 #include "advection.hpp"
 #include "diffusion.hpp"
 
@@ -33,9 +32,12 @@ struct hdiff_stepper_f {
 };
 
 auto hdiff_stepper(real_t diffusion_coeff) {
-  return [diffusion_coeff](auto grid, auto exchange, real_t dx, real_t dy,
-                           real_t dz) {
-    return hdiff_stepper_f{{grid, dx, dy, diffusion_coeff}, {exchange}};
+  return [diffusion_coeff](std::size_t resolution_x, std::size_t resolution_y,
+                           std::size_t resolution_z, real_t dx, real_t dy,
+                           real_t dz, auto exchange) {
+    return hdiff_stepper_f{
+        {resolution_x, resolution_y, resolution_z, dx, dy, diffusion_coeff},
+        {exchange}};
   };
 }
 
@@ -49,9 +51,11 @@ struct vdiff_stepper_f {
 };
 
 auto vdiff_stepper(real_t diffusion_coeff) {
-  return [diffusion_coeff](auto grid, auto halos, real_t dx, real_t dy,
-                           real_t dz) {
-    return vdiff_stepper_f{{grid, dz, diffusion_coeff}};
+  return [diffusion_coeff](std::size_t resolution_x, std::size_t resolution_y,
+                           std::size_t resolution_z, real_t dx, real_t dy,
+                           real_t dz, auto exchange) {
+    return vdiff_stepper_f{
+        {resolution_x, resolution_y, resolution_z, dz, diffusion_coeff}};
   };
 }
 
@@ -68,11 +72,13 @@ struct diff_stepper_f {
 };
 
 auto diff_stepper(real_t diffusion_coeff) {
-  return [diffusion_coeff](auto grid, auto exchange, real_t dx, real_t dy,
-                           real_t dz) {
-    return diff_stepper_f{{grid, dx, dy, diffusion_coeff},
-                          {grid, dz, diffusion_coeff},
-                          {exchange}};
+  return [diffusion_coeff](std::size_t resolution_x, std::size_t resolution_y,
+                           std::size_t resolution_z, real_t dx, real_t dy,
+                           real_t dz, auto exchange) {
+    return diff_stepper_f{
+        {resolution_x, resolution_y, resolution_z, dx, dy, diffusion_coeff},
+        {resolution_x, resolution_y, resolution_z, dz, diffusion_coeff},
+        {exchange}};
   };
 }
 
@@ -88,8 +94,11 @@ struct hadv_stepper_f {
 };
 
 auto hadv_stepper() {
-  return [](auto grid, auto exchange, real_t dx, real_t dy, real_t dz) {
-    return hadv_stepper_f{{grid, dx, dy}, {exchange}};
+  return [](std::size_t resolution_x, std::size_t resolution_y,
+            std::size_t resolution_z, real_t dx, real_t dy, real_t dz,
+            auto exchange) {
+    return hadv_stepper_f{{resolution_x, resolution_y, resolution_z, dx, dy},
+                          {exchange}};
   };
 }
 
@@ -103,8 +112,10 @@ struct vadv_stepper_f {
 };
 
 auto vadv_stepper() {
-  return [](auto grid, auto exchange, real_t dx, real_t dy, real_t dz) {
-    return vadv_stepper_f{{grid, dz}};
+  return [](std::size_t resolution_x, std::size_t resolution_y,
+            std::size_t resolution_z, real_t dx, real_t dy, real_t dz,
+            auto exchange) {
+    return vadv_stepper_f{{resolution_x, resolution_y, resolution_z, dz}};
   };
 }
 
@@ -125,8 +136,11 @@ struct rkadv_stepper_f {
 };
 
 auto rkadv_stepper() {
-  return [](auto grid, auto exchange, real_t dx, real_t dy, real_t dz) {
-    return rkadv_stepper_f{{grid, dx, dy, dz}, {exchange}};
+  return [](std::size_t resolution_x, std::size_t resolution_y,
+            std::size_t resolution_z, real_t dx, real_t dy, real_t dz,
+            auto exchange) {
+    return rkadv_stepper_f{
+        {resolution_x, resolution_y, resolution_z, dx, dy, dz}, {exchange}};
   };
 }
 
@@ -159,11 +173,13 @@ struct full_stepper_f {
 };
 
 auto full_stepper(real_t diffusion_coeff) {
-  return [diffusion_coeff](auto grid, auto exchange, real_t dx, real_t dy,
-                           real_t dz) {
-    return full_stepper_f{{grid, dx, dy, diffusion_coeff},
-                          {grid, dz, diffusion_coeff},
-                          {grid, dx, dy, dz},
-                          {exchange}};
+  return [diffusion_coeff](std::size_t resolution_x, std::size_t resolution_y,
+                           std::size_t resolution_z, real_t dx, real_t dy,
+                           real_t dz, auto exchange) {
+    return full_stepper_f{
+        {resolution_x, resolution_y, resolution_z, dx, dy, diffusion_coeff},
+        {resolution_x, resolution_y, resolution_z, dz, diffusion_coeff},
+        {resolution_x, resolution_y, resolution_z, dx, dy, dz},
+        {exchange}};
   };
 }

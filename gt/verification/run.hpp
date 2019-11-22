@@ -20,16 +20,11 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   solver_state state{nx,          ny,          nz,         initial.data(),
                      initial.u(), initial.v(), initial.w()};
 
-  const auto grid = gt::make_grid({halo, halo, halo, halo + gt::uint_t(nx) - 1,
-                                   halo + gt::uint_t(nx) + halo},
-                                  {halo, halo, halo, halo + gt::uint_t(ny) - 1,
-                                   halo + gt::uint_t(ny) + halo},
-                                  axis_t{nz});
   const real_t dx = initial.dx, dy = initial.dy, dz = initial.dz;
 
   auto exchange = communication::halo_exchanger(comm_grid, state.sinfo);
 
-  auto step = stepper(grid, exchange, dx, dy, dz);
+  auto step = stepper(nx, ny, nz, dx, dy, dz, exchange);
 
   real_t t;
   for (t = 0; t < tmax; t += dt)

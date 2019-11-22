@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../common.hpp"
+#include <gridtools/common/gt_math.hpp>
+
+#include "../common/types.hpp"
 
 namespace analytical {
 

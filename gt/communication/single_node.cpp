@@ -1,6 +1,6 @@
 #include "single_node.hpp"
 
-#include "../common.hpp"
+#include <gridtools/boundary_conditions/boundary.hpp>
 
 namespace communication {
 
@@ -23,9 +23,10 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo) {
   gt::uint_t nx = resolution_x(grid);
   gt::uint_t ny = resolution_y(grid);
   gt::uint_t nz = resolution_z(grid);
-  const halos_t halos{{{halo, halo, halo, halo + nx - 1, halo + nx + halo},
-                       {halo, halo, halo, halo + ny - 1, halo + ny + halo},
-                       {0, 0, 0, nz - 1, nz}}};
+  const gt::array<gt::halo_descriptor, 3> halos{
+      {{halo, halo, halo, halo + nx - 1, halo + nx + halo},
+       {halo, halo, halo, halo + ny - 1, halo + ny + halo},
+       {0, 0, 0, nz - 1, nz}}};
   gt::boundary<periodic_boundary, backend_t> boundary(halos,
                                                       periodic_boundary());
   return [boundary = std::move(boundary)](storage_t &storage) {

@@ -1,5 +1,9 @@
 #include "diffusion.hpp"
 
+#include <gridtools/stencil_composition/expressions/expressions.hpp>
+#include <gridtools/stencil_composition/stencil_functions.hpp>
+
+#include "computation.hpp"
 #include "tridiagonal.hpp"
 
 namespace diffusion {
@@ -130,10 +134,12 @@ struct stage_diffusion_w3 {
 
 } // namespace
 
-horizontal::horizontal(gt::grid<typename axis_t::axis_interval_t> const &grid,
-                       real_t dx, real_t dy, real_t coeff)
+horizontal::horizontal(std::size_t resolution_x, std::size_t resolution_y,
+                       std::size_t resolution_z, real_t dx, real_t dy,
+                       real_t coeff)
     : comp_(gt::make_computation<backend_t>(
-          grid, p_dx() = gt::make_global_parameter(dx),
+          computation_grid(resolution_x, resolution_y, resolution_z),
+          p_dx() = gt::make_global_parameter(dx),
           p_dy() = gt::make_global_parameter(dy),
           p_coeff() = gt::make_global_parameter(coeff),
           gt::make_multistage(
@@ -145,15 +151,17 @@ void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
   comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
 }
 
-vertical::vertical(grid_t const &grid, real_t dz, real_t coeff)
-    : sinfo_ij_(grid.i_size() + 2 * halo, grid.j_size() + 2 * halo, 1),
+vertical::vertical(std::size_t resolution_x, std::size_t resolution_y,
+                   std::size_t resolution_z, real_t dz, real_t coeff)
+    : sinfo_ij_(resolution_x + 2 * halo, resolution_y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
       comp_(gt::make_computation<backend_t>(
-          grid, p_dz() = gt::make_global_parameter(dz),
+          computation_grid(resolution_x, resolution_y, resolution_z),
+          p_dz() = gt::make_global_parameter(dz),
           p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
-          p_k_size() = gt::make_global_parameter(grid.k_size()),
+          p_k_size() = gt::make_global_parameter(gt::int_t(resolution_z)),
           gt::make_multistage(gt::execute::forward(),
                               gt::make_stage<stage_diffusion_w_forward1>(
                                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),

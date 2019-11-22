@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "../common.hpp"
+#include "../common/types.hpp"
 
 namespace communication {
 
