@@ -7,8 +7,8 @@ find_package(MPI)
 add_subdirectory(communication)
 add_subdirectory(numerics)
 
-add_executable(driver driver.cpp)
-target_link_libraries(driver advection diffusion communication_single_node)
+add_executable(driver_single_node driver_single_node.cpp)
+target_link_libraries(driver_single_node advection diffusion communication_single_node)
 
-add_executable(mpi_driver mpi_driver.cpp)
-target_link_libraries(mpi_driver advection diffusion communication_simple_mpi)
+add_executable(driver_simple_mpi driver_simple_mpi.cpp)
+target_link_libraries(driver_simple_mpi advection diffusion communication_simple_mpi)
