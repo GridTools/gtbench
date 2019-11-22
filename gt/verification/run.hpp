@@ -13,14 +13,13 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   const auto n = communication::resolution(comm_grid);
 
-  solver_state state{n.x,         n.y,         n.z,        initial.data(),
-                     initial.u(), initial.v(), initial.w()};
+  solver_state state{n, initial.data(), initial.u(), initial.v(), initial.w()};
 
-  const real_t dx = initial.dx, dy = initial.dy, dz = initial.dz;
+  const vec<real_t, 3> delta = {initial.dx, initial.dy, initial.dz};
 
   auto exchange = communication::halo_exchanger(comm_grid, state.sinfo);
 
-  auto step = stepper(n.x, n.y, n.z, dx, dy, dz, exchange);
+  auto step = stepper(n, delta, exchange);
 
   real_t t;
   for (t = 0; t < tmax; t += dt)
@@ -42,7 +41,7 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
       }
     }
   }
-  error *= dx * dy * dz;
+  error *= delta.x * delta.y * delta.z;
 
   return std::sqrt(communication::global_sum(comm_grid, error));
 }
