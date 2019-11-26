@@ -4,6 +4,18 @@ project(benchmark LANGUAGES CXX)
 find_package(GridTools 1.1.0)
 find_package(MPI)
 
+set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
+set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
+set(GTBENCH_FLOAT "double" CACHE STRING "Floating-point type")
+set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
+
+add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
+                        GTBENCH_FLOAT=${GTBENCH_FLOAT})
+
+if(GTBENCH_BACKEND STREQUAL "cuda")
+    enable_language(CUDA)
+endif()
+
 add_subdirectory(communication)
 add_subdirectory(numerics)
 

@@ -1,16 +1,15 @@
 #pragma once
 
-//#include <gridtools/storage/data_store.hpp>
 #include <gridtools/storage/storage_facility.hpp>
 
 namespace gt = gridtools;
 
-using real_t = double;
+using real_t = GTBENCH_FLOAT;
 
 static constexpr gt::int_t halo = 3;
 static constexpr gt::int_t huge_offset = 10000;
 
-using backend_t = gt::backend::x86;
+using backend_t = gt::backend::GTBENCH_BACKEND;
 using storage_tr = gt::storage_traits<backend_t>;
 using storage_info_ijk_t =
     storage_tr::storage_info_t<0, 3, gt::halo<halo, halo, 0>>;
