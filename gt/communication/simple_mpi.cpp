@@ -159,8 +159,9 @@ comm_halo_exchanger(grid const &comm_grid,
 }
 
 double comm_global_sum(grid const &grid, double t) {
-  MPI_Allreduce(&t, &t, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
-  return t;
+  double sum;
+  MPI_Allreduce(&t, &sum, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
+  return sum;
 }
 
 } // namespace simple_mpi
