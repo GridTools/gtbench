@@ -30,6 +30,7 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo) {
   gt::boundary<periodic_boundary, backend_t> boundary(halos,
                                                       periodic_boundary());
   return [boundary = std::move(boundary)](storage_t &storage) {
+    storage.sync();
     boundary.apply(storage);
   };
 }

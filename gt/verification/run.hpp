@@ -65,6 +65,7 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   for (t = 0; t < tmax; t += dt)
     step(state, dt);
 
+  state.data.sync();
   auto view = gt::make_host_view(state.data);
 
   auto expected = on_domain(exact, communication::global_resolution(comm_grid),
