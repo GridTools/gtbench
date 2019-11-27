@@ -173,11 +173,13 @@ inline auto analytical_velocity(repeated<Analytical> const &repeated) {
 template <class Analytical>
 inline auto analytical_domain(repeated<Analytical> const &repeated) {
   auto d = domain(repeated.wrapped);
-  return {d.x * repeated.repeats.x, d.y * repeated.repeats.y, d.z * repeated.repeats.z};
+  return {d.x * repeated.repeats.x, d.y * repeated.repeats.y,
+          d.z * repeated.repeats.z};
 }
 
 template <class Analytical>
-inline repeated<std::decay_t<Analytical>> repeat(Analytical&& analytical, vec<real_t, 3> const& repeats) {
+inline repeated<std::decay_t<Analytical>>
+repeat(Analytical &&analytical, vec<real_t, 3> const &repeats) {
   return {std::forward<Analytical>(analytical), repeats};
 }
 
