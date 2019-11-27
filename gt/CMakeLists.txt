@@ -24,3 +24,6 @@ target_link_libraries(driver_single_node advection diffusion communication_singl
 
 add_executable(driver_simple_mpi driver_simple_mpi.cpp)
 target_link_libraries(driver_simple_mpi advection diffusion communication_simple_mpi)
+
+add_executable(benchmark benchmark.cpp)
+target_link_libraries(benchmark advection diffusion communication_simple_mpi)
