@@ -1,11 +1,11 @@
-#include "advection.hpp"
+#include "./advection.hpp"
 
 #include <gridtools/stencil_composition/expressions/expressions.hpp>
 #include <gridtools/stencil_composition/stencil_composition.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
 
-#include "computation.hpp"
-#include "tridiagonal.hpp"
+#include "./computation.hpp"
+#include "./tridiagonal.hpp"
 
 namespace advection {
 namespace {

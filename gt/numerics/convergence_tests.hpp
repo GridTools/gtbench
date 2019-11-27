@@ -6,7 +6,7 @@
 #include "../verification/analytical.hpp"
 #include "../verification/convergence.hpp"
 #include "../verification/run.hpp"
-#include "solver.hpp"
+#include "./solver.hpp"
 
 template <class CommWorld> void run_convergence_tests(CommWorld &&comm_world) {
   {

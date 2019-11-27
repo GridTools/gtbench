@@ -2,7 +2,7 @@
 
 #include "../communication/communication.hpp"
 #include "../numerics/solver.hpp"
-#include "analytical.hpp"
+#include "./analytical.hpp"
 
 template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap(F &&f) const {

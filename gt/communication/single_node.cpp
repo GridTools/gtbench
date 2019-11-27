@@ -1,4 +1,4 @@
-#include "single_node.hpp"
+#include "./single_node.hpp"
 
 #include <gridtools/boundary_conditions/boundary.hpp>
 

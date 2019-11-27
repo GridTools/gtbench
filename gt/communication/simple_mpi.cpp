@@ -1,4 +1,4 @@
-#include "simple_mpi.hpp"
+#include "./simple_mpi.hpp"
 
 #include <array>
 #include <iostream>

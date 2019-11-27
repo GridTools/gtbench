@@ -2,7 +2,7 @@
 
 #include <mpi.h>
 
-#include "communication.hpp"
+#include "./communication.hpp"
 
 namespace communication {
 

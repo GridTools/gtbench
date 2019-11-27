@@ -1,10 +1,10 @@
-#include "diffusion.hpp"
+#include "./diffusion.hpp"
 
 #include <gridtools/stencil_composition/expressions/expressions.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
 
-#include "computation.hpp"
-#include "tridiagonal.hpp"
+#include "./computation.hpp"
+#include "./tridiagonal.hpp"
 
 namespace diffusion {
 
