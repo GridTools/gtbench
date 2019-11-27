@@ -1,6 +1,6 @@
 #pragma once
 
-#include "computation.hpp"
+#include "./computation.hpp"
 
 namespace diffusion {
 

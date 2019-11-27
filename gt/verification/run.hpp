@@ -2,7 +2,7 @@
 
 #include "../communication/communication.hpp"
 #include "../numerics/solver.hpp"
-#include "analytical.hpp"
+#include "./analytical.hpp"
 
 template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap(F &&f) const {
@@ -65,22 +65,18 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   for (t = 0; t < tmax; t += dt)
     step(state, dt);
 
+  state.data.sync();
   auto view = gt::make_host_view(state.data);
 
   auto expected = on_domain(exact, communication::global_resolution(comm_grid),
                             communication::offset(comm_grid), t)
                       .data();
   double error = 0.0;
-#pragma omp parallel for reduction(+ : error)
-  for (std::size_t i = halo; i < halo + n.x; ++i) {
-    for (std::size_t j = halo; j < halo + n.y; ++j) {
-      for (std::size_t k = 0; k < n.z; ++k) {
-        double diff = view(i, j, k) - expected(i, j, k);
-        error += diff * diff;
-      }
-    }
-  }
-  error *= delta.x * delta.y * delta.z;
+#pragma omp parallel for reduction(max : error)
+  for (std::size_t i = halo; i < halo + n.x; ++i)
+    for (std::size_t j = halo; j < halo + n.y; ++j)
+      for (std::size_t k = 0; k < n.z; ++k)
+        error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
-  return std::sqrt(communication::global_sum(comm_grid, error));
+  return communication::global_max(comm_grid, error);
 }

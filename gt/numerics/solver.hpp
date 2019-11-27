@@ -1,7 +1,7 @@
 #pragma once
 
-#include "advection.hpp"
-#include "diffusion.hpp"
+#include "./advection.hpp"
+#include "./diffusion.hpp"
 
 struct solver_state {
   template <class DataInit, class UInit, class VInit, class WInit>

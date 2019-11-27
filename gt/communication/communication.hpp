@@ -45,8 +45,8 @@ auto halo_exchanger(CommGrid &&grid, storage_t::storage_info_t const &sinfo) {
   return comm_halo_exchanger(std::forward<CommGrid>(grid), sinfo);
 }
 
-template <class CommGrid, class T> T global_sum(CommGrid &&grid, T const &t) {
-  return comm_global_sum(std::forward<CommGrid>(grid), t);
+template <class CommGrid, class T> T global_max(CommGrid &&grid, T const &t) {
+  return comm_global_max(std::forward<CommGrid>(grid), t);
 }
 
 } // namespace communication

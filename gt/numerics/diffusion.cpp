@@ -1,10 +1,10 @@
-#include "diffusion.hpp"
+#include "./diffusion.hpp"
 
 #include <gridtools/stencil_composition/expressions/expressions.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
 
-#include "computation.hpp"
-#include "tridiagonal.hpp"
+#include "./computation.hpp"
+#include "./tridiagonal.hpp"
 
 namespace diffusion {
 
@@ -17,7 +17,7 @@ using namespace gt::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
-  using in = in_accessor<1, extent<-1, 1, -1, 1>>;
+  using in = in_accessor<1, extent<-3, 3, -3, 3>>;
 
   using dx = in_accessor<2>;
   using dy = in_accessor<3>;
@@ -28,10 +28,31 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    auto flx_x1 = eval((in(1, 0, 0) - in()) / dx());
-    auto flx_x0 = eval((in() - in(-1, 0, 0)) / dx());
-    auto flx_y1 = eval((in(0, 1, 0) - in()) / dy());
-    auto flx_y0 = eval((in() - in(0, -1, 0)) / dy());
+    constexpr static real_t weights[] = {real_t(-1) / 90,  real_t(5) / 36,
+                                         real_t(-49) / 36, real_t(49) / 36,
+                                         real_t(-5) / 36,  real_t(1) / 90};
+
+    auto flx_x0 = eval((weights[0] * in(-3, 0) + weights[1] * in(-2, 0) +
+                        weights[2] * in(-1, 0) + weights[3] * in(0, 0) +
+                        weights[4] * in(1, 0) + weights[5] * in(2, 0)) /
+                       dx());
+    auto flx_x1 = eval((weights[0] * in(-2, 0) + weights[1] * in(-1, 0) +
+                        weights[2] * in(0, 0) + weights[3] * in(1, 0) +
+                        weights[4] * in(2, 0) + weights[5] * in(3, 0)) /
+                       dx());
+    auto flx_y0 = eval((weights[0] * in(0, -3) + weights[1] * in(0, -2) +
+                        weights[2] * in(0, -1) + weights[3] * in(0, 0) +
+                        weights[4] * in(0, 1) + weights[5] * in(0, 2)) /
+                       dy());
+    auto flx_y1 = eval((weights[0] * in(0, -2) + weights[1] * in(0, -1) +
+                        weights[2] * in(0, 0) + weights[3] * in(0, 1) +
+                        weights[4] * in(0, 2) + weights[5] * in(0, 3)) /
+                       dy());
+
+    flx_x0 = flx_x0 * eval(in() - in(-1, 0)) < real_t(0) ? real_t(0) : flx_x0;
+    flx_x1 = flx_x1 * eval(in(1, 0) - in()) < real_t(0) ? real_t(0) : flx_x1;
+    flx_y0 = flx_y0 * eval(in() - in(0, -1)) < real_t(0) ? real_t(0) : flx_y0;
+    flx_y1 = flx_y1 * eval(in(0, 1) - in()) < real_t(0) ? real_t(0) : flx_y1;
 
     eval(out()) =
         eval(in() + coeff() * dt() *
@@ -161,16 +182,33 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
-          gt::make_multistage(gt::execute::forward(),
-                              gt::make_stage<stage_diffusion_w_forward1>(
-                                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),
-                                  p_c(), p_d(), p_data_in(), p_dz(), p_dt(),
-                                  p_coeff(), p_k_size())),
+          gt::make_multistage(
+              gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_a()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_b()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
+              gt::make_stage<stage_diffusion_w_forward1>(
+                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
+                  p_data_in(), p_dz(), p_dt(), p_coeff(), p_k_size())),
           gt::make_multistage(
               gt::execute::backward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_x())),
               gt::make_stage<stage_diffusion_w_backward1>(p_x(), p_c(), p_d())),
           gt::make_multistage(
               gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
               gt::make_stage<stage_diffusion_w_forward2>(
                   p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
           gt::make_multistage(gt::execute::backward(),

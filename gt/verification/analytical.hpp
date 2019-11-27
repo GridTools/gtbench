@@ -126,30 +126,61 @@ struct advection_diffusion {
   real_t diffusion_coeff;
 };
 
-static constexpr real_t phi = M_PI / 4;
-
 inline auto analytical_data(advection_diffusion const &advdiff) {
   return [d = advdiff.diffusion_coeff](vec<real_t, 3> const &p,
                                        real_t t) -> real_t {
-    return -std::sin(p.x) *
-           std::sin(p.y * std::sin(phi) - p.z * std::cos(phi)) *
-           std::exp(-2 * d * t);
+    constexpr static real_t a = std::sqrt(real_t(2)) / 2;
+    return -std::sin(p.x) * std::sin(a * (p.y - p.z)) * std::exp(-2 * d * t);
   };
 }
 
 inline auto analytical_velocity(advection_diffusion const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {-std::sin(p.x) *
-                std::cos(p.y * std::sin(phi) - p.z * std::cos(phi)),
-            std::sin(phi) * std::cos(p.x) *
-                std::sin(p.y * std::sin(phi) - p.z * std::cos(phi)),
-            -std::cos(phi) * std::cos(p.x) *
-                std::sin(p.y * std::sin(phi) - p.z * std::cos(phi))};
+    constexpr static real_t a = std::sqrt(real_t(2)) / 2;
+    return {-std::sin(p.x) * std::cos(a * (p.y - p.z)),
+            a * std::cos(p.x) * std::sin(a * (p.y - p.z)),
+            -a * std::cos(p.x) * std::sin(a * (p.y - p.z))};
   };
 }
 
 inline vec<real_t, 3> analytical_domain(advection_diffusion const &) {
   return {2 * M_PI, 2 * M_PI * std::sqrt(2), 2 * M_PI * std::sqrt(2)};
+}
+
+template <class Analytical> struct repeated {
+  Analytical wrapped;
+  vec<std::size_t, 3> repeats;
+};
+
+template <class Analytical>
+inline auto analytical_data(repeated<Analytical> const &repeated) {
+  return [f = data(repeated.wrapped), d = domain(repeated.wrapped)](
+             vec<real_t, 3> const &p, real_t t) -> real_t {
+    return f({std::fmod(p.x, d.x), std::fmod(p.y, d.y), std::fmod(p.z, d.z)},
+             t);
+  };
+}
+
+template <class Analytical>
+inline auto analytical_velocity(repeated<Analytical> const &repeated) {
+  return [f = velocity(repeated.wrapped), d = domain(repeated.wrapped)](
+             vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
+    return f({std::fmod(p.x, d.x), std::fmod(p.y, d.y), std::fmod(p.z, d.z)},
+             t);
+  };
+}
+
+template <class Analytical>
+inline vec<real_t, 3> analytical_domain(repeated<Analytical> const &repeated) {
+  auto d = domain(repeated.wrapped);
+  return {d.x * repeated.repeats.x, d.y * repeated.repeats.y,
+          d.z * repeated.repeats.z};
+}
+
+template <class Analytical>
+inline repeated<std::decay_t<Analytical>>
+repeat(Analytical &&analytical, vec<std::size_t, 3> const &repeats) {
+  return {std::forward<Analytical>(analytical), repeats};
 }
 
 } // namespace analytical

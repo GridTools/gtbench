@@ -1,11 +1,11 @@
-#include "advection.hpp"
+#include "./advection.hpp"
 
 #include <gridtools/stencil_composition/expressions/expressions.hpp>
 #include <gridtools/stencil_composition/stencil_composition.hpp>
 #include <gridtools/stencil_composition/stencil_functions.hpp>
 
-#include "computation.hpp"
-#include "tridiagonal.hpp"
+#include "./computation.hpp"
+#include "./tridiagonal.hpp"
 
 namespace advection {
 namespace {
@@ -263,16 +263,33 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
-          gt::make_multistage(gt::execute::forward(),
-                              gt::make_stage<stage_advection_w_forward1>(
-                                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),
-                                  p_c(), p_d(), p_data_in(), p_dz(), p_dt(),
-                                  p_w(), p_k_size())),
+          gt::make_multistage(
+              gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_a()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_b()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
+              gt::make_stage<stage_advection_w_forward1>(
+                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
+                  p_data_in(), p_dz(), p_dt(), p_w(), p_k_size())),
           gt::make_multistage(
               gt::execute::backward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_x())),
               gt::make_stage<stage_advection_w_backward1>(p_x(), p_c(), p_d())),
           gt::make_multistage(
               gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
               gt::make_stage<stage_advection_w_forward2>(
                   p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
           gt::make_multistage(gt::execute::backward(),
@@ -302,16 +319,33 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
           p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
-          gt::make_multistage(gt::execute::forward(),
-                              gt::make_stage<stage_advection_w_forward1>(
-                                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(),
-                                  p_c(), p_d(), p_data_in(), p_dz(), p_dt(),
-                                  p_w(), p_k_size())),
+          gt::make_multistage(
+              gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_a()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_b()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
+              gt::make_stage<stage_advection_w_forward1>(
+                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
+                  p_data_in(), p_dz(), p_dt(), p_w(), p_k_size())),
           gt::make_multistage(
               gt::execute::backward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_x())),
               gt::make_stage<stage_advection_w_backward1>(p_x(), p_c(), p_d())),
           gt::make_multistage(
               gt::execute::forward(),
+              gt::define_caches(
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_c()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
+                      p_d())),
               gt::make_stage<stage_advection_w_forward2>(
                   p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
           gt::make_multistage(gt::execute::backward(),

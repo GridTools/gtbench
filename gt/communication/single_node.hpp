@@ -1,6 +1,6 @@
 #pragma once
 
-#include "communication.hpp"
+#include "./communication.hpp"
 
 namespace communication {
 
@@ -25,7 +25,7 @@ constexpr vec<std::size_t, 2> comm_offset(grid) { return {0, 0}; }
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
-template <class T> constexpr T comm_global_sum(grid, T const &t) { return t; }
+template <class T> constexpr T comm_global_max(grid, T const &t) { return t; }
 } // namespace single_node
 
 } // namespace communication

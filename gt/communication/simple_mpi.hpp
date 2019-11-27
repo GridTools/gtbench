@@ -2,7 +2,7 @@
 
 #include <mpi.h>
 
-#include "communication.hpp"
+#include "./communication.hpp"
 
 namespace communication {
 
@@ -37,7 +37,7 @@ inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution) {
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
-double comm_global_sum(grid const &grid, double t);
+double comm_global_max(grid const &grid, double t);
 
 } // namespace simple_mpi
 
