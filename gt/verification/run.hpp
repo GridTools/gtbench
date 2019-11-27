@@ -72,16 +72,11 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
                             communication::offset(comm_grid), t)
                       .data();
   double error = 0.0;
-#pragma omp parallel for reduction(+ : error)
-  for (std::size_t i = halo; i < halo + n.x; ++i) {
-    for (std::size_t j = halo; j < halo + n.y; ++j) {
-      for (std::size_t k = 0; k < n.z; ++k) {
-        double diff = view(i, j, k) - expected(i, j, k);
-        error += diff * diff;
-      }
-    }
-  }
-  error *= delta.x * delta.y * delta.z;
+#pragma omp parallel for reduction(max : error)
+  for (std::size_t i = halo; i < halo + n.x; ++i)
+    for (std::size_t j = halo; j < halo + n.y; ++j)
+      for (std::size_t k = 0; k < n.z; ++k)
+        error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
-  return std::sqrt(communication::global_sum(comm_grid, error));
+  return communication::global_max(comm_grid, error);
 }

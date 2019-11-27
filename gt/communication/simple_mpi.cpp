@@ -158,10 +158,10 @@ comm_halo_exchanger(grid const &comm_grid,
   return halo_exchange_f(comm_grid.comm_cart, sinfo);
 }
 
-double comm_global_sum(grid const &grid, double t) {
-  double sum;
-  MPI_Allreduce(&t, &sum, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
-  return sum;
+double comm_global_max(grid const &grid, double t) {
+  double max;
+  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
+  return max;
 }
 
 } // namespace simple_mpi
