@@ -77,14 +77,12 @@ public: // member types
     };
 
 private: // members
-    int m_halo_size;
     coordinate_type m_first;
     coordinate_type m_last;
 
 public: // ctors
     template<typename Array>
     halo_generator(const Array& g_first, const Array& g_last, int halo_size)
-    : m_halo_size(halo_size)
     {
         std::copy(g_first.begin(), g_first.end(), m_first.begin());
         std::copy(g_last.begin(), g_last.end(), m_last.begin());
@@ -98,25 +96,25 @@ public: // ctors
 public: // member functions
     std::array<box2,4> operator()(const domain_type& dom) const
     {
-        coordinate_type my_first_local {                                       0,                             -m_halo_size,                            0};
-        coordinate_type my_first_global{                          dom.first()[0],               dom.first()[1]-m_halo_size,               dom.first()[2]};
-        coordinate_type my_last_local  {            dom.last()[0]-dom.first()[0],                                       -1, dom.last()[2]-dom.first()[2]};
-        coordinate_type my_last_global {                           dom.last()[0],                         dom.first()[1]-1,                dom.last()[2]};
+        coordinate_type my_first_local {                                0,                             -halo,                            0};
+        coordinate_type my_first_global{                   dom.first()[0],               dom.first()[1]-halo,               dom.first()[2]};
+        coordinate_type my_last_local  {     dom.last()[0]-dom.first()[0],                                -1, dom.last()[2]-dom.first()[2]};
+        coordinate_type my_last_global {                    dom.last()[0],                  dom.first()[1]-1,                dom.last()[2]};
 
-        coordinate_type mx_first_local {                            -m_halo_size,                                        0,                            0};
-        coordinate_type mx_first_global{              dom.first()[0]-m_halo_size,                           dom.first()[1],               dom.first()[2]};
-        coordinate_type mx_last_local  {                                      -1,             dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
-        coordinate_type mx_last_global {                        dom.first()[0]-1,                            dom.last()[1],                dom.last()[2]};
+        coordinate_type mx_first_local {                            -halo,                                 0,                            0};
+        coordinate_type mx_first_global{              dom.first()[0]-halo,                    dom.first()[1],               dom.first()[2]};
+        coordinate_type mx_last_local  {                               -1,      dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
+        coordinate_type mx_last_global {                 dom.first()[0]-1,                     dom.last()[1],                dom.last()[2]};
 
-        coordinate_type px_first_local {          dom.last()[0]-dom.first()[0]+1,                                        0,                            0};
-        coordinate_type px_first_global{                         dom.last()[0]+1,                           dom.first()[1],               dom.first()[2]};
-        coordinate_type px_last_local  {dom.last()[0]-dom.first()[0]+m_halo_size,             dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
-        coordinate_type px_last_global {               dom.last()[0]+m_halo_size,                            dom.last()[1],                dom.last()[2]};
+        coordinate_type px_first_local {   dom.last()[0]-dom.first()[0]+1,                                 0,                            0};
+        coordinate_type px_first_global{                  dom.last()[0]+1,                    dom.first()[1],               dom.first()[2]};
+        coordinate_type px_last_local  {dom.last()[0]-dom.first()[0]+halo,      dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
+        coordinate_type px_last_global {               dom.last()[0]+halo,                     dom.last()[1],                dom.last()[2]};
 
-        coordinate_type py_first_local {                                       0,           dom.last()[1]-dom.first()[1]+1,                            0};
-        coordinate_type py_first_global{                          dom.first()[0],                          dom.last()[1]+1,               dom.first()[2]};
-        coordinate_type py_last_local  {            dom.last()[0]-dom.first()[0], dom.last()[1]-dom.first()[1]+m_halo_size, dom.last()[2]-dom.first()[2]};
-        coordinate_type py_last_global {                           dom.last()[0],                dom.last()[1]+m_halo_size,                dom.last()[2]};
+        coordinate_type py_first_local {                                0,    dom.last()[1]-dom.first()[1]+1,                            0};
+        coordinate_type py_first_global{                   dom.first()[0],                   dom.last()[1]+1,               dom.first()[2]};
+        coordinate_type py_last_local  {     dom.last()[0]-dom.first()[0], dom.last()[1]-dom.first()[1]+halo, dom.last()[2]-dom.first()[2]};
+        coordinate_type py_last_global {                    dom.last()[0],                dom.last()[1]+halo,                dom.last()[2]};
 
         my_first_global[1] = (((my_first_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
         my_last_global[1]  = ((( my_last_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
@@ -293,7 +291,7 @@ inline grid comm_grid(const world&, vec<std::size_t, 3> const &global_resolution
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
-double comm_global_sum(grid const &grid, double t);
+double comm_global_max(grid const &grid, double t);
 
 } // namespace ghex_comm
 
