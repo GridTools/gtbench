@@ -126,25 +126,20 @@ struct advection_diffusion {
   real_t diffusion_coeff;
 };
 
-static constexpr real_t phi = M_PI / 4;
-
 inline auto analytical_data(advection_diffusion const &advdiff) {
   return [d = advdiff.diffusion_coeff](vec<real_t, 3> const &p,
                                        real_t t) -> real_t {
-    return -std::sin(p.x) *
-           std::sin(p.y * std::sin(phi) - p.z * std::cos(phi)) *
-           std::exp(-2 * d * t);
+    constexpr static real_t a = std::sqrt(real_t(2)) / 2;
+    return -std::sin(p.x) * std::sin(a * (p.y - p.z)) * std::exp(-2 * d * t);
   };
 }
 
 inline auto analytical_velocity(advection_diffusion const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {-std::sin(p.x) *
-                std::cos(p.y * std::sin(phi) - p.z * std::cos(phi)),
-            std::sin(phi) * std::cos(p.x) *
-                std::sin(p.y * std::sin(phi) - p.z * std::cos(phi)),
-            -std::cos(phi) * std::cos(p.x) *
-                std::sin(p.y * std::sin(phi) - p.z * std::cos(phi))};
+    constexpr static real_t a = std::sqrt(real_t(2)) / 2;
+    return {-std::sin(p.x) * std::cos(a * (p.y - p.z)),
+            std::sin(phi) * std::cos(p.x) * std::sin(a * (p.y - p.z)),
+            -std::cos(phi) * std::cos(p.x) * std::sin(a * (p.y - p.z))};
   };
 }
 
