@@ -17,7 +17,7 @@ using namespace gt::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
-  using in = in_accessor<1, extent<-1, 1, -1, 1>>;
+  using in = in_accessor<1, extent<-3, 3, -3, 3>>;
 
   using dx = in_accessor<2>;
   using dy = in_accessor<3>;
@@ -28,10 +28,31 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    auto flx_x1 = eval((in(1, 0, 0) - in()) / dx());
-    auto flx_x0 = eval((in() - in(-1, 0, 0)) / dx());
-    auto flx_y1 = eval((in(0, 1, 0) - in()) / dy());
-    auto flx_y0 = eval((in() - in(0, -1, 0)) / dy());
+    constexpr static real_t weights[] = {real_t(-1) / 90,  real_t(5) / 36,
+                                         real_t(-49) / 36, real_t(49) / 36,
+                                         real_t(-5) / 36,  real_t(1) / 90};
+
+    auto flx_x0 = eval((weights[0] * in(-3, 0) + weights[1] * in(-2, 0) +
+                        weights[2] * in(-1, 0) + weights[3] * in(0, 0) +
+                        weights[4] * in(1, 0) + weights[5] * in(2, 0)) /
+                       dx());
+    auto flx_x1 = eval((weights[0] * in(-2, 0) + weights[1] * in(-1, 0) +
+                        weights[2] * in(0, 0) + weights[3] * in(1, 0) +
+                        weights[4] * in(2, 0) + weights[5] * in(3, 0)) /
+                       dx());
+    auto flx_y0 = eval((weights[0] * in(0, -3) + weights[1] * in(0, -2) +
+                        weights[2] * in(0, -1) + weights[3] * in(0, 0) +
+                        weights[4] * in(0, 1) + weights[5] * in(0, 2)) /
+                       dy());
+    auto flx_y1 = eval((weights[0] * in(0, -2) + weights[1] * in(0, -1) +
+                        weights[2] * in(0, 0) + weights[3] * in(0, 1) +
+                        weights[4] * in(0, 2) + weights[5] * in(0, 3)) /
+                       dy());
+
+    flx_x0 = flx_x0 * eval(in() - in(-1, 0)) < real_t(0) ? real_t(0) : flx_x0;
+    flx_x1 = flx_x1 * eval(in(1, 0) - in()) < real_t(0) ? real_t(0) : flx_x1;
+    flx_y0 = flx_y0 * eval(in() - in(0, -1)) < real_t(0) ? real_t(0) : flx_y0;
+    flx_y1 = flx_y1 * eval(in(0, 1) - in()) < real_t(0) ? real_t(0) : flx_y1;
 
     eval(out()) =
         eval(in() + coeff() * dt() *
