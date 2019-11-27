@@ -138,8 +138,8 @@ inline auto analytical_velocity(advection_diffusion const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
     constexpr static real_t a = std::sqrt(real_t(2)) / 2;
     return {-std::sin(p.x) * std::cos(a * (p.y - p.z)),
-            std::sin(phi) * std::cos(p.x) * std::sin(a * (p.y - p.z)),
-            -std::cos(phi) * std::cos(p.x) * std::sin(a * (p.y - p.z))};
+            a * std::cos(p.x) * std::sin(a * (p.y - p.z)),
+            -a * std::cos(p.x) * std::sin(a * (p.y - p.z))};
   };
 }
 
