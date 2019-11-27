@@ -149,7 +149,7 @@ inline vec<real_t, 3> analytical_domain(advection_diffusion const &) {
 
 template <class Analytical> struct repeated {
   Analytical wrapped;
-  vec<real_t, 3> repeats;
+  vec<std::size_t, 3> repeats;
 };
 
 template <class Analytical>
@@ -164,14 +164,14 @@ inline auto analytical_data(repeated<Analytical> const &repeated) {
 template <class Analytical>
 inline auto analytical_velocity(repeated<Analytical> const &repeated) {
   return [f = velocity(repeated.wrapped), d = domain(repeated.wrapped)](
-             vec<real_t, 3> const &p, real_t t) -> real_t {
+             vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
     return f({std::fmod(p.x, d.x), std::fmod(p.y, d.y), std::fmod(p.z, d.z)},
              t);
   };
 }
 
 template <class Analytical>
-inline auto analytical_domain(repeated<Analytical> const &repeated) {
+inline vec<real_t, 3> analytical_domain(repeated<Analytical> const &repeated) {
   auto d = domain(repeated.wrapped);
   return {d.x * repeated.repeats.x, d.y * repeated.repeats.y,
           d.z * repeated.repeats.z};
@@ -179,7 +179,7 @@ inline auto analytical_domain(repeated<Analytical> const &repeated) {
 
 template <class Analytical>
 inline repeated<std::decay_t<Analytical>>
-repeat(Analytical &&analytical, vec<real_t, 3> const &repeats) {
+repeat(Analytical &&analytical, vec<std::size_t, 3> const &repeats) {
   return {std::forward<Analytical>(analytical), repeats};
 }
 
