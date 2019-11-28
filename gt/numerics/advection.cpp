@@ -24,9 +24,8 @@ struct stage_u {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    static constexpr real_t weights[] = {real_t(1) / 30, -real_t(1) / 4,
-                                         real_t(1),      -real_t(1) / 3,
-                                         -real_t(1) / 2, real_t(1) / 20};
+    static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
+                                         -1_r / 3, -1_r / 2, 1_r / 20};
 
     if (eval(u()) < 0) {
       eval(flux()) =
@@ -43,7 +42,7 @@ struct stage_u {
                 weights[1] * in(2, 0, 0) + weights[0] * in(3, 0, 0)) /
                dx());
     } else {
-      eval(flux()) = real_t(0);
+      eval(flux()) = 0_r;
     }
   }
 };
@@ -57,9 +56,8 @@ struct stage_v {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    static constexpr real_t weights[] = {real_t(1) / 30, -real_t(1) / 4,
-                                         real_t(1),      -real_t(1) / 3,
-                                         -real_t(1) / 2, real_t(1) / 20};
+    static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
+                                         -1_r / 3, -1_r / 2, 1_r / 20};
 
     if (eval(v()) < 0) {
       eval(flux()) =
@@ -76,7 +74,7 @@ struct stage_v {
                 weights[1] * in(0, 2, 0) + weights[0] * in(0, 3, 0)) /
                dy());
     } else {
-      eval(flux()) = real_t(0);
+      eval(flux()) = 0_r;
     }
   }
 };
@@ -135,13 +133,12 @@ struct stage_advection_w_forward1 {
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     const gt::int_t k_offset = eval(k_size() - 1);
 
-    eval(a()) = eval(real_t(-0.25) * w() / dz());
-    eval(c()) = eval(real_t(0.25) * w(0, 0, 1) / dz());
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) =
-        eval(real_t(1) / dt() * data() -
-             real_t(0.25) * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz() -
-             real_t(0.25) * w() * (data() - data(0, 0, k_offset)) / dz());
+    eval(a()) = eval(-0.25_r * w() / dz());
+    eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) = eval(1_r / dt() * data() -
+                     0.25_r * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz() -
+                     0.25_r * w() * (data() - data(0, 0, k_offset)) / dz());
 
     eval(alpha()) = eval(-a());
     eval(beta()) = eval(a());
@@ -154,13 +151,12 @@ struct stage_advection_w_forward1 {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(a()) = eval(real_t(-0.25) * w() / dz());
-    eval(c()) = eval(real_t(0.25) * w(0, 0, 1) / dz());
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) =
-        eval(real_t(1) / dt() * data() -
-             real_t(0.25) * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz() -
-             real_t(0.25) * w() * (data() - data(0, 0, -1)) / dz());
+    eval(a()) = eval(-0.25_r * w() / dz());
+    eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) = eval(1_r / dt() * data() -
+                     0.25_r * w(0, 0, 1) * (data(0, 0, 1) - data()) / dz() -
+                     0.25_r * w() * (data() - data(0, 0, -1)) / dz());
 
     gridtools::call_proc<tridiagonal::periodic_forward1,
                          full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
@@ -170,13 +166,13 @@ struct stage_advection_w_forward1 {
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     const gt::int_t k_offset = eval(k_size() - 1);
 
-    eval(a()) = eval(real_t(-0.25) * w() / dz());
-    eval(c()) = eval(real_t(0.25) * w(0, 0, 1) / dz());
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) = eval(real_t(1) / dt() * data() -
-                     real_t(0.25) * w(0, 0, 1) *
-                         (data(0, 0, -k_offset) - data()) / dz() -
-                     real_t(0.25) * w() * (data() - data(0, 0, -1)) / dz());
+    eval(a()) = eval(-0.25_r * w() / dz());
+    eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) =
+        eval(1_r / dt() * data() -
+             0.25_r * w(0, 0, 1) * (data(0, 0, -k_offset) - data()) / dz() -
+             0.25_r * w() * (data() - data(0, 0, -1)) / dz());
 
     gridtools::call_proc<tridiagonal::periodic_forward1,
                          full_t::last_level>::with(eval, a(), b(), c(), d(),

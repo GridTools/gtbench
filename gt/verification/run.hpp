@@ -18,7 +18,7 @@ template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap_staggered_z(F &&f) const {
     return remap([f = std::forward<F>(f),
                   delta = delta](vec<real_t, 3> const &p, real_t t) {
-      return f({p.x, p.y, p.z - 0.5 * delta.z}, t);
+      return f({p.x, p.y, p.z - 0.5_r * delta.z}, t);
     });
   }
 

@@ -116,7 +116,7 @@ struct periodic_forward2 {
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(u()) = real_t(0);
+    eval(u()) = 0_r;
     gridtools::call_proc<tridiagonal::forward, full_t::modify<1, 0>>::with(
         eval, a(), b(), c(), u());
   }

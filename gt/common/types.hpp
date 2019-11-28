@@ -6,6 +6,11 @@ namespace gt = gridtools;
 
 using real_t = GTBENCH_FLOAT;
 
+constexpr real_t operator"" _r(long double value) { return real_t(value); }
+constexpr real_t operator"" _r(unsigned long long value) {
+  return real_t(value);
+}
+
 static constexpr gt::int_t halo = 3;
 static constexpr gt::int_t huge_offset = 10000;
 

@@ -28,9 +28,8 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    constexpr static real_t weights[] = {real_t(-1) / 90,  real_t(5) / 36,
-                                         real_t(-49) / 36, real_t(49) / 36,
-                                         real_t(-5) / 36,  real_t(1) / 90};
+    constexpr static real_t weights[] = {-1_r / 90, 5_r / 36,  -49_r / 36,
+                                         49_r / 36, -5_r / 36, 1_r / 90};
 
     auto flx_x0 = eval((weights[0] * in(-3, 0) + weights[1] * in(-2, 0) +
                         weights[2] * in(-1, 0) + weights[3] * in(0, 0) +
@@ -49,10 +48,10 @@ struct stage_horizontal {
                         weights[4] * in(0, 2) + weights[5] * in(0, 3)) /
                        dy());
 
-    flx_x0 = flx_x0 * eval(in() - in(-1, 0)) < real_t(0) ? real_t(0) : flx_x0;
-    flx_x1 = flx_x1 * eval(in(1, 0) - in()) < real_t(0) ? real_t(0) : flx_x1;
-    flx_y0 = flx_y0 * eval(in() - in(0, -1)) < real_t(0) ? real_t(0) : flx_y0;
-    flx_y1 = flx_y1 * eval(in(0, 1) - in()) < real_t(0) ? real_t(0) : flx_y1;
+    flx_x0 = flx_x0 * eval(in() - in(-1, 0)) < 0_r ? 0_r : flx_x0;
+    flx_x1 = flx_x1 * eval(in(1, 0) - in()) < 0_r ? 0_r : flx_x1;
+    flx_y0 = flx_y0 * eval(in() - in(0, -1)) < 0_r ? 0_r : flx_y0;
+    flx_y1 = flx_y1 * eval(in(0, 1) - in()) < 0_r ? 0_r : flx_y1;
 
     eval(out()) =
         eval(in() + coeff() * dt() *
@@ -84,15 +83,14 @@ struct stage_diffusion_w_forward1 {
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     const gt::int_t k_offset = eval(k_size() - 1);
 
-    eval(a()) = eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) =
-        eval(real_t(1) / dt() * data() +
-             real_t(0.5) * coeff() *
-                 (data(0, 0, k_offset) - real_t(2) * data() + data(0, 0, 1)) /
-                 (dz() * dz()));
+    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) = eval(1_r / dt() * data() +
+                     0.5_r * coeff() *
+                         (data(0, 0, k_offset) - 2_r * data() + data(0, 0, 1)) /
+                         (dz() * dz()));
 
-    eval(alpha()) = eval(beta()) = eval(-coeff() / (real_t(2) * dz() * dz()));
+    eval(alpha()) = eval(beta()) = eval(-coeff() / (2_r * dz() * dz()));
     eval(gamma()) = eval(-b());
 
     gridtools::call_proc<tridiagonal::periodic_forward1,
@@ -102,12 +100,12 @@ struct stage_diffusion_w_forward1 {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(a()) = eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) = eval(real_t(1) / dt() * data() +
-                     real_t(0.5) * coeff() *
-                         (data(0, 0, -1) - real_t(2) * data() + data(0, 0, 1)) /
-                         (dz() * dz()));
+    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) =
+        eval(1_r / dt() * data() +
+             0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
+                 (dz() * dz()));
 
     gridtools::call_proc<tridiagonal::periodic_forward1,
                          full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
@@ -117,13 +115,12 @@ struct stage_diffusion_w_forward1 {
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     const gt::int_t k_offset = eval(k_size() - 1);
 
-    eval(a()) = eval(c()) = eval(-coeff() / (real_t(2) * dz() * dz()));
-    eval(b()) = eval(real_t(1) / dt() - a() - c());
-    eval(d()) =
-        eval(real_t(1) / dt() * data() +
-             real_t(0.5) * coeff() *
-                 (data(0, 0, -1) - real_t(2) * data() + data(0, 0, -k_offset)) /
-                 (dz() * dz()));
+    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
+    eval(b()) = eval(1_r / dt() - a() - c());
+    eval(d()) = eval(1_r / dt() * data() + 0.5_r * coeff() *
+                                               (data(0, 0, -1) - 2_r * data() +
+                                                data(0, 0, -k_offset)) /
+                                               (dz() * dz()));
     gridtools::call_proc<tridiagonal::periodic_forward1,
                          full_t::last_level>::with(eval, a(), b(), c(), d(),
                                                    alpha(), beta(), gamma());
