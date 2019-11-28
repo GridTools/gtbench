@@ -31,8 +31,7 @@ world::~world() {
 }
 
 grid::grid(vec<std::size_t, 3> const &global_resolution)
-    : global_resolution{global_resolution.x, global_resolution.y} 
-{
+    : global_resolution{global_resolution.x, global_resolution.y} {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -82,8 +81,9 @@ template <class T> struct halo_info { T lower, upper; };
 
 struct halo_exchange_f {
   halo_exchange_f(MPI_Comm comm_cart, storage_t::storage_info_t const &sinfo)
-      : comm_cart(comm_cart), send_offsets{{0, 0}, {0, 0}}, recv_offsets{{0, 0}, {0, 0}} 
-  {
+      : comm_cart(comm_cart), send_offsets{{0, 0}, {0, 0}}, recv_offsets{
+                                                                {0, 0},
+                                                                {0, 0}} {
     auto strides = sinfo.strides();
     auto sizes = sinfo.total_lengths();
 
@@ -193,4 +193,3 @@ double comm_global_max(grid const &grid, double t) {
 } // namespace simple_mpi
 
 } // namespace communication
-
