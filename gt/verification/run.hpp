@@ -3,6 +3,7 @@
 #include "../communication/communication.hpp"
 #include "../numerics/solver.hpp"
 #include "./analytical.hpp"
+#include "./timer.hpp"
 
 template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap(F &&f) const {
@@ -44,8 +45,13 @@ on_domain(Analytical const &exact, vec<std::size_t, 3> const &resolution,
           t};
 }
 
+struct result {
+  double error;
+  double time;
+};
+
 template <class CommGrid, class Stepper, class Analytical>
-double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
+result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
            Analytical &&exact) {
   const auto initial =
       on_domain(exact, communication::global_resolution(comm_grid),
@@ -61,9 +67,12 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto step = stepper(n, delta, exchange);
 
+  auto start = timer::now(backend_t{});
   real_t t;
   for (t = 0; t < tmax; t += dt)
     step(state, dt);
+  auto stop = timer::now(backend_t{});
+  double time = timer::duration(start, stop);
 
   state.data.sync();
   auto view = gt::make_host_view(state.data);
@@ -78,5 +87,5 @@ double run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
       for (std::size_t k = 0; k < n.z; ++k)
         error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
-  return communication::global_max(comm_grid, error);
+  return {communication::global_max(comm_grid, error), time};
 }

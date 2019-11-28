@@ -25,9 +25,10 @@ int main(int argc, char **argv) {
       analytical::repeat(analytical::advection_diffusion{diffusion_coeff},
                          {(n + nz - 1) / nz, (n + nz - 1) / nz, 1});
 
-  auto error =
+  auto result =
       run(std::move(comm_grid), full_stepper(diffusion_coeff), 1, 1e-3, exact);
-  std::cout << "error: " << error << std::endl;
+  std::cout << "error: " << result.error << std::endl
+            << "time: " << result.time << "s" << std::endl;
 
   return 0;
 }
