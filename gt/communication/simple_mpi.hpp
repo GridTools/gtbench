@@ -42,3 +42,4 @@ double comm_global_max(grid const &grid, double t);
 } // namespace simple_mpi
 
 } // namespace communication
+
