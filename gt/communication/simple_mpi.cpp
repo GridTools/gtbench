@@ -186,7 +186,7 @@ comm_halo_exchanger(grid const &comm_grid,
 
 double comm_global_max(grid const &grid, double t) {
   double max;
-  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
+  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_MAX, grid.comm_cart);
   return max;
 }
 

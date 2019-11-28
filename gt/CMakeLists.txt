@@ -19,6 +19,11 @@ if(GTBENCH_BACKEND STREQUAL "cuda")
     enable_language(CUDA)
 endif()
 
+get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+if("CUDA" IN_LIST languages)
+    set_source_files_properties(benchmark.cpp driver_ghex.cpp PROPERTIES LANGUAGE CUDA)
+endif()
+
 add_subdirectory(communication)
 add_subdirectory(numerics)
 
@@ -32,5 +37,5 @@ add_executable(driver_ghex driver_ghex.cpp)
 target_link_libraries(driver_ghex advection diffusion communication_ghex)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion communication_simple_mpi)
+target_link_libraries(benchmark advection diffusion communication_ghex)
 

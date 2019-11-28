@@ -1,3 +1,8 @@
+get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+if("CUDA" IN_LIST languages)
+    set_source_files_properties(ghex_comm.cpp PROPERTIES LANGUAGE CUDA)
+endif()
+
 add_library(communication_single_node single_node.cpp)
 target_link_libraries(communication_single_node GridTools::gridtools)
 

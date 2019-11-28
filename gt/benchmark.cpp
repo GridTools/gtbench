@@ -1,11 +1,11 @@
 #include <iostream>
 
-#include "./communication/simple_mpi.hpp"
+#include "./communication/ghex_comm.hpp"
 #include "./numerics/solver.hpp"
 #include "./verification/run.hpp"
 
 int main(int argc, char **argv) {
-  auto comm_world = communication::simple_mpi::world(argc, argv);
+  auto comm_world = communication::ghex_comm::world(argc, argv);
 
   if (argc != 2) {
     std::cerr << "usage: " << argv[0] << " N" << std::endl;
