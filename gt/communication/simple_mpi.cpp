@@ -19,7 +19,16 @@ world::world(int &argc, char **&argv) {
     std::cout.setstate(std::ios_base::failbit);
 }
 
-world::~world() { MPI_Finalize(); }
+world::world(world &&other) : active(std::exchange(other.active, false)) {}
+
+world &world::operator=(world &&other) {
+  active = std::exchange(other.active, false);
+}
+
+world::~world() {
+  if (active)
+    MPI_Finalize();
+}
 
 grid::grid(vec<std::size_t, 3> const &global_resolution)
     : global_resolution{global_resolution.x, global_resolution.y} {
@@ -49,7 +58,24 @@ grid::grid(vec<std::size_t, 3> const &global_resolution)
     throw std::runtime_error("local resolution is smaller than halo size!");
 } // namespace mpi
 
-grid::~grid() { MPI_Comm_free(&comm_cart); }
+grid::grid(grid &&other)
+    : resolution(std::move(other.resolution)),
+      global_resolution(std::move(other.global_resolution)),
+      offset(std::move(other.offset)),
+      comm_cart(std::exchange(other.comm_cart, MPI_COMM_NULL)) {}
+
+grid &grid::operator=(grid &&other) {
+  resolution = std::move(other.resolution);
+  global_resolution = std::move(other.global_resolution);
+  offset = std::move(other.offset);
+  comm_cart = std::exchange(other.comm_cart, MPI_COMM_NULL);
+  return *this;
+}
+
+grid::~grid() {
+  if (comm_cart != MPI_COMM_NULL)
+    MPI_Comm_free(&comm_cart);
+}
 
 template <class T> struct halo_info { T lower, upper; };
 

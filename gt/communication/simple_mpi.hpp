@@ -11,23 +11,25 @@ namespace simple_mpi {
 struct world {
   world(int &argc, char **&argv);
   world(world const &) = delete;
-  world(world &&) = default;
+  world(world &&);
   world &operator=(world const &) = delete;
-  world &operator=(world &&) = default;
+  world &operator=(world &&);
   ~world();
+
+  bool active = true;
 };
 
 struct grid {
   grid(vec<std::size_t, 3> const &global_resolution);
   grid(grid const &) = delete;
-  grid(grid &&) = default;
+  grid(grid &&);
   grid &operator=(grid const &) = delete;
-  grid &operator=(grid &&) = default;
+  grid &operator=(grid &&);
   ~grid();
 
   vec<std::size_t, 3> resolution;
   vec<std::size_t, 2> global_resolution, offset;
-  MPI_Comm comm_cart;
+  MPI_Comm comm_cart = MPI_COMM_NULL;
 };
 
 inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution) {
