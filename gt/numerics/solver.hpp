@@ -19,152 +19,114 @@ struct solver_state {
   storage_t data, u, v, w, data1, data2;
 };
 
-struct hdiff_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    exchange(state.data);
-    hdiff(state.data1, state.data, dt);
-    std::swap(state.data1, state.data);
-  }
-
-  diffusion::horizontal hdiff;
-  std::function<void(storage_t &)> exchange;
-};
-
 auto hdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
-                           vec<real_t, 3> const &delta, auto exchange) {
-    return hdiff_stepper_f{{resolution, delta, diffusion_coeff}, {exchange}};
+                           vec<real_t, 3> const &delta, auto &&exchange) {
+    return [hdiff = diffusion::horizontal(resolution, delta, diffusion_coeff),
+            exchange = std::move(exchange)](solver_state &state,
+                                            real_t dt) mutable {
+      exchange(state.data);
+      hdiff(state.data1, state.data, dt);
+      std::swap(state.data1, state.data);
+    };
   };
 }
-
-struct vdiff_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    vdiff(state.data1, state.data, dt);
-    std::swap(state.data1, state.data);
-  }
-
-  diffusion::vertical vdiff;
-};
 
 auto vdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
-                           vec<real_t, 3> const &delta, auto exchange) {
-    return vdiff_stepper_f{{resolution, delta, diffusion_coeff}};
+                           vec<real_t, 3> const &delta, auto &&) {
+    return [vdiff = diffusion::vertical(resolution, delta, diffusion_coeff)](
+               solver_state &state, real_t dt) mutable {
+      vdiff(state.data1, state.data, dt);
+      std::swap(state.data1, state.data);
+    };
   };
 }
-
-struct diff_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    exchange(state.data);
-    hdiff(state.data1, state.data, dt);
-    vdiff(state.data, state.data1, dt);
-  }
-
-  diffusion::horizontal hdiff;
-  diffusion::vertical vdiff;
-  std::function<void(storage_t &)> exchange;
-};
 
 auto diff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
-                           vec<real_t, 3> const &delta, auto exchange) {
-    return diff_stepper_f{{resolution, delta, diffusion_coeff},
-                          {resolution, delta, diffusion_coeff},
-                          {exchange}};
+                           vec<real_t, 3> const &delta, auto &&exchange) {
+    return [hdiff = diffusion::horizontal(resolution, delta, diffusion_coeff),
+            vdiff = diffusion::vertical(resolution, delta, diffusion_coeff),
+            exchange = std::move(exchange)](solver_state &state,
+                                            real_t dt) mutable {
+      exchange(state.data);
+      hdiff(state.data1, state.data, dt);
+      vdiff(state.data, state.data1, dt);
+    };
   };
 }
-
-struct hadv_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    exchange(state.data);
-    hadv(state.data1, state.data, state.u, state.v, dt);
-    std::swap(state.data1, state.data);
-  }
-
-  advection::horizontal hadv;
-  std::function<void(storage_t &)> exchange;
-};
 
 auto hadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
-            auto exchange) {
-    return hadv_stepper_f{{resolution, delta}, {exchange}};
+            auto &&exchange) {
+    return [hadv = advection::horizontal(resolution, delta),
+            exchange = std::move(exchange)](solver_state &state,
+                                            real_t dt) mutable {
+      exchange(state.data);
+      hadv(state.data1, state.data, state.u, state.v, dt);
+      std::swap(state.data1, state.data);
+    };
   };
 }
-
-struct vadv_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    vadv(state.data1, state.data, state.w, dt);
-    std::swap(state.data1, state.data);
-  }
-
-  advection::vertical vadv;
-};
 
 auto vadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
-            auto exchange) {
-    return vadv_stepper_f{{resolution, delta}};
+            auto &&) {
+    return [vadv = advection::vertical(resolution, delta)](solver_state &state,
+                                                           real_t dt) mutable {
+      vadv(state.data1, state.data, state.w, dt);
+      std::swap(state.data1, state.data);
+    };
   };
 }
-
-struct rkadv_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    exchange(state.data);
-    rk_step(state.data1, state.data, state.data, state.u, state.v, state.w,
-            dt / 3);
-    exchange(state.data1);
-    rk_step(state.data2, state.data1, state.data, state.u, state.v, state.w,
-            dt / 2);
-    exchange(state.data2);
-    rk_step(state.data, state.data2, state.data, state.u, state.v, state.w, dt);
-  }
-
-  advection::runge_kutta_step rk_step;
-  std::function<void(storage_t &)> exchange;
-};
 
 auto rkadv_stepper() {
   return [](vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
-            auto exchange) {
-    return rkadv_stepper_f{{resolution, delta}, {exchange}};
+            auto &&exchange) {
+    return [rkstep = advection::runge_kutta_step(resolution, delta),
+            exchange = std::move(exchange)](solver_state &state,
+                                            real_t dt) mutable {
+      exchange(state.data);
+      rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
+             dt / 3);
+      exchange(state.data1);
+      rkstep(state.data2, state.data1, state.data, state.u, state.v, state.w,
+             dt / 2);
+      exchange(state.data2);
+      rkstep(state.data, state.data2, state.data, state.u, state.v, state.w,
+             dt);
+    };
   };
 }
-
-struct full_stepper_f {
-  void operator()(solver_state &state, real_t dt) {
-    // VDIFF
-    vdiff(state.data1, state.data, dt);
-    std::swap(state.data1, state.data);
-
-    // ADV
-    exchange(state.data);
-    rk_step(state.data1, state.data, state.data, state.u, state.v, state.w,
-            dt / 3);
-    exchange(state.data1);
-    rk_step(state.data2, state.data1, state.data, state.u, state.v, state.w,
-            dt / 2);
-    exchange(state.data2);
-    rk_step(state.data, state.data2, state.data, state.u, state.v, state.w, dt);
-
-    // HDIFF
-    exchange(state.data);
-    hdiff(state.data1, state.data, dt);
-    std::swap(state.data1, state.data);
-  }
-
-  diffusion::horizontal hdiff;
-  diffusion::vertical vdiff;
-  advection::runge_kutta_step rk_step;
-  std::function<void(storage_t &)> exchange;
-};
 
 auto full_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
-    return full_stepper_f{{resolution, delta, diffusion_coeff},
-                          {resolution, delta, diffusion_coeff},
-                          {resolution, delta},
-                          {exchange}};
+    return [hdiff = diffusion::horizontal(resolution, delta, diffusion_coeff),
+            vdiff = diffusion::vertical(resolution, delta, diffusion_coeff),
+            rkstep = advection::runge_kutta_step(resolution, delta),
+            exchange = std::move(exchange)](solver_state &state,
+                                            real_t dt) mutable {
+      // VDIFF
+      vdiff(state.data1, state.data, dt);
+      std::swap(state.data1, state.data);
+
+      // ADV
+      exchange(state.data);
+      rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
+             dt / 3);
+      exchange(state.data1);
+      rkstep(state.data2, state.data1, state.data, state.u, state.v, state.w,
+             dt / 2);
+      exchange(state.data2);
+      rkstep(state.data, state.data2, state.data, state.u, state.v, state.w,
+             dt);
+
+      // HDIFF
+      exchange(state.data);
+      hdiff(state.data1, state.data, dt);
+      std::swap(state.data1, state.data);
+    };
   };
 }
