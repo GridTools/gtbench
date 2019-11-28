@@ -149,14 +149,10 @@ struct world {
 
   world &operator=(world const &) = delete;
 
-  world(world &&other) noexcept : m_moved{other.m_moved} {
-    other.m_moved = true;
-  }
+  world(world &&other) noexcept : m_moved{std::exchange(other.m_moved, true)} {}
 
   world &operator=(world &&other) noexcept {
-    // if (!m_moved)
-    m_moved = other.m_moved;
-    other.m_moved = true;
+    m_moved = std::exchange(other.m_moved, true);
     return *this;
   }
 
