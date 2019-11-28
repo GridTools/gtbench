@@ -17,6 +17,10 @@ comm_halo_exchanger(grid &g, storage_t::storage_info_t const &sinfo) {
 
     auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
 
+#ifdef __CUDACC__
+    cudaDeviceSynchronize();
+#endif
+
     co.exchange(patterns(field)).wait();
   };
 }
