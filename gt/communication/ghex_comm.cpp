@@ -7,13 +7,8 @@ namespace communication {
 namespace ghex_comm {
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &g, storage_t::storage_info_t const &sinfo) {
-  static std::unique_ptr<grid::comm_obj_type> comm_obj;
-  if (!comm_obj) {
-    comm_obj.reset(new grid::comm_obj_type{
-        ::gridtools::ghex::make_communication_object<grid::patterns_type>()});
-  }
-  auto co_ptr = comm_obj.get();
+comm_halo_exchanger(grid &g, storage_t::storage_info_t const &sinfo) {
+  auto co_ptr = &g.co();
   auto patterns_ptr = &g.patterns();
   const auto domain_id = g.domain_id();
   return [co_ptr, patterns_ptr, domain_id](const storage_t &storage) mutable {

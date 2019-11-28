@@ -14,6 +14,20 @@ namespace communication {
 
 namespace ghex_comm {
 
+struct moved_bit {
+  bool m_moved = false;
+  moved_bit() = default;
+  moved_bit(const moved_bit &) = default;
+  moved_bit(moved_bit &&other) noexcept
+      : m_moved{std::exchange(other.m_moved, true)} {}
+  moved_bit &operator=(const moved_bit &) = default;
+  moved_bit &operator=(moved_bit &&other) noexcept {
+    m_moved = std::exchange(other.m_moved, true);
+    return *this;
+  }
+  operator bool() const { return m_moved; }
+};
+
 struct local_domain {
 public: // member types
   using domain_id_type = int;
@@ -132,7 +146,7 @@ public: // member functions
 
 struct world {
 
-  bool m_moved = false;
+  moved_bit m_moved;
 
   world(int &argc, char **&argv) {
     MPI_Init(&argc, &argv);
@@ -146,15 +160,9 @@ struct world {
   }
 
   world(world const &) = delete;
-
   world &operator=(world const &) = delete;
-
-  world(world &&other) noexcept : m_moved{std::exchange(other.m_moved, true)} {}
-
-  world &operator=(world &&other) noexcept {
-    m_moved = std::exchange(other.m_moved, true);
-    return *this;
-  }
+  world(world &&other) = default;
+  world &operator=(world &&other) = default;
 
   ~world() {
     if (!m_moved)
@@ -177,6 +185,7 @@ public: // member types
       typename std::remove_reference<typename std::remove_cv<decltype(
           ::gridtools::ghex::make_communication_object<patterns_type>())>::
                                          type>::type;
+  using comm_obj_ptr_t = std::unique_ptr<comm_obj_type>;
 
 private: // members
   int m_rank;
@@ -189,7 +198,8 @@ private: // members
   local_domain m_dom;
   halo_generator m_hg;
   patterns_ptr_t m_patterns;
-  bool m_moved = false;
+  comm_obj_ptr_t m_comm_obj;
+  moved_bit m_moved;
 
 public: // members
   vec<std::size_t, 2> global_resolution;
@@ -239,6 +249,8 @@ public: // ctors
         m_patterns{new patterns_type{::gridtools::ghex::make_pattern<
             ::gridtools::ghex::structured::grid>(
             m_comm_cart, m_hg, std::vector<local_domain>{m_dom})}},
+        m_comm_obj{new comm_obj_type{
+            ::gridtools::ghex::make_communication_object<patterns_type>()}},
         global_resolution{global_resolution.x, global_resolution.y},
         offset{(std::size_t)m_first[0], (std::size_t)m_first[1]},
         resolution{(std::size_t)(m_last[0] - m_first[0] + 1),
@@ -250,15 +262,7 @@ public: // ctors
 
   grid(grid const &) = delete;
 
-  grid(grid &&other) noexcept
-      : m_rank{other.m_rank}, m_size{other.m_size}, m_dims{other.m_dims},
-        m_comm_cart{other.m_comm_cart}, m_coords{other.m_coords},
-        m_first{other.m_first}, m_last{other.m_last}, m_dom{other.m_dom},
-        m_hg{other.m_hg}, m_patterns{std::move(other.m_patterns)},
-        global_resolution{other.global_resolution}, offset{other.offset},
-        resolution{other.resolution} {
-    other.m_moved = true;
-  }
+  grid(grid &&other) = default;
 
   ~grid() {
     if (!m_moved)
@@ -272,6 +276,9 @@ public: // member functions
   const patterns_type &patterns() const { return *m_patterns; }
   patterns_type &patterns() { return *m_patterns; }
 
+  const comm_obj_type &co() const { return *m_comm_obj; }
+  comm_obj_type &co() { return *m_comm_obj; }
+
   domain_id_type domain_id() const { return m_dom.domain_id(); }
 
   MPI_Comm mpi_comm() const { return m_comm_cart; }
@@ -283,7 +290,7 @@ inline grid comm_grid(const world &,
 }
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
+comm_halo_exchanger(grid &grid, storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid const &grid, double t);
 
