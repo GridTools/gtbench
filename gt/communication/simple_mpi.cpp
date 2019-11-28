@@ -23,6 +23,7 @@ world::world(world &&other) : active(std::exchange(other.active, false)) {}
 
 world &world::operator=(world &&other) {
   active = std::exchange(other.active, false);
+  return *this;
 }
 
 world::~world() {
