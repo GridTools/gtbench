@@ -87,5 +87,6 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
       for (std::size_t k = 0; k < n.z; ++k)
         error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
-  return {communication::global_max(comm_grid, error), time};
+  return {communication::global_max(comm_grid, error),
+          communication::global_max(comm_grid, time)};
 }
