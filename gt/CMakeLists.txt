@@ -19,10 +19,14 @@ if(GTBENCH_BACKEND STREQUAL "cuda")
     enable_language(CUDA)
 endif()
 
-get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-if("CUDA" IN_LIST languages)
-    set_source_files_properties(benchmark.cpp driver_ghex.cpp PROPERTIES LANGUAGE CUDA)
-endif()
+function(compile_as_cuda)
+    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+    if ("CUDA" IN_LIST languages)
+        set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
+    endif()
+endfunction()
+
+compile_as_cuda(benchmark.cpp driver_ghex.cpp)
 
 set(USE_GHEX ON CACHE BOOL "use GHEX")
 
