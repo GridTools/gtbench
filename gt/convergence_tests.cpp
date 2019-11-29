@@ -15,10 +15,12 @@ int main(int argc, char **argv) {
     auto spatial_error_f = [&comm_world, exact = std::move(exact),
                             stepper =
                                 std::move(stepper)](std::size_t resolution) {
+      constexpr real_t base_dt =
+          std::is_same<real_t, float>::value ? 1e-2f : 1e-3;
       return execution::run(
                  communication::grid(comm_world,
                                      {resolution, resolution, resolution}),
-                 stepper, 1e-3, 1e-4, exact)
+                 stepper, base_dt, base_dt / 10_r, exact)
           .error;
     };
     verification::print_order_verification_result(
