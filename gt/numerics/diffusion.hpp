@@ -2,6 +2,7 @@
 
 #include "./computation.hpp"
 
+namespace numerics {
 namespace diffusion {
 
 class horizontal {
@@ -62,3 +63,4 @@ private:
 };
 
 } // namespace diffusion
+} // namespace numerics

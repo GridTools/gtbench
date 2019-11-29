@@ -6,6 +6,7 @@
 
 #include "./computation.hpp"
 
+namespace numerics {
 namespace tridiagonal {
 using gt::extent;
 using gt::in_accessor;
@@ -185,3 +186,4 @@ struct periodic3 {
 };
 
 } // namespace tridiagonal
+} // namespace numerics

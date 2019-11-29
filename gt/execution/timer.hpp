@@ -2,7 +2,9 @@
 
 #include <chrono>
 
+namespace execution {
 namespace timer {
+
 template <class Backend>
 inline std::chrono::high_resolution_clock::time_point timer_now(Backend) {
   return std::chrono::high_resolution_clock::now();
@@ -34,3 +36,4 @@ timer_now(gt::backend::cuda) {
 #endif
 
 } // namespace timer
+} // namespace execution

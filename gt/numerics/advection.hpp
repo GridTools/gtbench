@@ -2,6 +2,7 @@
 
 #include "./computation.hpp"
 
+namespace numerics {
 namespace advection {
 
 class horizontal {
@@ -112,3 +113,4 @@ private:
 };
 
 } // namespace advection
+} // namespace numerics

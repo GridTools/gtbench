@@ -6,6 +6,8 @@
 #include <tuple>
 #include <vector>
 
+namespace verification {
+
 using order_verification_result_t =
     std::tuple<std::vector<std::size_t>, std::vector<double>,
                std::vector<double>>;
@@ -45,3 +47,5 @@ void print_order_verification_result(
     std::cout << std::endl;
   }
 }
+
+} // namespace verification

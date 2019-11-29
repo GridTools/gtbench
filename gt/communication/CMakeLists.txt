@@ -1,4 +1,4 @@
-compile_as_cuda(ghex_comm.cpp)
+compile_as_cuda(ghex_comm.cpp simple_mpi.cpp single_node.cpp)
 
 add_library(communication ${GTBENCH_COMMUNICATION_BACKEND}.cpp)
 target_link_libraries(communication GridTools::gridtools)

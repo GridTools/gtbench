@@ -2,8 +2,10 @@
 
 #include "../communication/communication.hpp"
 #include "../numerics/solver.hpp"
-#include "./analytical.hpp"
+#include "../verification/analytical.hpp"
 #include "./timer.hpp"
+
+namespace execution {
 
 template <class Analytical> struct on_domain_wrapper {
   template <class F> auto remap(F &&f) const {
@@ -22,10 +24,12 @@ template <class Analytical> struct on_domain_wrapper {
     });
   }
 
-  auto data() const { return remap(analytical::data(exact)); }
-  auto u() const { return remap(analytical::u(exact)); }
-  auto v() const { return remap(analytical::v(exact)); }
-  auto w() const { return remap_staggered_z(analytical::w(exact)); }
+  auto data() const { return remap(verification::analytical::data(exact)); }
+  auto u() const { return remap(verification::analytical::u(exact)); }
+  auto v() const { return remap(verification::analytical::v(exact)); }
+  auto w() const {
+    return remap_staggered_z(verification::analytical::w(exact));
+  }
 
   Analytical exact;
   vec<real_t, 3> delta;
@@ -38,9 +42,9 @@ on_domain_wrapper<Analytical>
 on_domain(Analytical const &exact, vec<std::size_t, 3> const &resolution,
           vec<std::size_t, 2> const &offset, real_t t) {
   return {exact,
-          {analytical::domain(exact).x / resolution.x,
-           analytical::domain(exact).y / resolution.y,
-           analytical::domain(exact).z / resolution.z},
+          {verification::analytical::domain(exact).x / resolution.x,
+           verification::analytical::domain(exact).y / resolution.y,
+           verification::analytical::domain(exact).z / resolution.z},
           {gt::int_t(offset.x), gt::int_t(offset.y)},
           t};
 }
@@ -59,7 +63,8 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   const auto n = communication::resolution(comm_grid);
 
-  solver_state state{n, initial.data(), initial.u(), initial.v(), initial.w()};
+  numerics::solver_state state{n, initial.data(), initial.u(), initial.v(),
+                               initial.w()};
 
   const vec<real_t, 3> delta = initial.delta;
 
@@ -90,3 +95,5 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   return {communication::global_max(comm_grid, error),
           communication::global_max(comm_grid, time)};
 }
+
+} // namespace execution

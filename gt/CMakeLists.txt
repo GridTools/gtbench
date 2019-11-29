@@ -33,7 +33,6 @@ if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
     include_directories(${GHEX_INCLUDE_DIR})
 
     add_compile_definitions(GTBENCH_USE_GHEX)
-    compile_as_cuda(convergence_tests.cpp benchmark.cpp)
 endif()
 
 add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
@@ -45,6 +44,8 @@ add_subdirectory(communication)
 add_subdirectory(numerics)
 
 # Current directory
+compile_as_cuda(convergence_tests.cpp benchmark.cpp)
+
 add_executable(convergence_tests convergence_tests.cpp)
 target_link_libraries(convergence_tests advection diffusion communication)
 

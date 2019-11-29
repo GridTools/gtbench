@@ -6,6 +6,7 @@
 #include "./computation.hpp"
 #include "./tridiagonal.hpp"
 
+namespace numerics {
 namespace diffusion {
 
 namespace {
@@ -223,3 +224,4 @@ void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
 }
 
 } // namespace diffusion
+} // namespace numerics

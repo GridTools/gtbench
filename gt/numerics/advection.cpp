@@ -7,6 +7,7 @@
 #include "./computation.hpp"
 #include "./tridiagonal.hpp"
 
+namespace numerics {
 namespace advection {
 namespace {
 using gt::extent;
@@ -363,3 +364,4 @@ void runge_kutta_step::operator()(storage_t &out, storage_t const &in,
 }
 
 } // namespace advection
+} // namespace numerics

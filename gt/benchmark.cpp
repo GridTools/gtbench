@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "./communication/backends.hpp"
+#include "./execution/run.hpp"
 #include "./numerics/solver.hpp"
-#include "./verification/run.hpp"
 
 int main(int argc, char **argv) {
   auto comm_world =
@@ -22,12 +22,12 @@ int main(int argc, char **argv) {
   auto comm_grid = communication::grid(comm_world, {n, n, 100});
 
   real_t diffusion_coeff = 0.05;
-  auto exact =
-      analytical::repeat(analytical::advection_diffusion{diffusion_coeff},
-                         {(n + nz - 1) / nz, (n + nz - 1) / nz, 1});
+  auto exact = verification::analytical::repeat(
+      verification::analytical::advection_diffusion{diffusion_coeff},
+      {(n + nz - 1) / nz, (n + nz - 1) / nz, 1});
 
-  auto result =
-      run(std::move(comm_grid), full_stepper(diffusion_coeff), 1, 1e-3, exact);
+  auto result = execution::run(
+      comm_grid, numerics::advdiff_stepper(diffusion_coeff), 1, 1e-3, exact);
   std::cout << "error: " << result.error << std::endl
             << "time: " << result.time << "s" << std::endl;
 

@@ -3,6 +3,8 @@
 #include "./advection.hpp"
 #include "./diffusion.hpp"
 
+namespace numerics {
+
 struct solver_state {
   template <class DataInit, class UInit, class VInit, class WInit>
   solver_state(vec<std::size_t, 3> const &resolution, DataInit &&data_init,
@@ -100,7 +102,7 @@ auto rkadv_stepper() {
   };
 }
 
-auto full_stepper(real_t diffusion_coeff) {
+auto advdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](vec<std::size_t, 3> const &resolution,
                            vec<real_t, 3> const &delta, auto exchange) {
     return [hdiff = diffusion::horizontal(resolution, delta, diffusion_coeff),
@@ -130,3 +132,5 @@ auto full_stepper(real_t diffusion_coeff) {
     };
   };
 }
+
+} // namespace numerics
