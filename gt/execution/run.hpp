@@ -55,7 +55,7 @@ struct result {
 };
 
 template <class CommGrid, class Stepper, class Analytical>
-result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
+result run_(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
            Analytical &&exact) {
   const auto initial =
       on_domain(exact, communication::global_resolution(comm_grid),
@@ -92,8 +92,19 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
       for (std::size_t k = 0; k < n.z; ++k)
         error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
-  return {communication::global_max(comm_grid, error),
-          communication::global_max(comm_grid, time)};
+  return { error, time};
+
+  //return {communication::global_max(comm_grid, error),
+  //        communication::global_max(comm_grid, time)};
+}
+
+template <class CommGrid, class Stepper, class Analytical>
+result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt, Analytical &&exact)
+{
+    auto result = run_(std::forward<CommGrid>(comm_grid), std::forward<Stepper>(stepper), tmax, dt, std::forward<Analytical>(exact));
+  
+    return {communication::global_max(comm_grid, result.error),
+            communication::global_max(comm_grid, result.time)};
 }
 
 } // namespace execution

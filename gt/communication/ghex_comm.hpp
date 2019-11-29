@@ -149,7 +149,9 @@ struct world {
   moved_bit m_moved;
 
   world(int &argc, char **&argv) {
-    MPI_Init(&argc, &argv);
+    //MPI_Init(&argc, &argv);
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
 
     int size, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
