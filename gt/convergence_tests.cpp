@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     verification::print_order_verification_result(
         verification::order_verification(spatial_error_f, 8, 64));
 
-    std::cout << "Space-Time convergence:" << std::endl;
+    std::cout << "Temporal convergence:" << std::endl;
     auto spacetime_error_f = [&comm_world, exact = std::move(exact),
                               stepper =
                                   std::move(stepper)](std::size_t resolution) {
