@@ -129,14 +129,14 @@ struct advection_diffusion {
 inline auto analytical_data(advection_diffusion const &advdiff) {
   return [d = advdiff.diffusion_coeff](vec<real_t, 3> const &p,
                                        real_t t) -> real_t {
-    constexpr static real_t a = std::sqrt(2_r) / 2;
+    const real_t a = std::sqrt(2_r) / 2;
     return -std::sin(p.x) * std::sin(a * (p.y - p.z)) * std::exp(-2 * d * t);
   };
 }
 
 inline auto analytical_velocity(advection_diffusion const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    constexpr static real_t a = std::sqrt(2_r) / 2;
+    const real_t a = std::sqrt(2_r) / 2;
     return {-std::sin(p.x) * std::cos(a * (p.y - p.z)),
             a * std::cos(p.x) * std::sin(a * (p.y - p.z)),
             -a * std::cos(p.x) * std::sin(a * (p.y - p.z))};

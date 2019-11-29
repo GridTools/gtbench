@@ -17,13 +17,17 @@ comm_halo_exchanger(grid &g, storage_t::storage_info_t const &sinfo) {
 
     auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
 
+#ifdef __CUDACC__
+    cudaDeviceSynchronize();
+#endif
+
     co.exchange(patterns(field)).wait();
   };
 }
 
 double comm_global_max(grid const &g, double t) {
   double max;
-  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_SUM, g.mpi_comm());
+  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_MAX, g.mpi_comm());
   return max;
 }
 
