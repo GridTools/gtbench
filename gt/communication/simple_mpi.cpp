@@ -10,7 +10,8 @@ namespace communication {
 namespace simple_mpi {
 
 world::world(int &argc, char **&argv) {
-  MPI_Init(&argc, &argv);
+  int provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -109,7 +110,7 @@ struct halo_exchange_f {
 
     // sort strides and halo_sizes by strides to simplify building of the MPI
     // data types
-    for (int i = 0; i < 3; ++i)
+    for (int i = 1; i < 3; ++i)
       for (int j = i; j > 0 && strides[j - 1] > strides[j]; --j) {
         std::swap(strides[j], strides[j - 1]);
         std::swap(halo_sizes.x[j], halo_sizes.x[j - 1]);
@@ -187,7 +188,7 @@ comm_halo_exchanger(grid const &comm_grid,
 
 double comm_global_max(grid const &grid, double t) {
   double max;
-  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_SUM, grid.comm_cart);
+  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_MAX, grid.comm_cart);
   return max;
 }
 
