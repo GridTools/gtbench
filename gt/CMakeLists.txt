@@ -11,6 +11,7 @@ set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
 set(GTBENCH_FLOAT "double" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
+option(GTBENCH_USE_GHEX "Enable GHEX communication" ON)
 
 add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
                         GTBENCH_FLOAT=${GTBENCH_FLOAT})
@@ -28,8 +29,6 @@ endfunction()
 
 compile_as_cuda(benchmark.cpp driver_ghex.cpp)
 
-set(USE_GHEX ON CACHE BOOL "use GHEX")
-
 add_subdirectory(communication)
 add_subdirectory(numerics)
 
@@ -39,16 +38,16 @@ target_link_libraries(driver_single_node advection diffusion communication_singl
 add_executable(driver_simple_mpi driver_simple_mpi.cpp)
 target_link_libraries(driver_simple_mpi advection diffusion communication_simple_mpi)
 
-if (USE_GHEX)
-add_executable(driver_ghex driver_ghex.cpp)
-target_link_libraries(driver_ghex advection diffusion communication_ghex)
+if (GTBENCH_USE_GHEX)
+    add_executable(driver_ghex driver_ghex.cpp)
+    target_link_libraries(driver_ghex advection diffusion communication_ghex)
 endif()
 
 add_executable(benchmark benchmark.cpp)
-if (USE_GHEX)
-    target_link_libraries(benchmark advection diffusion communication_ghex)
+target_link_libraries(benchmark advection diffusion)
+if (GTBENCH_USE_GHEX)
+    target_link_libraries(benchmark communication_ghex)
     target_compile_definitions(benchmark PUBLIC BENCHMARK_USE_GHEX)
 else()
-    target_link_libraries(benchmark advection diffusion communication_simple_mpi)
+    target_link_libraries(benchmark communication_simple_mpi)
 endif()
-
