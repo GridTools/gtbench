@@ -6,7 +6,9 @@ namespace communication {
 
 namespace single_node {
 
-struct world {};
+struct world {
+  world(int, char **) {}
+};
 
 struct grid {
   vec<std::size_t, 3> resolution;

@@ -4,22 +4,21 @@ project(benchmark LANGUAGES CXX)
 find_package(GridTools 1.1.0 REQUIRED)
 find_package(MPI REQUIRED COMPONENTS CXX)
 
-set(GHEX_INCLUDE_DIR "" CACHE PATH "path to GHEX include directory")
-include_directories(${GHEX_INCLUDE_DIR})
-
+# User options
 set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
+
 set(GTBENCH_FLOAT "double" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
-option(GTBENCH_USE_GHEX "Enable GHEX communication" ON)
 
-add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
-                        GTBENCH_FLOAT=${GTBENCH_FLOAT})
+set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backend")
+set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "single_node" "simple_mpi")
 
 if(GTBENCH_BACKEND STREQUAL "cuda")
     enable_language(CUDA)
 endif()
 
+# Helper functions
 function(compile_as_cuda)
     get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     if ("CUDA" IN_LIST languages)
@@ -27,27 +26,27 @@ function(compile_as_cuda)
     endif()
 endfunction()
 
-compile_as_cuda(benchmark.cpp driver_ghex.cpp)
+# Global setup
+if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
+    # TODO: proper CMake for GHEX
+    set(GHEX_INCLUDE_DIR "" CACHE PATH "path to GHEX include directory")
+    include_directories(${GHEX_INCLUDE_DIR})
 
+    add_compile_definitions(GTBENCH_USE_GHEX)
+    compile_as_cuda(convergence_tests.cpp benchmark.cpp)
+endif()
+
+add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
+                        GTBENCH_FLOAT=${GTBENCH_FLOAT}
+                        GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND})
+
+# Subdirectories
 add_subdirectory(communication)
 add_subdirectory(numerics)
 
-add_executable(driver_single_node driver_single_node.cpp)
-target_link_libraries(driver_single_node advection diffusion communication_single_node)
-
-add_executable(driver_simple_mpi driver_simple_mpi.cpp)
-target_link_libraries(driver_simple_mpi advection diffusion communication_simple_mpi)
-
-if (GTBENCH_USE_GHEX)
-    add_executable(driver_ghex driver_ghex.cpp)
-    target_link_libraries(driver_ghex advection diffusion communication_ghex)
-endif()
+# Current directory
+add_executable(convergence_tests convergence_tests.cpp)
+target_link_libraries(convergence_tests advection diffusion communication)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion)
-if (GTBENCH_USE_GHEX)
-    target_link_libraries(benchmark communication_ghex)
-    target_compile_definitions(benchmark PUBLIC BENCHMARK_USE_GHEX)
-else()
-    target_link_libraries(benchmark communication_simple_mpi)
-endif()
+target_link_libraries(benchmark advection diffusion communication)

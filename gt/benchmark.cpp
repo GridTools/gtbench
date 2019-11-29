@@ -1,17 +1,12 @@
 #include <iostream>
 
-#ifdef BENCHMARK_USE_GHEX
-#include "./communication/ghex_comm.hpp"
-using world_type = communication::ghex_comm::world;
-#else
-#include "./communication/simple_mpi.hpp"
-using world_type = communication::simple_mpi::world;
-#endif
+#include "./communication/backends.hpp"
 #include "./numerics/solver.hpp"
 #include "./verification/run.hpp"
 
 int main(int argc, char **argv) {
-  auto comm_world = world_type(argc, argv);
+  auto comm_world =
+      communication::GTBENCH_COMMUNICATION_BACKEND::world(argc, argv);
 
   if (argc != 2) {
     std::cerr << "usage: " << argv[0] << " N" << std::endl;
