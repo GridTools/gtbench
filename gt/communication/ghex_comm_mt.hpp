@@ -31,19 +31,10 @@ public:
         domain_id_type      domain_id;
         MPI_Comm            mpi_comm;
         comm_obj_ptr_t      co;
-        //halo_generator      m_hg;
         patterns_type*      patterns;
-        //domain_vec          domains;
-        //patterns_ptr_t      patterns;
         vec<std::size_t, 2> global_resolution;
         vec<std::size_t, 2> offset;
         vec<std::size_t, 3> resolution;
-
-        /*void init_pattern()
-        {
-            patterns.reset( new patterns_type{
-             ::gridtools::ghex::make_pattern<::gridtools::ghex::structured::grid>(mpi_comm, m_hg, domains)});
-        }*/
     };
 
 protected: // members
@@ -115,7 +106,7 @@ public: // ctors
             int x = m_first[0];
             for (const auto& dx : div[0])
             {
-                std::cout << "[(" << x << ", " << y << "), (" << x+dx-1 << ", " << y+dy-1 << ")]" << std::endl;
+                //std::cout << "[(" << x << ", " << y << "), (" << x+dx-1 << ", " << y+dy-1 << ")]" << std::endl;
                 m_domains.push_back( local_domain{ 
                     m_rank*num_sub_domains+i,
                     coordinate_type{x,y,m_first[2]},
@@ -144,9 +135,6 @@ public: // member functions
                  m_comm_cart,
                  comm_obj_ptr_t{new comm_obj_type{::gridtools::ghex::make_communication_object<patterns_type>()}},
                  m_patterns.get(),
-                 //m_hg,
-                 //std::vector<local_domain>{m_domains[i]}, 
-                 //patterns_ptr_t(),
                  m_global_resolution, 
                  {(std::size_t)dom.first()[0],
                   (std::size_t)dom.first()[1]},

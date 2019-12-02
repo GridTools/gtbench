@@ -30,6 +30,11 @@ double comm_global_max(grid const &g, double t) {
   MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_MAX, g.mpi_comm());
   return max;
 }
+double comm_global_max(world const &w, double t) {
+  double max;
+  MPI_Allreduce(&t, &max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  return max;
+}
 
 } // namespace ghex_comm
 

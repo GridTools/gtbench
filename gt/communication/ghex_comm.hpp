@@ -295,6 +295,7 @@ std::function<void(storage_t &)>
 comm_halo_exchanger(grid &grid, storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid const &grid, double t);
+double comm_global_max(world const &w, double t);
 
 } // namespace ghex_comm
 

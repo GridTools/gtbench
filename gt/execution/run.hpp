@@ -93,9 +93,6 @@ result run_(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
         error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
 
   return { error, time};
-
-  //return {communication::global_max(comm_grid, error),
-  //        communication::global_max(comm_grid, time)};
 }
 
 template <class CommGrid, class Stepper, class Analytical>
