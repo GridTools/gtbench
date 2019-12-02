@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   std::cout << "running benchmark with " << n << "x" << n << " columns"
             << std::endl;
 
-  int num_threads = 1;
+  int num_threads = 4;
 
   //auto comm_grid = communication::grid(comm_world, {n, n, 100});
   auto comm_grid = communication::ghex_comm::comm_grid(comm_world, {n, n, 100});

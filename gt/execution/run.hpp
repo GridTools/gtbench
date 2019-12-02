@@ -75,6 +75,7 @@ result run_(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   auto start = timer::now(backend_t{});
   real_t t;
   for (t = 0; t < tmax; t += dt)
+  //for (t = 0; t < dt; t += dt)
     step(state, dt);
   auto stop = timer::now(backend_t{});
   double time = timer::duration(start, stop);
