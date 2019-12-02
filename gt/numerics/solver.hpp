@@ -3,10 +3,7 @@
 #include "./advection.hpp"
 #include "./diffusion.hpp"
 
-#include <mutex>
 namespace numerics {
-
-std::mutex numerics_mutex;
 
 struct solver_state {
   template <class DataInit, class UInit, class VInit, class WInit>
@@ -114,38 +111,23 @@ auto advdiff_stepper(real_t diffusion_coeff) {
             exchange = std::move(exchange)](solver_state &state,
                                             real_t dt) mutable {
       // VDIFF
-      {
-      std::lock_guard<std::mutex> lock(numerics_mutex);
       vdiff(state.data1, state.data, dt);
-      }
       std::swap(state.data1, state.data);
 
       // ADV
       exchange(state.data);
-      {
-      std::lock_guard<std::mutex> lock(numerics_mutex);
       rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
              dt / 3);
-      }
       exchange(state.data1);
-      {
-      std::lock_guard<std::mutex> lock(numerics_mutex);
       rkstep(state.data2, state.data1, state.data, state.u, state.v, state.w,
              dt / 2);
-      }
       exchange(state.data2);
-      {
-      std::lock_guard<std::mutex> lock(numerics_mutex);
       rkstep(state.data, state.data2, state.data, state.u, state.v, state.w,
              dt);
-      }
 
       // HDIFF
       exchange(state.data);
-      {
-      std::lock_guard<std::mutex> lock(numerics_mutex);
       hdiff(state.data1, state.data, dt);
-      }
       std::swap(state.data1, state.data);
     };
   };
