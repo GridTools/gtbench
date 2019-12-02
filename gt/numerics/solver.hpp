@@ -114,7 +114,10 @@ auto advdiff_stepper(real_t diffusion_coeff) {
             exchange = std::move(exchange)](solver_state &state,
                                             real_t dt) mutable {
       // VDIFF
+      {
+      std::lock_guard<std::mutex> lock(numerics_mutex);
       vdiff(state.data1, state.data, dt);
+      }
       std::swap(state.data1, state.data);
 
       // ADV
