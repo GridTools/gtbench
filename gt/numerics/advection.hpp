@@ -47,13 +47,19 @@ class vertical {
   storage_ij_t gamma_;
   using p_fact = gt::arg<11, storage_ij_t>;
   storage_ij_t fact_;
+  using p_data_in_tmp = gt::arg<12, storage_ij_t>;
+  storage_ij_t data_in_tmp_;
 
-  using p_z = gt::tmp_arg<12, storage_t>;
-  using p_x = gt::tmp_arg<13, storage_t>;
+  using p_z = gt::tmp_arg<13, storage_t>;
+  using p_z_top = gt::arg<14, storage_ij_t>;
+  storage_ij_t z_top_;
+  using p_x = gt::tmp_arg<15, storage_t>;
+  using p_x_top = gt::arg<16, storage_ij_t>;
+  storage_ij_t x_top_;
 
-  using p_w = gt::arg<14, storage_t>;
+  using p_w = gt::arg<17, storage_t>;
 
-  using p_k_size = gt::arg<15, global_parameter_int_t>;
+  using p_k_size = gt::arg<18, global_parameter_int_t>;
 
 public:
   vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta);
@@ -90,15 +96,21 @@ class runge_kutta_step {
   storage_ij_t gamma_;
   using p_fact = gt::arg<14, storage_ij_t>;
   storage_ij_t fact_;
+  using p_data_in_tmp = gt::arg<15, storage_ij_t>;
+  storage_ij_t data_in_tmp_;
 
-  using p_z = gt::tmp_arg<15, storage_t>;
-  using p_x = gt::tmp_arg<16, storage_t>;
+  using p_z = gt::tmp_arg<16, storage_t>;
+  using p_z_top = gt::arg<17, storage_ij_t>;
+  storage_ij_t z_top_;
+  using p_x = gt::tmp_arg<18, storage_t>;
+  using p_x_top = gt::arg<19, storage_ij_t>;
+  storage_ij_t x_top_;
 
-  using p_u = gt::arg<17, storage_t>;
-  using p_v = gt::arg<18, storage_t>;
-  using p_w = gt::arg<19, storage_t>;
+  using p_u = gt::arg<20, storage_t>;
+  using p_v = gt::arg<21, storage_t>;
+  using p_w = gt::arg<22, storage_t>;
 
-  using p_k_size = gt::arg<20, global_parameter_int_t>;
+  using p_k_size = gt::arg<23, global_parameter_int_t>;
 
 public:
   runge_kutta_step(vec<std::size_t, 3> const &resolution,

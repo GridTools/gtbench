@@ -130,10 +130,10 @@ struct periodic_forward2 {
 };
 
 struct periodic_backward2 {
-  using z = inout_accessor<0, extent<0, 0, 0, 0, 0, huge_offset>>;
+  using z = inout_accessor<0, extent<0, 0, 0, 0, 0, 1>>;
   using c = inout_accessor<1>;
   using d = inout_accessor<2>;
-  using x = in_accessor<3, extent<0, 0, 0, 0, 0, huge_offset>>;
+  using x = in_accessor<3, extent<0, 0, 0, 0, 0, 1>>;
 
   using beta = in_accessor<4>;
   using gamma = in_accessor<5>;
@@ -142,15 +142,19 @@ struct periodic_backward2 {
 
   using k_size = in_accessor<7>;
 
-  using param_list = make_param_list<z, c, d, x, beta, gamma, fact, k_size>;
+  using z_top = inout_accessor<8>;
+  using x_top = inout_accessor<9>;
+
+  using param_list =
+      make_param_list<z, c, d, x, beta, gamma, fact, k_size, z_top, x_top>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     gridtools::call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(
         eval, z(), c(), d());
     const gt::int_t top_offset = eval(k_size() - 1);
-    eval(fact()) = eval((x() + beta() * x(0, 0, top_offset) / gamma()) /
-                        (1 + z() + beta() * z(0, 0, top_offset) / gamma()));
+    eval(fact()) = eval((x() + beta() * x_top() / gamma()) /
+                        (1 + z() + beta() * z_top() / gamma()));
   }
 
   template <typename Evaluation>
@@ -163,6 +167,9 @@ struct periodic_backward2 {
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     gridtools::call_proc<tridiagonal::backward, full_t::last_level>::with(
         eval, z(), c(), d());
+
+    eval(z_top()) = eval(z());
+    eval(x_top()) = eval(x());
   }
 };
 
