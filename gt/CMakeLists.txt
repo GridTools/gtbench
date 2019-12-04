@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.14.5)
-project(benchmark LANGUAGES CXX)
+project(lumi-benchmark LANGUAGES CXX)
 
-find_package(GridTools 1.1.0 REQUIRED)
 find_package(MPI REQUIRED COMPONENTS CXX)
 
 # User options
@@ -15,29 +14,32 @@ set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backen
 set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "single_node" "simple_mpi")
 
 if(GTBENCH_BACKEND STREQUAL "cuda")
-    enable_language(CUDA)
+  enable_language(CUDA)
 endif()
 
 # Helper functions
 function(compile_as_cuda)
-    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-    if ("CUDA" IN_LIST languages)
-        set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
-    endif()
+  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+  if("CUDA" IN_LIST languages)
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
+  endif()
 endfunction()
+
+add_library(common INTERFACE)
 
 # Global setup
 if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
-    # TODO: proper CMake for GHEX
-    set(GHEX_INCLUDE_DIR "" CACHE PATH "path to GHEX include directory")
-    include_directories(${GHEX_INCLUDE_DIR})
-
-    add_compile_definitions(GTBENCH_USE_GHEX)
+  find_package(GHEX REQUIRED)
+  target_link_libraries(common INTERFACE GHEX::ghexlib)
+  target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
 endif()
 
-add_compile_definitions(GTBENCH_BACKEND=${GTBENCH_BACKEND}
-                        GTBENCH_FLOAT=${GTBENCH_FLOAT}
-                        GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND})
+target_compile_definitions(common INTERFACE
+  GTBENCH_BACKEND=${GTBENCH_BACKEND}
+  GTBENCH_FLOAT=${GTBENCH_FLOAT}
+  GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
+  )
+target_compile_options(common INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_60,code=sm_60>)
 
 # Subdirectories
 add_subdirectory(communication)
