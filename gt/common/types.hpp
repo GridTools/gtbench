@@ -12,7 +12,6 @@ constexpr real_t operator"" _r(unsigned long long value) {
 }
 
 static constexpr gt::int_t halo = 3;
-static constexpr gt::int_t huge_offset = 100;
 
 using backend_t = gt::backend::GTBENCH_BACKEND;
 using storage_tr = gt::storage_traits<backend_t>;

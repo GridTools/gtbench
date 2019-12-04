@@ -71,6 +71,7 @@ struct stage_diffusion_w0 {
     eval(data_top()) = eval(data());
   }
 };
+
 struct stage_diffusion_w_forward1 {
   using alpha = inout_accessor<0>;
   using beta = inout_accessor<1>;
@@ -195,8 +196,8 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           p_dz() = gt::make_global_parameter(delta.z),
           p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_, p_data_in_tmp() = data_in_tmp_,
-          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           p_z_top() = z_top_, p_x_top() = x_top_,
+          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(
               gt::execute::forward(),
               gt::make_stage<stage_diffusion_w0>(p_data_in(), p_data_in_tmp())
