@@ -90,7 +90,8 @@ result run_(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   for (std::size_t i = halo; i < halo + n.x; ++i)
     for (std::size_t j = halo; j < halo + n.y; ++j)
       for (std::size_t k = 0; k < n.z; ++k)
-        error = std::max(error, double(view(i, j, k) - expected(i, j, k)));
+        error = std::max(error,
+                         double(std::abs(view(i, j, k) - expected(i, j, k))));
 
   return { error, time};
 }

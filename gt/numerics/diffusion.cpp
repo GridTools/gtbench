@@ -147,7 +147,6 @@ struct stage_diffusion_w3 {
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
     gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
                                                                z(), fact());
-    // eval(out()) = eval((out() - in()) / dt());
   }
 };
 

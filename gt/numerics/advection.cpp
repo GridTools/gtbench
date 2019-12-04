@@ -97,15 +97,6 @@ struct stage_horizontal {
     auto flx = gridtools::call<stage_u, full_t>::with(eval, u(), in(), dx());
     auto fly = gridtools::call<stage_v, full_t>::with(eval, v(), in(), dy());
 
-    // auto flx = eval(u()) >= 0 ? eval((u() * in() - u(-1, 0) * in(-1, 0)) /
-    // dx())
-    //                           : eval((u(1, 0) * in(1, 0) - u() * in()) /
-    //                           dx());
-    // auto fly = eval(v()) >= 0 ? eval((v() * in() - v(0, -1) * in(0, -1)) /
-    // dy())
-    //                           : eval((v(0, 1) * in(0, 1) - v() * in()) /
-    //                           dy());
-
     eval(out()) = eval(in() - dt() * (flx + fly));
   }
 };
@@ -123,7 +114,7 @@ struct stage_advection_w_forward1 {
 
   using dz = in_accessor<8>;
   using dt = in_accessor<9>;
-  using w = in_accessor<10, extent<0, 0, 0, 0, -1, 1>>;
+  using w = in_accessor<10, extent<0, 0, 0, 0, 0, 1>>;
 
   using k_size = in_accessor<11>;
 
@@ -200,7 +191,6 @@ struct stage_advection_w3 {
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
     gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
                                                                z(), fact());
-    // eval(out()) = eval((out() - in()) / dt());
   }
 };
 
@@ -270,7 +260,9 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
                   gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
                       p_c()),
                   gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
+                      p_d()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::fill>(
+                      p_w())),
               gt::make_stage<stage_advection_w_forward1>(
                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
                   p_data_in(), p_dz(), p_dt(), p_w(), p_k_size())),
@@ -326,7 +318,9 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
                   gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
                       p_c()),
                   gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
+                      p_d()),
+                  gt::cache<gt::cache_type::k, gt::cache_io_policy::fill>(
+                      p_w())),
               gt::make_stage<stage_advection_w_forward1>(
                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
                   p_data_in(), p_dz(), p_dt(), p_w(), p_k_size())),

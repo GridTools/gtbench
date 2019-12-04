@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   std::cout << "running benchmark with " << n << "x" << n << " columns"
             << std::endl;
 
-  auto comm_grid = communication::grid(comm_world, {n, n, 100});
+  auto comm_grid = communication::grid(comm_world, {n, n, nz});
 
   real_t diffusion_coeff = 0.05;
   auto exact = verification::analytical::repeat(
