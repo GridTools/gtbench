@@ -237,11 +237,12 @@ public: // ctors
           MPI_Cart_coords(m_comm_cart, m_rank, 2, coords.data());
           return coords;
         }()},
-        m_first{(int)global_resolution.x * m_coords[0] / m_dims[0],
-                (int)global_resolution.y * m_coords[1] / m_dims[1], 0},
-        m_last{(int)global_resolution.x * (m_coords[0] + 1) / m_dims[0] - 1,
-               (int)global_resolution.y * (m_coords[1] + 1) / m_dims[1] - 1,
-               (int)global_resolution.z - 1},
+        m_first{(int)((double)(global_resolution.x / m_dims[0]) * m_coords[0]),
+                (int)((double)(global_resolution.y / m_dims[1]) * m_coords[1]),
+                0},
+        m_last{ (int)((double)(global_resolution.x / m_dims[0]) * (m_coords[0]+1))-1,
+                (int)((double)(global_resolution.y / m_dims[1]) * (m_coords[1]+1))-1,
+                (int)global_resolution.z - 1},
         m_dom{m_rank, m_first, m_last}, m_hg{std::array<int, 3>{0, 0, 0},
                                              std::array<int, 3>{
                                                  (int)global_resolution.x - 1,

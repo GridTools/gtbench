@@ -21,8 +21,8 @@ public: // member types
 protected: // member types
     using coordinate_type = local_domain::coordinate_type;
     using domain_vec      = std::vector<local_domain>;
-    using comm_obj_type   = typename std::remove_reference<typename std::remove_cv<decltype(
-                               ::gridtools::ghex::make_communication_object<patterns_type>())>::type>::type;
+    using comm_obj_type   = typename std::remove_reference_t<typename std::remove_cv_t<decltype(
+                               ::gridtools::ghex::make_communication_object<patterns_type>())>>;
     using comm_obj_ptr_t  = std::unique_ptr<comm_obj_type>;
 
 public:
@@ -84,11 +84,11 @@ public: // ctors
             MPI_Cart_coords(m_comm_cart, m_rank, 2, coords.data());
             return coords;
         }()}
-    , m_first{(int)global_resolution.x * m_coords[0] / m_dims[0],
-              (int)global_resolution.y * m_coords[1] / m_dims[1], 
+    , m_first{(int)(((double)global_resolution.x / m_dims[0]) * m_coords[0]),
+              (int)(((double)global_resolution.y / m_dims[1]) * m_coords[1]), 
               0}
-    , m_last{ (int)global_resolution.x * (m_coords[0] + 1) / m_dims[0] - 1,
-              (int)global_resolution.y * (m_coords[1] + 1) / m_dims[1] - 1,
+    , m_last{ (int)(((double)global_resolution.x / m_dims[0]) * (m_coords[0] + 1)) - 1,
+              (int)(((double)global_resolution.y / m_dims[1]) * (m_coords[1] + 1)) - 1,
               (int)global_resolution.z - 1}
     , m_hg{std::array<int, 3>{0, 0, 0},
            std::array<int, 3>{(int)global_resolution.x - 1, (int)global_resolution.y - 1, (int)global_resolution.z - 1}, 
@@ -106,7 +106,6 @@ public: // ctors
             int x = m_first[0];
             for (const auto& dx : div[0])
             {
-                //std::cout << "[(" << x << ", " << y << "), (" << x+dx-1 << ", " << y+dy-1 << ")]" << std::endl;
                 m_domains.push_back( local_domain{ 
                     m_rank*num_sub_domains+i,
                     coordinate_type{x,y,m_first[2]},
@@ -117,8 +116,8 @@ public: // ctors
             y+=dy; 
         }
         
-        m_patterns.reset( new patterns_type{
-            ::gridtools::ghex::make_pattern<::gridtools::ghex::structured::grid>(m_comm_cart, m_hg, m_domains)});
+        m_patterns = std::make_unique<patterns_type>(
+            ::gridtools::ghex::make_pattern<::gridtools::ghex::structured::grid>(m_comm_cart, m_hg, m_domains));
     }
 
     grid_mt(const grid_mt&) = delete;
@@ -143,8 +142,6 @@ public: // member functions
                   (std::size_t)(dom.last()[2]-dom.first()[2]+1)}};
 
     }
-
-protected: // implementation
 };
 
 std::function<void(storage_t &)>
