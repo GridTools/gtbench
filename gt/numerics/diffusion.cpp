@@ -90,9 +90,8 @@ struct stage_diffusion_w_forward1 {
 
   using k_size = in_accessor<12>;
 
-  using param_list =
-      make_param_list<alpha, beta, gamma, a, b, c, d, data, data_tmp,
-                      dz, dt, coeff, k_size>;
+  using param_list = make_param_list<alpha, beta, gamma, a, b, c, d, data,
+                                     data_tmp, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
@@ -189,19 +188,19 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
-      data_in_tmp_(sinfo_ij_, "data_in_tmp"),
-      z_top_(sinfo_ij_, "z_top"), x_top_(sinfo_ij_, "x_top"),
+      data_in_tmp_(sinfo_ij_, "data_in_tmp"), z_top_(sinfo_ij_, "z_top"),
+      x_top_(sinfo_ij_, "x_top"),
       comp_(gt::make_computation<backend_t>(
           computation_grid(resolution.x, resolution.y, resolution.z),
           p_dz() = gt::make_global_parameter(delta.z),
           p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
-          p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_, p_data_in_tmp() = data_in_tmp_,
-          p_z_top() = z_top_, p_x_top() = x_top_,
+          p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
+          p_data_in_tmp() = data_in_tmp_, p_z_top() = z_top_,
+          p_x_top() = x_top_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(
               gt::execute::forward(),
-              gt::make_stage<stage_diffusion_w0>(p_data_in(), p_data_in_tmp())
-          ),
+              gt::make_stage<stage_diffusion_w0>(p_data_in(), p_data_in_tmp())),
           gt::make_multistage(
               gt::execute::forward(),
               gt::define_caches(
@@ -215,7 +214,8 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
                       p_d())),
               gt::make_stage<stage_diffusion_w_forward1>(
                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
-                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_coeff(), p_k_size())),
+                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_coeff(),
+                  p_k_size())),
           gt::make_multistage(
               gt::execute::backward(),
               gt::define_caches(
@@ -234,7 +234,8 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_diffusion_w_backward2>(
                                   p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_k_size(), p_z_top(), p_x_top())),
+                                  p_gamma(), p_fact(), p_k_size(), p_z_top(),
+                                  p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_diffusion_w3>(
                                   p_data_out(), p_x(), p_z(), p_fact(),

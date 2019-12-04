@@ -145,7 +145,8 @@ struct periodic_backward2 {
   using z_top = inout_accessor<8>;
   using x_top = inout_accessor<9>;
 
-  using param_list = make_param_list<z, c, d, x, beta, gamma, fact, k_size, z_top, x_top>;
+  using param_list =
+      make_param_list<z, c, d, x, beta, gamma, fact, k_size, z_top, x_top>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {

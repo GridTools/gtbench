@@ -21,4 +21,4 @@ inline grid_t computation_grid(gt::uint_t resolution_x, gt::uint_t resolution_y,
       axis_t{resolution_z});
 }
 
-}
+} // namespace numerics
