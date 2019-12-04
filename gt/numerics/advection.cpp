@@ -245,11 +245,13 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
+      z_top_(sinfo_ij_, "z_top"), x_top_(sinfo_ij_, "x_top"),
       comp_(gt::make_computation<backend_t>(
           computation_grid(resolution.x, resolution.y, resolution.z),
           p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
+          p_z_top() = z_top_, p_x_top() = x_top_,
           gt::make_multistage(
               gt::execute::forward(),
               gt::define_caches(
@@ -284,7 +286,8 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_advection_w_backward2>(
                                   p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_k_size())),
+                                  p_gamma(), p_fact(), p_k_size(),
+                                  p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3>(
                                   p_data_out(), p_x(), p_z(), p_fact(),
@@ -301,6 +304,7 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
       gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
+      z_top_(sinfo_ij_, "z_top"), x_top_(sinfo_ij_, "x_top"),
       comp_(gt::make_computation<backend_t>(
           computation_grid(resolution.x, resolution.y, resolution.z),
           p_dx() = gt::make_global_parameter(delta.x),
@@ -308,6 +312,7 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
           p_dz() = gt::make_global_parameter(delta.z), p_alpha() = alpha_,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
+          p_z_top() = z_top_, p_x_top() = x_top_,
           gt::make_multistage(
               gt::execute::forward(),
               gt::define_caches(
@@ -342,7 +347,8 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_advection_w_backward2>(
                                   p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_k_size())),
+                                  p_gamma(), p_fact(), p_k_size(),
+                                  p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3_rk>(
                                   p_data_out(), p_x(), p_z(), p_fact(),

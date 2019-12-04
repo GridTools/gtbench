@@ -55,6 +55,11 @@ class vertical {
 
   using p_k_size = gt::arg<15, global_parameter_int_t>;
 
+  using p_z_top = gt::arg<16, storage_ij_t>;
+  storage_ij_t z_top_;
+  using p_x_top = gt::arg<17, storage_ij_t>;
+  storage_ij_t x_top_;
+
 public:
   vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta);
 
@@ -99,6 +104,11 @@ class runge_kutta_step {
   using p_w = gt::arg<19, storage_t>;
 
   using p_k_size = gt::arg<20, global_parameter_int_t>;
+
+  using p_z_top = gt::arg<21, storage_ij_t>;
+  storage_ij_t z_top_;
+  using p_x_top = gt::arg<22, storage_ij_t>;
+  storage_ij_t x_top_;
 
 public:
   runge_kutta_step(vec<std::size_t, 3> const &resolution,
