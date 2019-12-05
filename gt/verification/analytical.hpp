@@ -14,7 +14,8 @@ inline auto analytical_velocity(Analytical const &) {
 
 template <class Analytical>
 inline vec<real_t, 3> analytical_domain(Analytical const &) {
-  return {2 * M_PI, 2 * M_PI, 2 * M_PI};
+  static constexpr real_t two_pi = real_t(2 * M_PI);
+  return {two_pi, two_pi, two_pi};
 }
 
 template <class Analytical> inline auto data(Analytical const &analytical) {
@@ -145,7 +146,8 @@ inline auto analytical_velocity(advection_diffusion const &) {
 }
 
 inline vec<real_t, 3> analytical_domain(advection_diffusion const &) {
-  return {2 * M_PI, 2 * M_PI * std::sqrt(2_r), 2 * M_PI * std::sqrt(2_r)};
+  static constexpr real_t two_pi = real_t(2 * M_PI);
+  return {two_pi, two_pi * std::sqrt(2_r), two_pi * std::sqrt(2_r)};
 }
 
 template <class Analytical> struct repeated {
