@@ -128,20 +128,22 @@ struct halo_exchange_f {
     // building of halo data type for exchanges along x-axis
     halo_dtypes.x =
         std::shared_ptr<MPI_Datatype>(new MPI_Datatype, mpi_dtype_deleter);
-    MPI_Type_hvector(halo_sizes.x[1], halo_sizes.x[0],
-                     strides[1] * sizeof(real_t), mpi_real_dtype, &plane);
-    MPI_Type_hvector(halo_sizes.x[2], 1, strides[2] * sizeof(real_t), plane,
-                     halo_dtypes.x.get());
+    MPI_Type_create_hvector(halo_sizes.x[1], halo_sizes.x[0],
+                            strides[1] * sizeof(real_t), mpi_real_dtype,
+                            &plane);
+    MPI_Type_create_hvector(halo_sizes.x[2], 1, strides[2] * sizeof(real_t),
+                            plane, halo_dtypes.x.get());
     MPI_Type_commit(halo_dtypes.x.get());
     MPI_Type_free(&plane);
 
     // building of halo data type for exchanges along y-axis
     halo_dtypes.y =
         std::shared_ptr<MPI_Datatype>(new MPI_Datatype, mpi_dtype_deleter);
-    MPI_Type_hvector(halo_sizes.y[1], halo_sizes.y[0],
-                     strides[1] * sizeof(real_t), mpi_real_dtype, &plane);
-    MPI_Type_hvector(halo_sizes.y[2], 1, strides[2] * sizeof(real_t), plane,
-                     halo_dtypes.y.get());
+    MPI_Type_create_hvector(halo_sizes.y[1], halo_sizes.y[0],
+                            strides[1] * sizeof(real_t), mpi_real_dtype,
+                            &plane);
+    MPI_Type_create_hvector(halo_sizes.y[2], 1, strides[2] * sizeof(real_t),
+                            plane, halo_dtypes.y.get());
     MPI_Type_commit(halo_dtypes.y.get());
     MPI_Type_free(&plane);
   }
