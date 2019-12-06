@@ -7,8 +7,6 @@ if(NOT CMAKE_BUILD_TYPE)
     FORCE)
 endif()
 
-find_package(MPI REQUIRED COMPONENTS CXX)
-
 # User options
 set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
@@ -34,11 +32,15 @@ endfunction()
 add_library(common INTERFACE)
 
 # Global setup
+find_package(MPI REQUIRED COMPONENTS CXX)
+
 if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
   find_package(GHEX REQUIRED)
   target_link_libraries(common INTERFACE GHEX::ghexlib)
   target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
 endif()
+
+find_package(GridTools 1.1.0 REQUIRED)
 
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
