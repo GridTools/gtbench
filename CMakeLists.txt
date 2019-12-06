@@ -29,6 +29,8 @@ function(compile_as_cuda)
   endif()
 endfunction()
 
+find_package(GridTools 1.1.0 REQUIRED)
+
 add_library(common INTERFACE)
 
 # Global setup
@@ -42,14 +44,13 @@ elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
   target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
 endif()
 
-find_package(GridTools 1.1.0 REQUIRED)
-
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
   )
 target_compile_options(common INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_60,code=sm_60>)
+target_link_libraries(common INTERFACE GridTools::gridtools)
 
 # Subdirectories
 add_subdirectory(communication)
