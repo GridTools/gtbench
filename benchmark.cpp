@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
               << upper_time << "s" << std::endl;
   }
 
-  // just for safety: check if errors of all runs are (almost) the smae
+  // just for safety: check if errors of all runs are (almost) the same
   for (execution::result const &r : results) {
     if (std::abs(r.error - results.front().error) > 1e-9) {
       std::cerr << "Detected error differences between the runs, "
