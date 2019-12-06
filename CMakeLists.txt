@@ -29,18 +29,20 @@ function(compile_as_cuda)
   endif()
 endfunction()
 
+find_package(GridTools 1.1.0 REQUIRED)
+
 add_library(common INTERFACE)
 
 # Global setup
-find_package(MPI REQUIRED COMPONENTS CXX)
-
 if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
   find_package(GHEX REQUIRED)
   target_link_libraries(common INTERFACE GHEX::ghexlib)
   target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
+elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
+  find_package(MPI REQUIRED COMPONENTS CXX)
+  target_link_libraries(common INTERFACE MPI::MPI_CXX)
+  target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
 endif()
-
-find_package(GridTools 1.1.0 REQUIRED)
 
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
@@ -48,6 +50,7 @@ target_compile_definitions(common INTERFACE
   GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
   )
 target_compile_options(common INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_60,code=sm_60>)
+target_link_libraries(common INTERFACE GridTools::gridtools)
 
 # Subdirectories
 add_subdirectory(communication)
