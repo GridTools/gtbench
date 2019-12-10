@@ -11,7 +11,7 @@ endif()
 set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
 
-set(GTBENCH_FLOAT "double" CACHE STRING "Floating-point type")
+set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 
 set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backend")
