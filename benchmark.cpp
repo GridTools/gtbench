@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -13,7 +14,7 @@ int main(int argc, char **argv) {
 
   // user input handling
   std::size_t runs = 101;
-  const std::size_t nz = 100;
+  const std::size_t nz = 60;
 
   if (argc < 2 || argc > 3) {
     std::cerr << "Usage: " << argv[0] << " N [RUNS]" << std::endl;
@@ -29,8 +30,21 @@ int main(int argc, char **argv) {
   if (argc > 2)
     runs = std::atoll(argv[2]);
 
-  std::cout << "Running benchmark on a " << n << "x" << n << "x" << nz
-            << " domain" << std::endl;
+  auto fmt = [&]() -> std::ostream & {
+    return std::cout << std::endl << std::setw(25) << std::left;
+  };
+
+  std::cout << "Running GTBENCH";
+  fmt() << "Domain size:" << n << "x" << n << "x" << nz;
+
+#define GTBENCH_STR2(var) #var
+#define GTBENCH_STR(var) GTBENCH_STR2(var)
+  fmt() << "Floating-point type:" << GTBENCH_STR(GTBENCH_FLOAT);
+  fmt() << "GridTools backend:" << GTBENCH_STR(GTBENCH_BACKEND);
+  fmt() << "Communication backend:"
+        << GTBENCH_STR(GTBENCH_COMMUNICATION_BACKEND);
+#undef GTBENCH_STR
+#undef GTBENCH_STR2
 
   // more communication setup
   auto comm_grid = communication::grid(comm_world, {n, n, nz});
@@ -58,11 +72,18 @@ int main(int argc, char **argv) {
   const double lower_time = results[results.size() * 25 / 1000].time;
   const double upper_time = results[results.size() * 975 / 1000].time;
 
-  std::cout << "Median time: " << median_time << "s" << std::endl;
+  fmt() << "Median time: " << median_time << "s";
   if (runs > 100) {
-    std::cout << "95% confidence interval: " << lower_time << "s - "
-              << upper_time << "s" << std::endl;
+    std::cout << " (95% confidence: " << lower_time << "s - " << upper_time
+              << "s)";
   }
+
+  fmt() << "Columns per second: " << (n * n / median_time);
+  if (runs > 100) {
+    std::cout << " (95% confidence: " << (n * n / upper_time) << " - "
+              << (n * n / lower_time) << ")";
+  }
+  std::cout << std::endl;
 
   // just for safety: check if errors of all runs are (almost) the same
   for (execution::result const &r : results) {
