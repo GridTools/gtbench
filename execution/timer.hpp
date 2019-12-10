@@ -10,6 +10,15 @@ inline std::chrono::high_resolution_clock::time_point timer_now(Backend) {
   return std::chrono::high_resolution_clock::now();
 }
 
+#ifdef __CUDACC__
+inline std::chrono::high_resolution_clock::time_point
+timer_now(gt::backend::cuda) {
+  if (cudaDeviceSynchronize() != cudaSuccess)
+    throw std::runtime_error("cudaDeviceSynchronize() failed");
+  return std::chrono::high_resolution_clock::now();
+}
+#endif
+
 inline double
 timer_duration(std::chrono::high_resolution_clock::time_point const &start,
                std::chrono::high_resolution_clock::time_point const &stop) {
@@ -25,15 +34,6 @@ inline double duration(TimePoint &&start, TimePoint &&stop) {
   return timer_duration(std::forward<TimePoint>(start),
                         std::forward<TimePoint>(stop));
 }
-
-#ifdef __CUDACC__
-inline std::chrono::high_resolution_clock::time_point
-timer_now(gt::backend::cuda) {
-  if (cudaDeviceSynchronize() != cudaSuccess)
-    throw std::runtime_error("cudaDeviceSynchronize() failed");
-  return std::chrono::high_resolution_clock::now();
-}
-#endif
 
 } // namespace timer
 } // namespace execution
