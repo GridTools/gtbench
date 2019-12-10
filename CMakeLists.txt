@@ -21,7 +21,7 @@ set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
 find_package(GridTools 1.1.0 REQUIRED)
 
-if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC_CUDA")
+if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
   enable_language(CUDA)
 
   set(CMAKE_CUDA_STANDARD 14)
@@ -49,6 +49,9 @@ elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
   find_package(MPI REQUIRED COMPONENTS CXX)
   target_link_libraries(common INTERFACE MPI::MPI_CXX)
   target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
+endif()
+if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
+  target_compile_options(common INTERFACE -arch=${GTBENCH_CUDA_ARCH})
 endif()
 
 target_compile_definitions(common INTERFACE
