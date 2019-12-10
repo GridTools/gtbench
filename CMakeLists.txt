@@ -17,9 +17,18 @@ set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backend")
 set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "single_node" "simple_mpi")
 
-if(GTBENCH_BACKEND STREQUAL "cuda")
+set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
+
+find_package(GridTools 1.1.0 REQUIRED)
+
+if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
   enable_language(CUDA)
+
+  set(CMAKE_CUDA_STANDARD 14)
+  set(CMAKE_CUDA_EXTENSIONS OFF)
 endif()
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Helper functions
 function(compile_as_cuda)
@@ -28,8 +37,6 @@ function(compile_as_cuda)
     set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
   endif()
 endfunction()
-
-find_package(GridTools 1.1.0 REQUIRED)
 
 add_library(common INTERFACE)
 
@@ -42,6 +49,9 @@ elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
   find_package(MPI REQUIRED COMPONENTS CXX)
   target_link_libraries(common INTERFACE MPI::MPI_CXX)
   target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
+endif()
+if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
+  target_compile_options(common INTERFACE -arch=${GTBENCH_CUDA_ARCH})
 endif()
 
 target_compile_definitions(common INTERFACE
