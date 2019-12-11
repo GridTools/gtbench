@@ -6,13 +6,34 @@
 #include <ghex/communication_object_2.hpp>
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
-#include <ghex/transport_layer/mpi/communicator.hpp>
+#include <ghex/threads/none/primitives.hpp>
+#ifdef GTBENCH_USE_GHEX_UCP
+#include <ghex/transport_layer/ucx/context.hpp>
+using transport      = gridtools::ghex::tl::ucx_tag;
+//#pragma message "GHEX is using UCX"
+//#ifdef GTBENCH_USE_GHEX_PMIX
+//#pragma message "GHEX is using PMIX"
+//#endif
+#else
+#include <ghex/transport_layer/mpi/context.hpp>
+using transport      = gridtools::ghex::tl::mpi_tag;
+#endif
 
 #include <iostream>
 
 namespace communication {
 
 namespace ghex_comm {
+
+
+using threading      = gridtools::ghex::threads::none::primitives;
+using context_t      = gridtools::ghex::tl::context<transport,threading>;
+using communicator_t = context_t::communicator_type;
+  
+using domain_id_t       = int;
+using dimension_t       = std::integral_constant<int, 3>;
+using coordinate_base_t = std::array<int, dimension_t::value>;
+using coordinate_t      = ::gridtools::ghex::coordinate<coordinate_base_t>;
 
 struct moved_bit {
   bool m_moved = false;
@@ -30,10 +51,9 @@ struct moved_bit {
 
 struct local_domain {
 public: // member types
-  using domain_id_type = int;
-  using dimension = std::integral_constant<int, 3>;
-  using coordinate_base_type = std::array<int, dimension::value>;
-  using coordinate_type = ::gridtools::ghex::coordinate<coordinate_base_type>;
+  using domain_id_type  = domain_id_t;
+  using dimension       = dimension_t;
+  using coordinate_type = coordinate_t;
 
 private: // members
   domain_id_type m_id;
@@ -58,6 +78,10 @@ public: // member functions
   const coordinate_type &first() const { return m_first; }
   const coordinate_type &last() const { return m_last; }
 };
+
+using grid_t     = typename ::gridtools::ghex::structured::grid::template type<local_domain>;
+using patterns_t = ::gridtools::ghex::pattern_container<communicator_t, grid_t, domain_id_t>;
+using comm_obj_t = ::gridtools::ghex::communication_object<communicator_t,grid_t,domain_id_t>;
 
 struct halo_generator {
 public: // member types
@@ -172,20 +196,12 @@ struct world {
 
 struct grid {
 public: // member types
-  using transport_type = ::gridtools::ghex::tl::mpi_tag;
-  using domain_id_type = typename local_domain::domain_id_type;
+  using domain_id_type  = typename local_domain::domain_id_type;
   using coordinate_type = typename local_domain::coordinate_type;
-  using grid_type =
-      typename ::gridtools::ghex::structured::grid::template type<local_domain>;
-  using patterns_type =
-      ::gridtools::ghex::pattern_container<transport_type, grid_type,
-                                           domain_id_type>;
-  using patterns_ptr_t = std::unique_ptr<patterns_type>;
-  using comm_obj_type =
-      typename std::remove_reference<typename std::remove_cv<decltype(
-          ::gridtools::ghex::make_communication_object<patterns_type>())>::
-                                         type>::type;
-  using comm_obj_ptr_t = std::unique_ptr<comm_obj_type>;
+  using patterns_type   = patterns_t;
+  using patterns_ptr_t  = std::unique_ptr<patterns_type>;
+  using comm_obj_type   = comm_obj_t;
+  using comm_obj_ptr_t  = std::unique_ptr<comm_obj_type>;
 
 private: // members
   int m_rank;
@@ -197,6 +213,7 @@ private: // members
   coordinate_type m_last;
   local_domain m_dom;
   halo_generator m_hg;
+  std::unique_ptr<context_t> m_context;
   patterns_ptr_t m_patterns;
   comm_obj_ptr_t m_comm_obj;
   moved_bit m_moved;
@@ -246,11 +263,12 @@ public: // ctors
                                                  (int)global_resolution.y - 1,
                                                  (int)global_resolution.z - 1},
                                              halo},
+        m_context{gridtools::ghex::tl::context_factory<transport,threading>::create(1,m_comm_cart)},
         m_patterns{new patterns_type{::gridtools::ghex::make_pattern<
             ::gridtools::ghex::structured::grid>(
-            m_comm_cart, m_hg, std::vector<local_domain>{m_dom})}},
+            *m_context, m_hg, std::vector<local_domain>{m_dom})}},
         m_comm_obj{new comm_obj_type{
-            ::gridtools::ghex::make_communication_object<patterns_type>()}},
+            ::gridtools::ghex::make_communication_object<patterns_type>(m_context->get_communicator(m_context->get_token()))}},
         global_resolution{global_resolution.x, global_resolution.y},
         offset{(std::size_t)m_first[0], (std::size_t)m_first[1]},
         resolution{(std::size_t)(m_last[0] - m_first[0] + 1),
