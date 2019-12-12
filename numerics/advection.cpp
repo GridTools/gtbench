@@ -129,15 +129,11 @@ struct stage_advection_w_forward1 {
   using dt = in_accessor<10>;
   using w = in_accessor<11, extent<0, 0, 0, 0, 0, 1>>;
 
-  using k_size = in_accessor<12>;
-
   using param_list = make_param_list<alpha, beta, gamma, a, b, c, d, data,
-                                     data_tmp, dz, dt, w, k_size>;
+                                     data_tmp, dz, dt, w>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-    const gt::int_t k_offset = eval(k_size() - 1);
-
     eval(a()) = eval(-0.25_r * w() / dz());
     eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
     eval(b()) = eval(1_r / dt() - a() - c());
@@ -171,8 +167,6 @@ struct stage_advection_w_forward1 {
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    const gt::int_t k_offset = eval(k_size() - 1);
-
     eval(a()) = eval(-0.25_r * w() / dz());
     eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
     eval(b()) = eval(1_r / dt() - a() - c());
@@ -267,7 +261,6 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_data_in_tmp() = data_in_tmp_, p_z_top() = z_top_,
           p_x_top() = x_top_,
-          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(
               gt::execute::forward(),
               gt::make_stage<stage_advection_w0>(p_data_in(), p_data_in_tmp())),
@@ -286,8 +279,7 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
                       p_w())),
               gt::make_stage<stage_advection_w_forward1>(
                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
-                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_w(),
-                  p_k_size())),
+                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_w())),
           gt::make_multistage(
               gt::execute::backward(),
               gt::define_caches(
@@ -306,8 +298,7 @@ vertical::vertical(vec<std::size_t, 3> const &resolution,
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_advection_w_backward2>(
                                   p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_k_size(), p_z_top(),
-                                  p_x_top())),
+                                  p_gamma(), p_fact(), p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3>(
                                   p_data_out(), p_x(), p_z(), p_fact(),
@@ -334,7 +325,6 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
           p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
           p_data_in_tmp() = data_in_tmp_, p_z_top() = z_top_,
           p_x_top() = x_top_,
-          p_k_size() = gt::make_global_parameter(gt::int_t(resolution.z)),
           gt::make_multistage(
               gt::execute::forward(),
               gt::make_stage<stage_advection_w0>(p_data_in(), p_data_in_tmp())),
@@ -353,8 +343,7 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
                       p_w())),
               gt::make_stage<stage_advection_w_forward1>(
                   p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
-                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_w(),
-                  p_k_size())),
+                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_w())),
           gt::make_multistage(
               gt::execute::backward(),
               gt::define_caches(
@@ -373,8 +362,7 @@ runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
           gt::make_multistage(gt::execute::backward(),
                               gt::make_stage<stage_advection_w_backward2>(
                                   p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_k_size(), p_z_top(),
-                                  p_x_top())),
+                                  p_gamma(), p_fact(), p_z_top(), p_x_top())),
           gt::make_multistage(gt::execute::parallel(),
                               gt::make_stage<stage_advection_w3_rk>(
                                   p_data_out(), p_x(), p_z(), p_fact(),
