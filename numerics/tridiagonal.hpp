@@ -140,21 +140,18 @@ struct periodic_backward2 {
 
   using fact = inout_accessor<6>;
 
-  using k_size = in_accessor<7>;
-
-  using z_top = inout_accessor<8>;
-  using x_top = inout_accessor<9>;
+  using z_top = inout_accessor<7>;
+  using x_top = inout_accessor<8>;
 
   using param_list =
-      make_param_list<z, c, d, x, beta, gamma, fact, k_size, z_top, x_top>;
+      make_param_list<z, c, d, x, beta, gamma, fact, z_top, x_top>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     gridtools::call_proc<tridiagonal::backward, full_t::modify<0, -1>>::with(
         eval, z(), c(), d());
-    const gt::int_t top_offset = eval(k_size() - 1);
     eval(fact()) = eval((x() + beta() * x_top() / gamma()) /
-                        (1 + z() + beta() * z_top() / gamma()));
+                        (1_r + z() + beta() * z_top() / gamma()));
   }
 
   template <typename Evaluation>
