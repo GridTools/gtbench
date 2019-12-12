@@ -21,9 +21,6 @@ set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
 find_package(GridTools 1.1 REQUIRED)
 
-set(LUMI_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${LUMI_MODULE_PATH}")
-
 if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
                                         OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
   enable_language(CUDA)
@@ -49,12 +46,8 @@ if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
   find_package(GHEX REQUIRED)
   target_link_libraries(common INTERFACE GHEX::ghexlib)
   if (GHEX_USE_UCP)
-      find_package(UCP REQUIRED)
-      target_link_libraries(common INTERFACE UCP::libucp)
       target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_UCP)
       if (GHEX_USE_PMIX)
-        find_package(PMIx REQUIRED)
-        target_link_libraries(common INTERFACE PMIx::libpmix)
         target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_PMIX)
       endif()
   endif()
