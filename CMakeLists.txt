@@ -19,9 +19,10 @@ set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "s
 
 set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
-find_package(GridTools 1.1.0 REQUIRED)
+find_package(GridTools 1.1 REQUIRED)
 
-if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
+if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
+                                        OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
   enable_language(CUDA)
 
   set(CMAKE_CUDA_STANDARD 14)
@@ -59,7 +60,6 @@ target_compile_definitions(common INTERFACE
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
   )
-target_compile_options(common INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_60,code=sm_60>)
 target_link_libraries(common INTERFACE GridTools::gridtools)
 
 # Subdirectories
