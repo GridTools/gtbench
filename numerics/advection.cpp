@@ -28,14 +28,14 @@ struct stage_u {
     static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
                                          -1_r / 3, -1_r / 2, 1_r / 20};
 
-    if (eval(u()) < 0) {
+    if (eval(u()) > 0_r) {
       eval(flux()) =
           eval(u() *
                -(weights[0] * in(-3, 0, 0) + weights[1] * in(-2, 0, 0) +
                  weights[2] * in(-1, 0, 0) + weights[3] * in() +
                  weights[4] * in(1, 0, 0) + weights[5] * in(2, 0, 0)) /
                dx());
-    } else if (eval(u()) > 0) {
+    } else if (eval(u()) < 0_r) {
       eval(flux()) =
           eval(u() *
                (weights[5] * in(-2, 0, 0) + weights[4] * in(-1, 0, 0) +
@@ -60,14 +60,14 @@ struct stage_v {
     static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
                                          -1_r / 3, -1_r / 2, 1_r / 20};
 
-    if (eval(v()) < 0) {
+    if (eval(v()) > 0_r) {
       eval(flux()) =
           eval(v() *
                -(weights[0] * in(0, -3, 0) + weights[1] * in(0, -2, 0) +
                  weights[2] * in(0, -1, 0) + weights[3] * in() +
                  weights[4] * in(0, 1, 0) + weights[5] * in(0, 2, 0)) /
                dy());
-    } else if (eval(v()) > 0) {
+    } else if (eval(v()) < 0_r) {
       eval(flux()) =
           eval(v() *
                (weights[5] * in(0, -2, 0) + weights[4] * in(0, -1, 0) +
