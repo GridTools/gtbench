@@ -10,77 +10,59 @@ int main(int argc, char **argv) {
   auto comm_world =
       communication::GTBENCH_COMMUNICATION_BACKEND::world(argc, argv);
 
-  auto run_tests = [&comm_world](auto &&exact, auto &&stepper) {
+  auto run_tests = [&comm_world](std::string const &title, auto &&exact,
+                                 auto &&stepper) {
+    std::size_t max_resolution = std::is_same<real_t, float>() ? 16 : 32;
+
+    std::cout << "=== " << title << " ===" << std::endl;
     std::cout << "Spatial convergence:" << std::endl;
     auto spatial_error_f = [&comm_world, exact = std::move(exact),
                             stepper =
                                 std::move(stepper)](std::size_t resolution) {
-      constexpr real_t base_dt =
-          std::is_same<real_t, float>::value ? 1e-2f : 1e-3;
       return execution::run(
                  communication::grid(comm_world,
                                      {resolution, resolution, resolution}),
-                 stepper, base_dt, base_dt / 10_r, exact)
+                 stepper, 1e-2, std::is_same<real_t, float>() ? 1e-3 : 1e-5,
+                 exact)
           .error;
     };
     verification::print_order_verification_result(
-        verification::order_verification(spatial_error_f, 8, 64));
+        verification::order_verification(spatial_error_f, 8, max_resolution));
 
     std::cout << "Temporal convergence:" << std::endl;
     auto spacetime_error_f = [&comm_world, exact = std::move(exact),
                               stepper =
                                   std::move(stepper)](std::size_t resolution) {
-      return execution::run(communication::grid(comm_world, {64, 64, 64}),
+      return execution::run(communication::grid(comm_world, {128, 128, 128}),
                             stepper, 1e-1, 1e-1 / resolution, exact)
           .error;
     };
     verification::print_order_verification_result(
-        verification::order_verification(spacetime_error_f, 8, 64));
+        verification::order_verification(spacetime_error_f, 8, max_resolution));
   };
 
   const real_t diffusion_coeff = 0.05;
 
-  {
-    std::cout << "HORIZONTAL DIFFUSION" << std::endl;
-    run_tests(verification::analytical::horizontal_diffusion{diffusion_coeff},
-              numerics::hdiff_stepper(diffusion_coeff));
-  }
-
-  {
-    std::cout << "VERTICAL DIFFUSION" << std::endl;
-    run_tests(verification::analytical::vertical_diffusion{diffusion_coeff},
-              numerics::vdiff_stepper(diffusion_coeff));
-  }
-
-  {
-    std::cout << "FULL DIFFUSION" << std::endl;
-    run_tests(verification::analytical::full_diffusion{diffusion_coeff},
-              numerics::diff_stepper(diffusion_coeff));
-  }
-
-  {
-    std::cout << "HORIZONTAL ADVECTION" << std::endl;
-    run_tests(verification::analytical::horizontal_advection{},
-              numerics::hadv_stepper());
-  }
-
-  {
-    std::cout << "VERTICAL ADVECTION" << std::endl;
-    run_tests(verification::analytical::vertical_advection{},
-              numerics::vadv_stepper());
-  }
-
-  {
-    std::cout << "RUNGE-KUTTA ADVECTION" << std::endl;
-    run_tests(verification::analytical::full_advection{},
-              numerics::rkadv_stepper());
-  }
-
-  {
-    std::cout << "ADVECTION-DIFFUSION" << std::endl;
-    run_tests(verification::analytical::advection_diffusion{diffusion_coeff},
-              numerics::advdiff_stepper(diffusion_coeff));
-  }
+  run_tests("HORIZONTAL DIFFUSION",
+            verification::analytical::horizontal_diffusion{diffusion_coeff},
+            numerics::hdiff_stepper(diffusion_coeff));
+  run_tests("VERTICAL DIFFUSION",
+            verification::analytical::vertical_diffusion{diffusion_coeff},
+            numerics::vdiff_stepper(diffusion_coeff));
+  run_tests("FULL DIFFUSION",
+            verification::analytical::full_diffusion{diffusion_coeff},
+            numerics::diff_stepper(diffusion_coeff));
+  run_tests("HORIZONTAL ADVECTION",
+            verification::analytical::horizontal_advection{},
+            numerics::hadv_stepper());
+  run_tests("VERTICAL ADVECTION",
+            verification::analytical::vertical_advection{},
+            numerics::vadv_stepper());
+  run_tests("RUNGE-KUTTA ADVECTION", verification::analytical::full_advection{},
+            numerics::rkadv_stepper());
+  run_tests("ADVECTION-DIFFUSION",
+            verification::analytical::advection_diffusion{diffusion_coeff},
+            numerics::advdiff_stepper(diffusion_coeff));
 
   return 0;
 }
