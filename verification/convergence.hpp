@@ -38,14 +38,24 @@ void print_order_verification_result(
   std::vector<double> errors, orders;
   std::tie(ns, errors, orders) = result;
 
-  std::cout << std::setw(5) << "N" << std::setw(20) << "Error" << std::setw(20)
-            << "Order" << std::endl;
+  const auto initial_flags = std::cout.flags();
+  const auto initial_precision = std::cout.precision();
+
+  std::cout << std::left << std::setw(15) << "Resolution"
+            << " " << std::setw(15) << "Error"
+            << " " << std::setw(15) << "Order" << std::endl;
   for (std::size_t i = 0; i < ns.size(); ++i) {
-    std::cout << std::setw(5) << ns[i] << " " << std::setw(20) << errors[i];
+    std::cout << std::setw(15) << ns[i] << " ";
+    std::cout << std::setw(15) << std::setprecision(5) << std::scientific
+              << errors[i];
     if (i > 0)
-      std::cout << std::setw(20) << orders[i - 1];
+      std::cout << " " << std::setw(15) << std::setprecision(2) << std::fixed
+                << orders[i - 1];
     std::cout << std::endl;
   }
+
+  std::cout.flags(initial_flags);
+  std::cout.precision(initial_precision);
 }
 
 } // namespace verification
