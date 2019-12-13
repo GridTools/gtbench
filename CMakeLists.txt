@@ -80,3 +80,6 @@ target_link_libraries(convergence_tests advection diffusion communication)
 
 add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark advection diffusion communication)
+
+add_executable(benchmark_mt benchmark_mt.cpp)
+target_link_libraries(benchmark_mt advection diffusion communication_mt)

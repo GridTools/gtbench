@@ -110,10 +110,12 @@ auto advdiff_stepper(real_t diffusion_coeff) {
             rkstep = advection::runge_kutta_step(resolution, delta),
             exchange = std::move(exchange)](solver_state &state,
                                             real_t dt) mutable {
+      std::cout << "aaaaaaaaaa" << std::endl;
       // VDIFF
       vdiff(state.data1, state.data, dt);
       std::swap(state.data1, state.data);
 
+      std::cout << "ksldfdklsf" << std::endl;
       // ADV
       exchange(state.data);
       rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
