@@ -14,8 +14,8 @@ inline auto analytical_velocity(Analytical const &) {
 
 template <class Analytical>
 inline vec<real_t, 3> analytical_domain(Analytical const &) {
-  static constexpr real_t two_pi = real_t(2 * M_PI);
-  return {two_pi, two_pi, two_pi};
+  static constexpr real_t four_pies = real_t(4 * M_PI);
+  return {four_pies, four_pies, four_pies};
 }
 
 template <class Analytical> inline auto data(Analytical const &analytical) {
@@ -86,13 +86,13 @@ struct horizontal_advection {};
 
 inline auto analytical_data(horizontal_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x - t) * std::cos(p.y + 2 * t) * std::cos(p.z);
+    return std::sin(p.x - 5 * t) * std::cos(p.y + 2 * t) * std::cos(p.z);
   };
 }
 
 inline auto analytical_velocity(horizontal_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {1, -2, 0};
+    return {5, -2, 0};
   };
 }
 
@@ -100,13 +100,13 @@ struct vertical_advection {};
 
 inline auto analytical_data(vertical_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x) * std::cos(p.y) * std::cos(p.z - 0.5 * t);
+    return std::sin(p.x) * std::cos(p.y) * std::cos(p.z - 3 * t);
   };
 }
 
 inline auto analytical_velocity(vertical_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {0, 0, 0.5};
+    return {0, 0, 3};
   };
 }
 
@@ -114,13 +114,14 @@ struct full_advection {};
 
 inline auto analytical_data(full_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x - t) * std::cos(p.y + 2 * t) * std::cos(p.z - 0.5 * t);
+    return std::sin(p.x - 5 * t) * std::cos(p.y + 2 * t) *
+           std::cos(p.z - 3 * t);
   };
 }
 
 inline auto analytical_velocity(full_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {1, -2, 0.5};
+    return {5, -2, 3};
   };
 }
 
