@@ -171,15 +171,12 @@ struct world {
   moved_bit m_moved;
 
   world(int &argc, char **&argv, bool mt = false) {
-    if (mt)
-    {
+    if (mt) {
       int provided;
       int res = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
       if (res == MPI_ERR_OTHER)
         throw std::runtime_error("MPI init failed");
-    }
-    else
-    {
+    } else {
       MPI_Init(&argc, &argv);
     }
 

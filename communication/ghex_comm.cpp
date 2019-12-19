@@ -12,7 +12,6 @@ comm_halo_exchanger(grid &g, storage_t::storage_info_t const &sinfo) {
   auto patterns_ptr = &g.patterns();
   const auto domain_id = g.domain_id();
   return [co_ptr, patterns_ptr, domain_id](const storage_t &storage) mutable {
-    std::cout << "exchanging" << std::endl;
     auto &co = *co_ptr;
     auto &patterns = *patterns_ptr;
 
