@@ -33,18 +33,17 @@ double comm_global_max(grid_mt::sub_grid const &g, double t) {
     for (int i = 1; i < g.m_size; ++i) {
       double max_i;
       MPI_Status status;
-      MPI_Recv(&max_i, sizeof(double), MPI_BYTE, i, g.m_token.id(),
-               MPI_COMM_WORLD, &status);
+      MPI_Recv(&max_i, 1, MPI_DOUBLE, i, g.m_token.id(), MPI_COMM_WORLD,
+               &status);
       max_v = std::max(max_v, max_i);
     }
     for (int i = 1; i < g.m_size; ++i) {
-      MPI_Send(&t, sizeof(double), MPI_BYTE, i, g.m_token.id(), MPI_COMM_WORLD);
+      MPI_Send(&t, 1, MPI_DOUBLE, i, g.m_token.id(), MPI_COMM_WORLD);
     }
   } else {
-    MPI_Send(&t, sizeof(double), MPI_BYTE, 0, g.m_token.id(), MPI_COMM_WORLD);
+    MPI_Send(&t, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD);
     MPI_Status status;
-    MPI_Recv(&max_v, sizeof(double), MPI_BYTE, 0, g.m_token.id(),
-             MPI_COMM_WORLD, &status);
+    MPI_Recv(&max_v, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD, &status);
   }
   return max_v;
 }

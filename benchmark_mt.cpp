@@ -87,8 +87,6 @@ int main(int argc, char **argv) {
           std::max(all_results[0][i].error, all_results[j][i].error);
     }
 
-  fmt() << "error:" << all_results[0][0].error;
-
   auto &results = all_results[0];
   // computation and reporting of median and confidence interval times
   std::sort(std::begin(results), std::end(results),

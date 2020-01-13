@@ -174,7 +174,7 @@ struct world {
     if (mt) {
       int provided;
       int res = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-      if (res == MPI_ERR_OTHER)
+      if (res != MPI_SUCCESS)
         throw std::runtime_error("MPI init failed");
     } else {
       MPI_Init(&argc, &argv);

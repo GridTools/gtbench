@@ -96,9 +96,9 @@ public:
     // make domains
     int i = 0;
     for (std::size_t y = 0; y < div_threads[1].size(); ++y) {
-      for (std::size_t x = 0; x < div_threads[0].size(); ++x) {
+      for (std::size_t x = 0; x < div_threads[0].size(); ++x, ++i) {
         m_domains.push_back(
-            local_domain{m_rank * num_sub_domains + i++,
+            local_domain{m_rank * num_sub_domains + i,
                          coordinate_type{(int)(offsets_threads[0][x]),
                                          (int)(offsets_threads[1][y]), 0},
                          coordinate_type{(int)(offsets_threads[0][x + 1] - 1),

@@ -63,8 +63,6 @@ int main(int argc, char **argv) {
                                      0.1, 1e-3, exact));
   }
 
-  fmt() << "error:" << results[0].error;
-
   // computation and reporting of median and confidence interval times
   std::sort(std::begin(results), std::end(results),
             [](execution::result const &a, execution::result const &b) {
