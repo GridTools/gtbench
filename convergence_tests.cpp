@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv) {
   auto comm_world =
-      communication::GTBENCH_COMMUNICATION_BACKEND::world(argc, argv);
+      communication::GTBENCH_COMMUNICATION_BACKEND::world(argc, argv, false);
 
   auto run_tests = [&comm_world](std::string const &title, auto &&exact,
                                  auto &&stepper) {
@@ -19,11 +19,10 @@ int main(int argc, char **argv) {
     auto spatial_error_f = [&comm_world, exact = std::move(exact),
                             stepper =
                                 std::move(stepper)](std::size_t resolution) {
-      return execution::run(
-                 communication::grid(comm_world,
-                                     {resolution, resolution, resolution}),
-                 stepper, 1e-2, std::is_same<real_t, float>() ? 1e-3 : 1e-5,
-                 exact)
+      auto grid =
+          communication::grid(comm_world, {resolution, resolution, resolution});
+      return execution::run(communication::sub_grid(grid), stepper, 1e-2,
+                            std::is_same<real_t, float>() ? 1e-3 : 1e-5, exact)
           .error;
     };
     verification::print_order_verification_result(
@@ -33,8 +32,9 @@ int main(int argc, char **argv) {
     auto spacetime_error_f = [&comm_world, exact = std::move(exact),
                               stepper =
                                   std::move(stepper)](std::size_t resolution) {
-      return execution::run(communication::grid(comm_world, {128, 128, 128}),
-                            stepper, 1e-1, 1e-1 / resolution, exact)
+      auto grid = communication::grid(comm_world, {128, 128, 128});
+      return execution::run(communication::sub_grid(grid), stepper, 1e-1,
+                            1e-1 / resolution, exact)
           .error;
     };
     verification::print_order_verification_result(

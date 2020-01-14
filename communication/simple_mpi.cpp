@@ -9,7 +9,7 @@ namespace communication {
 
 namespace simple_mpi {
 
-world::world(int &argc, char **&argv) {
+world::world(int &argc, char **&argv, bool) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   int size, rank;

@@ -23,8 +23,10 @@ vec<std::size_t, 2> comm_offset(CommGrid const &grid) {
 }
 
 template <class CommWorld>
-auto grid(CommWorld &&world, vec<std::size_t, 3> const &global_resolution) {
-  return comm_grid(std::forward<CommWorld>(world), global_resolution);
+auto grid(CommWorld &&world, vec<std::size_t, 3> const &global_resolution,
+          int num_threads = 1) {
+  return comm_grid(std::forward<CommWorld>(world), global_resolution,
+                   num_threads);
 }
 
 template <class CommGrid>
@@ -38,6 +40,10 @@ template <class CommGrid> vec<std::size_t, 3> resolution(CommGrid &&grid) {
 
 template <class CommGrid> vec<std::size_t, 2> offset(CommGrid &&grid) {
   return comm_offset(std::forward<CommGrid>(grid));
+}
+
+template <class CommGrid> auto sub_grid(CommGrid &&grid, int id = 0) {
+  return comm_sub_grid(std::forward<CommGrid>(grid), id);
 }
 
 template <class CommGrid>
