@@ -31,18 +31,18 @@ double comm_global_max(grid::sub_grid const &g, double t) {
   if (g.m_rank == 0) {
     for (int i = 1; i < g.m_size; ++i) {
       double max_i;
-      MPI_Status status;
       MPI_Recv(&max_i, 1, MPI_DOUBLE, i, g.m_token.id(), MPI_COMM_WORLD,
-               &status);
+               MPI_STATUS_IGNORE);
       max_v = std::max(max_v, max_i);
     }
     for (int i = 1; i < g.m_size; ++i) {
-      MPI_Send(&t, 1, MPI_DOUBLE, i, g.m_token.id(), MPI_COMM_WORLD);
+      MPI_Send(&max_v, 1, MPI_DOUBLE, i, g.m_token.id(), MPI_COMM_WORLD);
     }
   } else {
     MPI_Send(&t, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD);
     MPI_Status status;
-    MPI_Recv(&max_v, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD, &status);
+    MPI_Recv(&max_v, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD,
+             MPI_STATUS_IGNORE);
   }
   return max_v;
 }

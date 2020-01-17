@@ -35,7 +35,11 @@ int main(int argc, char **argv) {
 
     // override number of threads for simple backends
 #if !defined(GTBENCH_USE_GHEX)
-  num_threads = 1;
+  if (num_threads != 1) {
+    std::cerr << "number of threads cannot be larger than 1 for this backend."
+              << std::endl;
+    return 1;
+  }
 #endif
   const bool multi_threaded = num_threads > 1;
 
@@ -49,8 +53,7 @@ int main(int argc, char **argv) {
 
   // get number of openmp threads
   int num_omp_threads = 1;
-#pragma omp parallel
-#pragma omp master
+#pragma omp parallel master
   num_omp_threads = omp_get_num_threads();
 
   std::cout << "Running GTBENCH";
