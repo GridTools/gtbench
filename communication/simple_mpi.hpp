@@ -9,7 +9,7 @@ namespace communication {
 namespace simple_mpi {
 
 struct world {
-  world(int &argc, char **&argv);
+  world(int &argc, char **&argv, bool);
   world(world const &) = delete;
   world(world &&);
   world &operator=(world const &) = delete;
@@ -32,9 +32,12 @@ struct grid {
   MPI_Comm comm_cart = MPI_COMM_NULL;
 };
 
-inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution) {
+inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution,
+                      int) {
   return {global_resolution};
 }
+
+inline grid &comm_sub_grid(grid &g, int) { return g; }
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
