@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
 
   // get number of openmp threads
   int num_omp_threads = 1;
-#pragma omp parallel master
+#pragma omp parallel
+#pragma omp master
   num_omp_threads = omp_get_num_threads();
 
   std::cout << "Running GTBENCH";
