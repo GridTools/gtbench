@@ -43,7 +43,7 @@ template <class CommGrid> vec<std::size_t, 2> offset(CommGrid &&grid) {
 }
 
 template <class CommGrid>
-typename std::remove_reference_t<CommGrid>::sub_grid_t sub_grid(CommGrid &&grid,
+decltype(auto) sub_grid(CommGrid &&grid,
                                                                 int id = 0) {
   return comm_sub_grid(std::forward<CommGrid>(grid), id);
 }

@@ -11,7 +11,6 @@ struct world {
 };
 
 struct grid {
-  using sub_grid_t = grid&;
   vec<std::size_t, 3> resolution;
 };
 

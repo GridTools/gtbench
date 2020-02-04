@@ -26,7 +26,6 @@ struct grid {
   grid &operator=(grid const &) = delete;
   grid &operator=(grid &&);
   ~grid();
-  using sub_grid_t = grid&;
   vec<std::size_t, 3> resolution;
   vec<std::size_t, 2> global_resolution, offset;
   MPI_Comm comm_cart = MPI_COMM_NULL;
