@@ -224,6 +224,8 @@ public: // member types
     vec<std::size_t, 3> resolution;
   };
 
+  using sub_grid_t = sub_grid;
+
 private: // members
   halo_generator m_hg;
   vec<std::size_t, 2> m_global_resolution;
