@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
                                 std::move(stepper)](std::size_t resolution) {
       auto grid =
           communication::grid(comm_world, {resolution, resolution, resolution});
-      return execution::run(communication::sub_grid(grid), stepper, 1e-2,
+      return execution::run(grid.sub_grid(), stepper, 1e-2,
                             std::is_same<real_t, float>() ? 1e-3 : 1e-5, exact)
           .error;
     };
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
                               stepper =
                                   std::move(stepper)](std::size_t resolution) {
       auto grid = communication::grid(comm_world, {128, 128, 128});
-      return execution::run(communication::sub_grid(grid), stepper, 1e-1,
+      return execution::run(grid.sub_grid(), stepper, 1e-1,
                             1e-1 / resolution, exact)
           .error;
     };

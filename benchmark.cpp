@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   auto execution_func = [&](int id = 0) {
     for (std::size_t r = 0; r < runs; ++r) {
       all_results[id].push_back(execution::run(
-          communication::sub_grid(comm_grid, id),
+          comm_grid.sub_grid(id),
           numerics::advdiff_stepper(diffusion_coeff), 0.1, 1e-3, exact));
     }
   };

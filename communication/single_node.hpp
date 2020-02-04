@@ -12,13 +12,12 @@ struct world {
 
 struct grid {
   vec<std::size_t, 3> resolution;
+  grid& sub_grid(int id = 0) { return *this; }
 };
 
 inline grid comm_grid(world, vec<std::size_t, 3> const &resolution, int) {
   return {resolution};
 }
-
-inline grid &comm_sub_grid(grid &g, int) { return g; }
 
 inline vec<std::size_t, 3> comm_global_resolution(grid const &grid) {
   return grid.resolution;

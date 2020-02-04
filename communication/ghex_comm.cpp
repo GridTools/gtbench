@@ -8,7 +8,7 @@ namespace communication {
 namespace ghex_comm {
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid::sub_grid &g, storage_t::storage_info_t const &sinfo) {
+comm_halo_exchanger(grid::sub_grid_ &g, storage_t::storage_info_t const &sinfo) {
   auto co_ptr = g.m_comm_obj.get();
   auto patterns_ptr = g.m_patterns;
   const auto domain_id = g.m_domain_id;
@@ -26,7 +26,7 @@ comm_halo_exchanger(grid::sub_grid &g, storage_t::storage_info_t const &sinfo) {
   };
 }
 
-double comm_global_max(grid::sub_grid const &g, double t) {
+double comm_global_max(grid::sub_grid_ const &g, double t) {
   double max_v = t;
   if (g.m_rank == 0) {
     for (int i = 1; i < g.m_size; ++i) {

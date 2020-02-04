@@ -30,14 +30,14 @@ struct grid {
   vec<std::size_t, 3> resolution;
   vec<std::size_t, 2> global_resolution, offset;
   MPI_Comm comm_cart = MPI_COMM_NULL;
+
+  grid& sub_grid(int id = 0) { return *this; }
 };
 
 inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution,
                       int) {
   return {global_resolution};
 }
-
-inline grid &comm_sub_grid(grid &g, int) { return g; }
 
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);

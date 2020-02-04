@@ -211,7 +211,7 @@ public: // member types
   using context_ptr_t = std::unique_ptr<context_t>;
   using thread_token = context_t::thread_token;
 
-  struct sub_grid {
+  struct sub_grid_ {
     int m_rank;
     int m_size;
     domain_id_type m_domain_id;
@@ -297,7 +297,7 @@ public:
             *m_context, m_hg, m_domains));
   }
 
-  sub_grid operator[](unsigned int i) {
+  sub_grid_ sub_grid(unsigned int i = 0) {
     const auto &dom = m_domains[i];
 
     auto t = m_context->get_token();
@@ -334,13 +334,11 @@ inline grid comm_grid(const world &,
   return {global_resolution, num_threads};
 }
 
-inline grid::sub_grid comm_sub_grid(grid &grid, int id = 0) { return grid[id]; }
-
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid::sub_grid &grid,
+comm_halo_exchanger(grid::sub_grid_ &grid,
                     storage_t::storage_info_t const &sinfo);
 
-double comm_global_max(grid::sub_grid const &grid, double t);
+double comm_global_max(grid::sub_grid_ const &grid, double t);
 
 } // namespace ghex_comm
 
