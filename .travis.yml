@@ -17,7 +17,7 @@ env:
 script:
     - >
       docker build
-      --build-arg BUILD_FROM=$(if [ $backend = cuda]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+      --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
       --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
