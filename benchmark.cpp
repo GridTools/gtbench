@@ -51,13 +51,14 @@ int main(int argc, char **argv) {
     return std::cout << std::endl << std::setw(26) << std::left;
   };
 
-  // get number of openmp threads
-  const auto num_omp_threads = omp_get_max_threads();
-
   std::cout << "Running GTBENCH";
   fmt() << "Domain size:" << n << "x" << n << "x" << nz;
   fmt() << "Number of domain threads:" << num_threads;
-  fmt() << "Number of OpenMP threads:" << num_omp_threads;
+
+#ifdef _OPENMP
+  // get number of openmp threads
+  fmt() << "Number of OpenMP threads:" << omp_get_max_threads();
+#endif
 
 #define GTBENCH_STR2(var) #var
 #define GTBENCH_STR(var) GTBENCH_STR2(var)
