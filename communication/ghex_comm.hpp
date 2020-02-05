@@ -6,6 +6,7 @@
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
 #include <ghex/threads/atomic/primitives.hpp>
+#include <ghex/threads/std_thread/primitives.hpp>
 #include <mpi.h>
 #include <numeric>
 
@@ -58,7 +59,7 @@ public: // member functions
   const coordinate_type &last() const { return m_last; }
 };
 
-using threading = gridtools::ghex::threads::atomic::primitives;
+using threading = gridtools::ghex::threads::std_thread::primitives;
 using context_t = gridtools::ghex::tl::context<transport, threading>;
 using communicator_t = context_t::communicator_type;
 using grid_t =
