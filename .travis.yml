@@ -4,12 +4,15 @@ services:
     docker
 
 env:
-    - backend=mc
-    - backend=x86
-    - backend=cuda
-    - communication_backend=single_node
-    - communication_backend=simple_mpi
-    - communication_backend=ghex
+    - backend=mc communication_backend=single_node
+    - backend=mc communication_backend=simple_mpi
+    - backend=mc communication_backend=ghex_comm
+    - backend=x86 communication_backend=single_node
+    - backend=x86 communication_backend=simple_mpi
+    - backend=x86 communication_backend=ghex_comm
+    - backend=cuda communication_backend=single_node
+    - backend=cuda communication_backend=simple_mpi
+    - backend=cuda communication_backend=ghex_comm
 
 script:
     - >
@@ -22,6 +25,9 @@ script:
       .travis
     - >
       if [ ! $backend = cuda ]; then
-      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 10
-      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests
+      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10;
+      fi
+    - >
+      if [ ! $backend = cuda ]; then
+      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
       fi
