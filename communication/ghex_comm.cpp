@@ -40,7 +40,6 @@ double comm_global_max(grid::sub_grid const &g, double t) {
     }
   } else {
     MPI_Send(&t, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD);
-    MPI_Status status;
     MPI_Recv(&max_v, 1, MPI_DOUBLE, 0, g.m_token.id(), MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
   }
