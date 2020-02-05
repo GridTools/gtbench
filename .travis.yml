@@ -28,3 +28,13 @@ script:
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
       fi
+
+cache:
+    directories:
+        - cache
+
+before_install:
+    - docker load -i cache/images.tar || true
+
+before_cache:
+    - docker save -o cache/images.tar $(docker images -a -q)
