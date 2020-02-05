@@ -21,13 +21,10 @@ script:
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
       --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
-      -t mrtravis/gtbench:${backend}_${communication_backend}
+      -t gtbench:${backend}_${communication_backend}
       .travis
     - >
       if [ ! $backend = cuda ]; then
-      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10;
-      fi
-    - >
-      if [ ! $backend = cuda ]; then
-      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
+      docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
+      docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
       fi
