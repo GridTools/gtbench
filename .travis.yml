@@ -1,0 +1,27 @@
+language: minimal
+
+services:
+    docker
+
+env:
+    - backend=mc
+    - backend=x86
+    - backend=cuda
+    - communication_backend=single_node
+    - communication_backend=simple_mpi
+    - communication_backend=ghex
+
+script:
+    - >
+      docker build
+      --build-arg BUILD_FROM=$(if [ $backend = cuda]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+      --build-arg GTBENCH_BACKEND=${backend}
+      --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
+      --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
+      -t mrtravis/gtbench:${backend}_${communication_backend}
+      .travis
+    - >
+      if [ ! $backend = cuda ]; then
+      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 10
+      docker run --rm -it mrtravis/gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests
+      fi
