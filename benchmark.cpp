@@ -52,9 +52,7 @@ int main(int argc, char **argv) {
   };
 
   // get number of openmp threads
-  int num_omp_threads = 1;
-#pragma omp parallel master
-  num_omp_threads = omp_get_num_threads();
+  const auto num_omp_threads = omp_get_max_threads();
 
   std::cout << "Running GTBENCH";
   fmt() << "Domain size:" << n << "x" << n << "x" << nz;
