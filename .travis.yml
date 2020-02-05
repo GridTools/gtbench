@@ -22,7 +22,7 @@ script:
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
       --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
       -t gtbench:${backend}_${communication_backend}
-      .travis
+      .
     - >
       if [ ! $backend = cuda ]; then
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&

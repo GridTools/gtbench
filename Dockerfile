@@ -61,10 +61,8 @@ RUN if [ "${GTBENCH_COMMUNICATION_BACKEND}" = ghex_comm ]; then \
     rm -rf /tmp/GHEX; \
     fi
 
-ARG GTBENCH_BRANCH=master
-RUN git clone https://github.com/GridTools/gtbench.git && \
-    cd gtbench && \
-    git checkout ${GTBENCH_BRANCH} && \
+COPY . /gtbench
+RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
     cmake \
@@ -76,4 +74,4 @@ RUN git clone https://github.com/GridTools/gtbench.git && \
     .. && \
     make -j $(nproc) && \
     cp benchmark convergence_tests /usr/bin/ && \
-    rm -rf /tmp/gtbench
+    rm -rf /gtbench/build
