@@ -34,10 +34,8 @@ script:
       fi
       &&
       if [ ${TRAVIS_BRANCH} = master ]; then
-      echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin
-      &&
-      docker tag gtbench:${backend}_${communication_backend} ${DOCKER_USERNAME}/gtbench:${backend}_${communication_backend}
-      docker push "${DOCKER_USERNAME}/gtbench"
-      &&
-      docker logout
+      echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin &&
+      docker tag gtbench:${backend}_${communication_backend} ${DOCKER_USERNAME}/gtbench:${backend}_${communication_backend} &&
+      docker push "${DOCKER_USERNAME}/gtbench" &&
+      docker logout;
       fi
