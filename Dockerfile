@@ -75,3 +75,5 @@ RUN cd /gtbench && \
     make -j $(nproc) && \
     cp benchmark convergence_tests /usr/bin/ && \
     rm -rf /gtbench/build
+
+CMD ["/usr/bin/convergence_tests"]
