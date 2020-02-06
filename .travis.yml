@@ -4,15 +4,19 @@ services:
     docker
 
 env:
-    - backend=mc communication_backend=single_node
-    - backend=mc communication_backend=simple_mpi
-    - backend=mc communication_backend=ghex_comm
-    - backend=x86 communication_backend=single_node
-    - backend=x86 communication_backend=simple_mpi
-    - backend=x86 communication_backend=ghex_comm
-    - backend=cuda communication_backend=single_node
-    - backend=cuda communication_backend=simple_mpi
-    - backend=cuda communication_backend=ghex_comm
+    matrix:
+      - backend=mc communication_backend=single_node
+      - backend=mc communication_backend=simple_mpi
+      - backend=mc communication_backend=ghex_comm
+      - backend=x86 communication_backend=single_node
+      - backend=x86 communication_backend=simple_mpi
+      - backend=x86 communication_backend=ghex_comm
+      - backend=cuda communication_backend=single_node
+      - backend=cuda communication_backend=simple_mpi
+      - backend=cuda communication_backend=ghex_comm
+    global:
+      secure: iBlhLjiowLobef7n82x3o4kFJFuPztNp6VEdj4RG6ElM491BZIcLfO/1uyjlBCMHRnn5ZYXdZN8ZZbEjSKDNK9fFMFCPUSyF30ObY/etLzKdf993s2oqabofYtPSkcBDTyUy2KQLEuHz+b54osXfsTIffdTvQqxecuVWcxZ1/sMGU//JlWYYBHJ8G28+zxFlYDMxUVPww5caS0pp42kPA6+1sbhaWR7oCo55Efe0cMesdEu21c8esPncWHY0ot1HAENSepOmctVJZV7ZGe+K7U4KrxZX2drotRXoy338quwb7jXGnjb/QDiv2ZU5PG4AS//ICoKqikiMGLvS+Z6WEPdp5KrIKYhGVUCFvKgKfzFT6lKWGfobl+OFnKpeh8VCdwk/MGVHjA4O/ZJCnlL4ds1Lw+TMsny77lJg3QAi5mbi0oLjAZ91cUWnCfbIMzKRne7wzhGs4W0lrfbFTHr3SknE44PAubW6smAhW2bSJuC4vrMV1mHtRzTw6Lnc66axhVofiqDmJ+fZGtv3mPwgoGgXfqAcby5mo1TiK1J6vzFp8X6LvGOKCOpucDFlf9qbmiScvBALMunqEorI9oLRTJvOGxTt++VzxmDYrYAaQmMc+tfrpjOYxUzi46Qce5rLj0ScRvcciRQ3Jh9fUEeqhiIipXxBV/CHiz9NPCNN8Bw=
+      secure: ckbpBcVIZSVd56OwUvUYgSSlCGEFAb+HlirEQHII+rKGm+plR1jpEGC1597E4rYR3Uior+gWSgCEke7bPfuCRBmk2CRujQeQUqSBjMvlqA4f/P5K2wsthH5Sld8s1xlqWfu6bzs8jJ24MuZZgo06hbrPgnoiVZDdEjE966SuMzF2vf2V+oEXejggkU75eyrLVK1gwyyIVly430rkJ3KHRIAZ0dMPhyzVyy+674fA8kFfZPY/lQBH3QRi96PeGqk2KmMRx3YStKIPPpp2qAH/wZIbwv0GsVxy0Feym7lsm166DUX6GQweDrk60U3wQwKFDHlXhhrvTtacI6u/5nhV9gzvh9V7IFRQrH6D2Lskniha4KNBSMAeFPDK5RoFJRIK/MbqKA4Nrh+lq2cTtzLrmKGn9WnLA3znXw4z3hs6jeZUN2dYGf/2jPoMz8X+77PTEwlAcOmIEg/SuQD/j3tmxC0suM4p+GFLX9OBOezT9VYJvfE6VYjafyxFTGnAO9ZEjFKXDrAjUYcK9Yl7hsndl5iKarsA+PqtrEYXFMQ8AVem6xOpbcMsroDTM2+HjNz4/6/ol912N916YMWsq6tpnjw2ZWnEb4S9qk4+IC4hpwbITT0Trlb7Ls/9ULTcNubsXRZfdqQGfTdf4j66GN3iN27L0d6UAG1pdUK8EVCA4hw=
 
 script:
     - >
@@ -20,11 +24,17 @@ script:
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
-      --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
       -t gtbench:${backend}_${communication_backend}
       .
-    - >
+      &&
       if [ ! $backend = cuda ]; then
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
+      fi
+      &&
+      if [ ${TRAVIS_PULL_REQUEST} = false ] && [ ${TRAVIS_BRANCH} = master ]; then
+      echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin &&
+      docker tag gtbench:${backend}_${communication_backend} ${DOCKER_USERNAME}/gtbench:${backend}_${communication_backend} &&
+      docker push "${DOCKER_USERNAME}/gtbench" &&
+      docker logout;
       fi
