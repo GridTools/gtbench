@@ -304,6 +304,7 @@ public:
     if (!m_tokens[i])
       m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
     auto comm = m_context->get_communicator(*m_tokens[i]);
+    comm.barrier();
     return {
         m_rank,
         m_size,
