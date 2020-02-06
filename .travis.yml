@@ -15,11 +15,11 @@ env:
       - backend=cuda communication_backend=simple_mpi
       - backend=cuda communication_backend=ghex_comm
     global:
-      - secure: WBQZ7gXgA/Qe0LNVFJ3yDGQKxcZ+Ezxdf9TkgBMlywLQQVrXnHsCGIJc/gU5lf2//vKF3Mkq1gQgPZgpVm4VCVmlTAUH48o9qQasJ6gIofb+OqZN9yqui2ukqqev6oupjJWo0Shs5vkw2RKthxLnBcEQR8pPgVsHkgNhrZc1kXDMcYexY/dKQ3shEb1BAOTQZSoYvpbQAgau3M0F4yIAmUveAsFneOoklEThRMI64F31BmHrVpQeCSdqhPjU4kaNV603DzfRWZNyIFxT6ZpgEzwD7XoV8i6+UzmOb1nEsL2EilT5vwBJmYzWpU8OIelULDZJ1EwbKyZDmqbLWhoWSbPK99LmcI/o9vhG9wCPLUsLyXGQIHR2Gh0BUGYtHZD5IcscGSPwd6Psr9tOJLTf1VjB9Pi+HKwJ0AWq5HtyZtoxd+Q7ZmNOxpMcUH7zJwhF40K5zjwoRNiUSzkvvcm1wIXDCcxCvDz6xTuvOSgRYbd7urMxNv9DvU6jCPkWd+3uxvi4DTb6gwN0T2+JnwqiwSb/qQfOkZki3oB8pr8B+2jF62Jwf9fLrPkb+XzS9B3eoC0OXYDO/st9UFe74qckD+dDpAo8brczsa6QhmqvXv1OqqQclpQOjfnl8aIyicOO5cxUHolhpR9ltlKiEy77yJ78AwT23EuD7sqJPw1V8WY=
-      - secure: sAi4xdNUrH+iVFds9fpNmMmMHdmACopPXuH0axPrHQwEo4XVKOF/QJEBx2XH/f+4cqX0wcLEzQZnFkl9j/dx7G7a9c+dlexYl5ZIp2a0+mVb7NuoqOLJxrJlOs62ofiz1gaea/+rcXCKFLjzl2ejHMpNwurD8mypWNMJjZvgdU+7Uh3KdWNypNogEGHj/ucV7ig5x6fvRC9vtG3qfDFMo559czyEEWwYLRO62qXZO0jWkVakr7UzbmuNF4gRQKa2QWUTGFAtmdC408XxA2oAudlAp4wvju7nTu4Xjzk61hh5JBqadiXNnOimwCWVncBfhX0iqbUVuFMrFK2xcA8dHElAscEIcoejhqzw4cDyMnQTfwNFu7VgE2BR+03LZmcTHn/SmhrUTxf/zgyxQusD8pzjavRRnK87nzpSqkcJOlRDTo7XOWV2bdUnBW8AQGSkSqP0M63AhVy6vIO+bhYTwARnUsQ/vWqDtqa+ugU2ngq1vLN+5oHO1p9OhYuaaSrOHj+nOaHm06Yiof0LnNVXA/3SpMEhm+wbC0Hhi49DXZX4Sv11P4+b/0QURNC1hprGDuQlESWYyAkj3n4LvSGtaDqxF199VMVLUIIWdXJEpJwdoZZ2fsSEgMq7UpGZjjGczQnYFdWb4rhhsb+7WTbY1P0r01lj9cZhjZ3UnIRnVOE=
+      - secure: x1lSbemorpCDKvFzF5q2T2vXFElMaCkdOImlDu6rNt9MCe/URx1qPunxU+vpcLWWX0zZBFQXuwFAUAr3oDSp3udDxMxoksndJx3hwD6NpyictaeZwDCVTDK3sXybo+p4yWnFa80Qolkd0CsY5fLxH70z3kowwB4e/hYqkGz5VeEW3ieAy2dpd22+uTCXVyhw2xwCZq+YbHuY+9xpBXQL1iJku/5BrXrjEc26VW7VIEsaZFQwJAMor4dDcmGZ5aRanQ3WzzJZ3BVACovBmuYtoysFFiC62Dw8/YZEziA+rlbZgoEznV7IhwJ2ShyjybJfvP0Knvi3RwEsM7vLUPhUe/kt07urWn8Nhx/jHsdK9tadnNmDIgAX+O668zZ+XhekNSgyYZYqgeHdK8VURuEQZfdl4vk9yJOfKDFQufzPTXCIxT5zjeOAs/yINCXwo/uZcWq27OKTmslmAPUbcN4+W2Ta5Uj+1pZkXemmVFkeDuh93+IeBUKJNyLSgDf8glD81i5kJhJNnhuxLq+P4/WnKPHshT0NspIx7z2wPrAttRPMah75U0Zbe9vdN58b9DolEgxQyU+I5gPLIL57iEcD9PKQzZYHdmb32IweCiMycag0eY09v0D4Kx/oCgCMo/Ij2EnrH2lcyNP8ABwN8RECguzWDrzRvyU2xXk0js0qS2Q=
 
 script:
     - >
+      docker pull fthaler/gtbench:${backend}_${communication_backend};
       docker build
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
@@ -33,8 +33,8 @@ script:
       fi
       &&
       if [ ${TRAVIS_PULL_REQUEST} = false ] && [ ${TRAVIS_BRANCH} = master ]; then
-      echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USERNAME} --password-stdin &&
-      docker tag gtbench:${backend}_${communication_backend} ${DOCKER_USERNAME}/gtbench:${backend}_${communication_backend} &&
-      docker push "${DOCKER_USERNAME}/gtbench" &&
+      echo ${DOCKER_TOKEN} | docker login -u fthaler --password-stdin &&
+      docker tag gtbench:${backend}_${communication_backend} fthaler/gtbench:${backend}_${communication_backend} &&
+      docker push fthaler/gtbench &&
       docker logout;
       fi
