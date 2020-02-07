@@ -41,8 +41,8 @@ RUN git clone -b release_v1.1 https://github.com/GridTools/gridtools.git && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
-    -DGT_ENABLE_BACKEND_X86=$(if [ "${GTBENCH_BACKEND}" = x86 ]; then echo ON; else echo OFF; fi) \
-    -DGT_ENABLE_BACKEND_MC=$(if [ "${GTBENCH_BACKEND}" = mc ]; then echo ON; else echo OFF; fi) \
+    -DGT_ENABLE_BACKEND_X86=ON \
+    -DGT_ENABLE_BACKEND_MC=ON \
     -DGT_ENABLE_BACKEND_CUDA=$(if [ "${GTBENCH_BACKEND}" = cuda ]; then echo ON; else echo OFF; fi) \
     -DGT_ENABLE_BACKEND_NAIVE=OFF \
     .. && \
