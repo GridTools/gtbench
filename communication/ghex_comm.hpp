@@ -15,6 +15,7 @@
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
 #include <ghex/threads/atomic/primitives.hpp>
+#include <ghex/threads/std_thread/primitives.hpp>
 #include <mpi.h>
 #include <numeric>
 
@@ -67,7 +68,7 @@ public: // member functions
   const coordinate_type &last() const { return m_last; }
 };
 
-using threading = gridtools::ghex::threads::atomic::primitives;
+using threading = gridtools::ghex::threads::std_thread::primitives;
 using context_t = gridtools::ghex::tl::context<transport, threading>;
 using communicator_t = context_t::communicator_type;
 using grid_t =
@@ -243,7 +244,7 @@ private: // members
   domain_vec m_domains;
   context_ptr_t m_context;
   patterns_ptr_t m_patterns;
-  // moved_bit           m_moved;
+  std::vector<std::unique_ptr<thread_token>> m_tokens;
 
 public:
   grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains = 1)
@@ -252,7 +253,8 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1},
              halo},
-        m_global_resolution{global_resolution.x, global_resolution.y} {
+        m_global_resolution{global_resolution.x, global_resolution.y},
+        m_tokens(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
@@ -308,16 +310,17 @@ public:
 
   sub_grid operator[](unsigned int i) {
     const auto &dom = m_domains[i];
-
-    auto t = m_context->get_token();
-    auto comm = m_context->get_communicator(t);
+    if (!m_tokens[i])
+      m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
+    auto comm = m_context->get_communicator(*m_tokens[i]);
+    comm.barrier();
     return {
         m_rank,
         m_size,
         dom.domain_id(),
         m_context.get(),
         m_patterns.get(),
-        t,
+        *m_tokens[i],
         comm_obj_ptr_t{new comm_obj_type{
             ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
         m_global_resolution,
