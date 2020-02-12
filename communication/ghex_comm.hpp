@@ -194,7 +194,7 @@ struct world {
 
 #ifdef __CUDACC__
     int device_count = 1;
-    if (cudaGetDeviceCount(&device_count) = !cudaSuccess)
+    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
       throw std::runtime_error("cudaGetDeviceCount failed");
     MPI_Comm shmem_comm;
     MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
