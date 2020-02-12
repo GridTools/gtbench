@@ -192,6 +192,21 @@ struct world {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+#ifdef __CUDACC__
+    int device_count = 1;
+    if (cudaGetDeviceCount(&device_count) = !cudaSuccess)
+      throw std::runtime_error("cudaGetDeviceCount failed");
+    MPI_Comm shmem_comm;
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                        &shmem_comm);
+    int node_rank = 0;
+    MPI_Comm_rank(shmem_comm, &node_rank);
+    MPI_Comm_free(&shmem_comm);
+    const int device_id = node_rank % device_count;
+    if (cudaSetDevice(device_id) != cudaSuccess)
+      throw std::runtime_error("cudaSetDevice failed");
+#endif
+
     if (size > 1 && rank != 0)
       std::cout.setstate(std::ios_base::failbit);
   }
