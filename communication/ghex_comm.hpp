@@ -205,6 +205,18 @@ struct world {
     const int device_id = node_rank % device_count;
     if (cudaSetDevice(device_id) != cudaSuccess)
       throw std::runtime_error("cudaSetDevice failed");
+    if (device_count > 1) {
+      for (int i = 0; i < device_count; ++i) {
+        if (i != device_id) {
+          int flag;
+          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
+            throw std::runtime_error("");
+          if (flag) {
+            cudaDeviceEnablePeerAccess(i, 0);
+          }
+        }
+      }
+    }
 #endif
 
     if (size > 1 && rank != 0)
