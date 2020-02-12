@@ -210,7 +210,7 @@ struct world {
         if (i != device_id) {
           int flag;
           if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-            throw std::runtime_error("");
+            throw std::runtime_error("cudaDeviceAccessPeer failed");
           if (flag) {
             cudaDeviceEnablePeerAccess(i, 0);
           }
@@ -256,6 +256,7 @@ public: // member types
     patterns_type *m_patterns;
     mutable thread_token m_token;
     comm_obj_ptr_t m_comm_obj;
+    communicator_t m_comm;
     vec<std::size_t, 2> global_resolution;
     vec<std::size_t, 2> offset;
     vec<std::size_t, 3> resolution;
@@ -350,6 +351,7 @@ public:
         *m_tokens[i],
         comm_obj_ptr_t{new comm_obj_type{
             ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
+        comm,
         m_global_resolution,
         {(std::size_t)dom.first()[0], (std::size_t)dom.first()[1]},
         {(std::size_t)(dom.last()[0] - dom.first()[0] + 1),
@@ -380,6 +382,8 @@ comm_halo_exchanger(grid::sub_grid &grid,
                     storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid::sub_grid const &grid, double t);
+
+void comm_barrier(grid::sub_grid &grid);
 
 } // namespace ghex_comm
 

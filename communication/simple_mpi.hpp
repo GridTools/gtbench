@@ -53,6 +53,8 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid const &grid, double t);
 
+void comm_barrier(grid &);
+
 } // namespace simple_mpi
 
 } // namespace communication

@@ -42,6 +42,9 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo) {
     boundary.apply(storage);
   };
 }
+
+void comm_barrier(grid &) {}
+
 } // namespace single_node
 
 } // namespace communication

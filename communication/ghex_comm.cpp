@@ -55,6 +55,8 @@ double comm_global_max(grid::sub_grid const &g, double t) {
   return max_v;
 }
 
+void comm_barrier(grid::sub_grid &g) { g.m_comm.barrier(); }
+
 } // namespace ghex_comm
 
 } // namespace communication

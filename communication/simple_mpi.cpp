@@ -203,6 +203,9 @@ double comm_global_max(grid const &grid, double t) {
   return max;
 }
 
+void comm_barrier(grid &) {
+  MPI_Barrier(MPI_COMM_WORLD);
+}
 } // namespace simple_mpi
 
 } // namespace communication

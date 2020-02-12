@@ -40,6 +40,8 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
 template <class T> constexpr T comm_global_max(grid, T const &t) { return t; }
 
+void comm_barrier(grid &);
+
 } // namespace single_node
 
 } // namespace communication
