@@ -15,6 +15,10 @@
 #include "./ghex_comm.hpp"
 #endif
 
+#ifdef GTBENCH_USE_GCL
+#include "./gcl.hpp"
+#endif
+
 #ifdef GTBENCH_USE_SIMPLE_MPI
 #include "./simple_mpi.hpp"
 #endif
