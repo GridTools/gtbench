@@ -9,26 +9,25 @@
  */
 #pragma once
 
-#include <mpi.h>
 #include <gridtools/communication/GCL.hpp>
 #include <gridtools/communication/halo_exchange.hpp>
+#include <mpi.h>
 
 #include "./communication.hpp"
 
 namespace communication {
 
 namespace gcl {
-  
-  using pattern_type = gt::halo_exchange_dynamic_ut<
-    typename storage_info_ijk_t::layout_t,
-    gt::layout_map<0, 1, 2>,
-    real_t,
+
+using pattern_type =
+    gt::halo_exchange_dynamic_ut<typename storage_info_ijk_t::layout_t,
+                                 gt::layout_map<0, 1, 2>, real_t,
 #ifdef __CUDACC__
-    gridtools::gcl_gpu
+                                 gridtools::gcl_gpu
 #else
-    gridtools::gcl_cpu
+                                 gridtools::gcl_cpu
 #endif
-  >;
+                                 >;
 
 struct world {
   world(int &argc, char **&argv, bool);

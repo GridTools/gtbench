@@ -8,7 +8,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "./gcl.hpp"
-
 #include <array>
 #include <iostream>
 
@@ -19,15 +18,13 @@ namespace gcl {
 world::world(int &argc, char **&argv, bool) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-  gt::GCL_Init(argc,argv);
+  gt::GCL_Init(argc, argv);
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if (size > 1 && rank != 0)
     std::cout.setstate(std::ios_base::failbit);
-  
-  // setup halos
 }
 
 world::world(world &&other) : active(std::exchange(other.active, false)) {}
@@ -43,8 +40,7 @@ world::~world() {
 }
 
 grid::grid(vec<std::size_t, 3> const &global_resolution)
-    : global_resolution{global_resolution.x, global_resolution.y}
-{
+    : global_resolution{global_resolution.x, global_resolution.y} {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -94,17 +90,24 @@ std::function<void(storage_t &)>
 comm_halo_exchanger(grid &comm_grid, storage_t::storage_info_t const &sinfo) {
   if (!comm_grid.pattern) {
     comm_grid.pattern = std::make_unique<pattern_type>(
-        pattern_type::grid_type::period_type{true, true, false}, comm_grid.comm_cart);
+        pattern_type::grid_type::period_type{true, true, false},
+        comm_grid.comm_cart);
 
-    comm_grid.pattern->template add_halo<0>(
-        halo, halo, halo, comm_grid.resolution.x + halo - 1, sinfo.padded_length<0>());
-    comm_grid.pattern->template add_halo<1>(
-        halo, halo, halo, comm_grid.resolution.y + halo - 1, sinfo.padded_length<1>());
-    comm_grid.pattern->template add_halo<2>(0, 0, 0, comm_grid.resolution.z -1,
+    comm_grid.pattern->template add_halo<0>(halo, halo, halo,
+                                            comm_grid.resolution.x + halo - 1,
+                                            sinfo.padded_length<0>());
+    comm_grid.pattern->template add_halo<1>(halo, halo, halo,
+                                            comm_grid.resolution.y + halo - 1,
+                                            sinfo.padded_length<1>());
+    comm_grid.pattern->template add_halo<2>(0, 0, 0, comm_grid.resolution.z - 1,
                                             sinfo.padded_length<2>());
     comm_grid.pattern->setup(1);
   }
   auto pattern_ptr = comm_grid.pattern.get();
+
+#ifdef __CUDACC__
+  cudaDeviceSynchronize();
+#endif
 
   return [pattern_ptr](const storage_t &storage) mutable {
     auto ptr = storage.get_storage_ptr()->get_target_ptr();
@@ -120,10 +123,7 @@ double comm_global_max(grid const &grid, double t) {
   return max;
 }
 
-void comm_barrier(grid &) {
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-        
+void comm_barrier(grid &) { MPI_Barrier(MPI_COMM_WORLD); }
 
 } // namespace gcl
 
