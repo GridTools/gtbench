@@ -192,6 +192,33 @@ struct world {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+#ifdef __CUDACC__
+    int device_count = 1;
+    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
+      throw std::runtime_error("cudaGetDeviceCount failed");
+    MPI_Comm shmem_comm;
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                        &shmem_comm);
+    int node_rank = 0;
+    MPI_Comm_rank(shmem_comm, &node_rank);
+    MPI_Comm_free(&shmem_comm);
+    const int device_id = node_rank % device_count;
+    if (cudaSetDevice(device_id) != cudaSuccess)
+      throw std::runtime_error("cudaSetDevice failed");
+    if (device_count > 1) {
+      for (int i = 0; i < device_count; ++i) {
+        if (i != device_id) {
+          int flag;
+          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
+            throw std::runtime_error("cudaDeviceAccessPeer failed");
+          if (flag) {
+            cudaDeviceEnablePeerAccess(i, 0);
+          }
+        }
+      }
+    }
+#endif
+
     if (size > 1 && rank != 0)
       std::cout.setstate(std::ios_base::failbit);
   }
@@ -229,6 +256,7 @@ public: // member types
     patterns_type *m_patterns;
     mutable thread_token m_token;
     comm_obj_ptr_t m_comm_obj;
+    communicator_t m_comm;
     vec<std::size_t, 2> global_resolution;
     vec<std::size_t, 2> offset;
     vec<std::size_t, 3> resolution;
@@ -323,6 +351,7 @@ public:
         *m_tokens[i],
         comm_obj_ptr_t{new comm_obj_type{
             ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
+        comm,
         m_global_resolution,
         {(std::size_t)dom.first()[0], (std::size_t)dom.first()[1]},
         {(std::size_t)(dom.last()[0] - dom.first()[0] + 1),
@@ -353,6 +382,8 @@ comm_halo_exchanger(grid::sub_grid &grid,
                     storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid::sub_grid const &grid, double t);
+
+void comm_barrier(grid::sub_grid &grid);
 
 } // namespace ghex_comm
 

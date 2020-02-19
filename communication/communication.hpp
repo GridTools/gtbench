@@ -66,4 +66,8 @@ template <class CommGrid, class T> T global_max(CommGrid &&grid, T const &t) {
   return comm_global_max(std::forward<CommGrid>(grid), t);
 }
 
+template <class CommGrid> void barrier(CommGrid &grid) {
+  comm_barrier(grid);
+}
+
 } // namespace communication

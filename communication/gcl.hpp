@@ -9,13 +9,25 @@
  */
 #pragma once
 
+#include <gridtools/communication/GCL.hpp>
+#include <gridtools/communication/halo_exchange.hpp>
 #include <mpi.h>
 
 #include "./communication.hpp"
 
 namespace communication {
 
-namespace simple_mpi {
+namespace gcl {
+
+using pattern_type =
+    gt::halo_exchange_dynamic_ut<typename storage_info_ijk_t::layout_t,
+                                 gt::layout_map<0, 1, 2>, real_t,
+#ifdef __CUDACC__
+                                 gridtools::gcl_gpu
+#else
+                                 gridtools::gcl_cpu
+#endif
+                                 >;
 
 struct world {
   world(int &argc, char **&argv, bool);
@@ -39,6 +51,7 @@ struct grid {
   vec<std::size_t, 3> resolution;
   vec<std::size_t, 2> global_resolution, offset;
   MPI_Comm comm_cart = MPI_COMM_NULL;
+  std::unique_ptr<pattern_type> pattern;
 };
 
 inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution,
@@ -49,12 +62,12 @@ inline grid comm_grid(world &, vec<std::size_t, 3> const &global_resolution,
 inline grid &comm_sub_grid(grid &g, int) { return g; }
 
 std::function<void(storage_t &)>
-comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
+comm_halo_exchanger(grid &grid, storage_t::storage_info_t const &sinfo);
 
 double comm_global_max(grid const &grid, double t);
 
 void comm_barrier(grid &);
 
-} // namespace simple_mpi
+} // namespace gcl
 
 } // namespace communication
