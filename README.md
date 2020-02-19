@@ -112,7 +112,7 @@ $ cmake -DGTBENCH_COMMUNICATION_BACKEND=<COMM_BACKEND> ..
 where `COMM_BACKEND` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`. `simple_mpi` and `single_node` are for debugging purposes only.
 - The `single_node` options is useful for performing "single-node" tests to understand kernel performance.
 - The `simple_mpi` implementation uses a simple MPI 2 sided communication for halo exchanges.
-- The `gcl` implementation uses a optimized MPI based communication library shiped with gridtools.
+- The `gcl` implementation uses a optimized MPI based communication library shipped with [GridTools](https://gridtools.github.io/gridtools/latest/user_manual/user_manual.html#halo-exchanges).
 - The `ghex_comm` option will use highly optimized distributed communication via the GHEX library, designed for best performance at scale.
  Additionally, this option will enable a multi-threaded version of the benchmark, where a rank may have more than one sub-domain (over-subscription), which are delegated to separate threads. **Note:** The gridtools computations use openmp threads on the CPU targets which will not be affected by this parameter.
 
