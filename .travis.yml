@@ -4,27 +4,40 @@ services:
     docker
 
 env:
-    - backend=mc communication_backend=single_node
-    - backend=mc communication_backend=simple_mpi
-    - backend=mc communication_backend=ghex_comm
-    - backend=x86 communication_backend=single_node
-    - backend=x86 communication_backend=simple_mpi
-    - backend=x86 communication_backend=ghex_comm
-    - backend=cuda communication_backend=single_node
-    - backend=cuda communication_backend=simple_mpi
-    - backend=cuda communication_backend=ghex_comm
+    matrix:
+      - backend=mc communication_backend=single_node
+      - backend=mc communication_backend=simple_mpi
+      - backend=mc communication_backend=gcl
+      - backend=mc communication_backend=ghex_comm
+      - backend=x86 communication_backend=single_node
+      - backend=x86 communication_backend=simple_mpi
+      - backend=x86 communication_backend=gcl
+      - backend=x86 communication_backend=ghex_comm
+      - backend=cuda communication_backend=single_node
+      - backend=cuda communication_backend=simple_mpi
+      - backend=cuda communication_backend=gcl
+      - backend=cuda communication_backend=ghex_comm
+    global:
+      - secure: x1lSbemorpCDKvFzF5q2T2vXFElMaCkdOImlDu6rNt9MCe/URx1qPunxU+vpcLWWX0zZBFQXuwFAUAr3oDSp3udDxMxoksndJx3hwD6NpyictaeZwDCVTDK3sXybo+p4yWnFa80Qolkd0CsY5fLxH70z3kowwB4e/hYqkGz5VeEW3ieAy2dpd22+uTCXVyhw2xwCZq+YbHuY+9xpBXQL1iJku/5BrXrjEc26VW7VIEsaZFQwJAMor4dDcmGZ5aRanQ3WzzJZ3BVACovBmuYtoysFFiC62Dw8/YZEziA+rlbZgoEznV7IhwJ2ShyjybJfvP0Knvi3RwEsM7vLUPhUe/kt07urWn8Nhx/jHsdK9tadnNmDIgAX+O668zZ+XhekNSgyYZYqgeHdK8VURuEQZfdl4vk9yJOfKDFQufzPTXCIxT5zjeOAs/yINCXwo/uZcWq27OKTmslmAPUbcN4+W2Ta5Uj+1pZkXemmVFkeDuh93+IeBUKJNyLSgDf8glD81i5kJhJNnhuxLq+P4/WnKPHshT0NspIx7z2wPrAttRPMah75U0Zbe9vdN58b9DolEgxQyU+I5gPLIL57iEcD9PKQzZYHdmb32IweCiMycag0eY09v0D4Kx/oCgCMo/Ij2EnrH2lcyNP8ABwN8RECguzWDrzRvyU2xXk0js0qS2Q=
 
 script:
     - >
+      docker pull fthaler/gtbench:${backend}_${communication_backend};
       docker build
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
-      --build-arg GTBENCH_BRANCH=${TRAVIS_COMMIT}
       -t gtbench:${backend}_${communication_backend}
       .
-    - >
+      &&
       if [ ! $backend = cuda ]; then
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
       docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
+      fi
+      &&
+      if [ ${TRAVIS_PULL_REQUEST} = false ] && [ ${TRAVIS_BRANCH} = master ]; then
+      echo ${DOCKER_TOKEN} | docker login -u fthaler --password-stdin &&
+      docker tag gtbench:${backend}_${communication_backend} fthaler/gtbench:${backend}_${communication_backend} &&
+      docker push fthaler/gtbench &&
+      docker logout;
       fi

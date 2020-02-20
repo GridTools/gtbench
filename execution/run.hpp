@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #pragma once
 
 #include "../communication/communication.hpp"
@@ -78,6 +87,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
     step(state, dt);
   auto stop = timer::now(backend_t{});
   double time = timer::duration(start, stop);
+  communication::barrier(comm_grid);
 
   state.data.sync();
   auto view = gt::make_host_view(state.data);

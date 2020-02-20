@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #pragma once
 
 #include "./communication.hpp"
@@ -30,6 +39,8 @@ std::function<void(storage_t &)>
 comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo);
 
 template <class T> constexpr T comm_global_max(grid, T const &t) { return t; }
+
+void comm_barrier(grid &);
 
 } // namespace single_node
 

@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #include "./simple_mpi.hpp"
 
 #include <array>
@@ -194,6 +203,9 @@ double comm_global_max(grid const &grid, double t) {
   return max;
 }
 
+void comm_barrier(grid &) {
+  MPI_Barrier(MPI_COMM_WORLD);
+}
 } // namespace simple_mpi
 
 } // namespace communication

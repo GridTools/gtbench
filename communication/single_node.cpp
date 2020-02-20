@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #include "./single_node.hpp"
 
 #include <gridtools/boundary_conditions/boundary.hpp>
@@ -33,6 +42,9 @@ comm_halo_exchanger(grid const &grid, storage_t::storage_info_t const &sinfo) {
     boundary.apply(storage);
   };
 }
+
+void comm_barrier(grid &) {}
+
 } // namespace single_node
 
 } // namespace communication

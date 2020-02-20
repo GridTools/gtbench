@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include "./ghex_comm.hpp"
 
@@ -45,6 +54,8 @@ double comm_global_max(grid::sub_grid const &g, double t) {
   }
   return max_v;
 }
+
+void comm_barrier(grid::sub_grid &g) { g.m_comm.barrier(); }
 
 } // namespace ghex_comm
 

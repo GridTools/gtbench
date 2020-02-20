@@ -1,3 +1,12 @@
+/*
+ * gtbench
+ *
+ * Copyright (c) 2014-2020, ETH Zurich
+ * All rights reserved.
+ *
+ * Please, refer to the LICENSE file in the root directory.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #pragma once
 
 #include <utility>
@@ -55,6 +64,10 @@ auto halo_exchanger(CommGrid &&grid, storage_t::storage_info_t const &sinfo) {
 
 template <class CommGrid, class T> T global_max(CommGrid &&grid, T const &t) {
   return comm_global_max(std::forward<CommGrid>(grid), t);
+}
+
+template <class CommGrid> void barrier(CommGrid &grid) {
+  comm_barrier(grid);
 }
 
 } // namespace communication
