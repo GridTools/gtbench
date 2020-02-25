@@ -81,6 +81,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto step = stepper(n, delta, exchange);
 
+  communication::barrier(comm_grid);
   auto start = timer::now(backend_t{});
   real_t t;
   for (t = 0; t < tmax; t += dt)

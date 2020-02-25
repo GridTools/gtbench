@@ -30,9 +30,10 @@ comm_halo_exchanger(grid::sub_grid &g, storage_t::storage_info_t const &sinfo) {
     auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
 
 #ifdef __CUDACC__
-    context_ptr->thread_primitives().single(token,
-                                            []() { cudaDeviceSynchronize(); });
-    context_ptr->thread_primitives().barrier(token);
+    //context_ptr->thread_primitives().single(token,
+    //                                        []() { cudaDeviceSynchronize(); });
+    //context_ptr->thread_primitives().barrier(token);
+    cudaStreamSynchronize(0);
 #endif
 
     co.exchange(patterns(field)).wait();
