@@ -82,9 +82,12 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
   auto step = stepper(n, delta, exchange);
 
   communication::barrier(comm_grid);
+  if (tmax > 0)
+    step(state, dt); // do not measure execution time of inital step
+
   auto start = timer::now(backend_t{});
   real_t t;
-  for (t = 0; t < tmax; t += dt)
+  for (t = dt; t < tmax; t += dt)
     step(state, dt);
   auto stop = timer::now(backend_t{});
   double time = timer::duration(start, stop);
