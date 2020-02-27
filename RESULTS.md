@@ -1,7 +1,7 @@
 
   system |  local size | total size | gt backend | transport | variant | taskspernode | domainthreads | ompthreads | nodes | colspersec |     time
 :--------|------------:|-----------:|:----------:|:---------:|:-------:|-------------:|--------------:|-----------:|------:|-----------:|--------:
-daint_mc |         128 |        128 |         mc |       gcl |     mpi |            1 |             1 |         36 |     1 | <div>style="background-color:powderblue;"   10989.2</div> |  1.49092
+daint_mc |         128 |        128 |         mc |       gcl |     mpi |            1 |             1 |         36 |     1 | <div style="background-color:powderblue;">   10989.2</div> |  1.49092
 daint_mc |         128 |        256 |         mc |       gcl |     mpi |            1 |             1 |         36 |     4 |    10488.9 |  1.56203
 daint_mc |         128 |        512 |         mc |       gcl |     mpi |            1 |             1 |         36 |    16 |        nan |      nan
 daint_mc |         128 |       1024 |         mc |       gcl |     mpi |            1 |             1 |         36 |    64 |        nan |      nan
