@@ -106,7 +106,6 @@ comm_halo_exchanger(grid &comm_grid, storage_t::storage_info_t const &sinfo) {
   auto pattern_ptr = comm_grid.pattern.get();
 
 #ifdef __CUDACC__
-  //cudaDeviceSynchronize();
   cudaStreamSynchronize(0);
 #endif
 
