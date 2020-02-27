@@ -2,7 +2,7 @@
 
 system  = daint_mc
 
-|  local size | total size | gt backend | transport | variant | tasks per node | domain threads | omp threads | nodes | cols per sec |     time
+|  local size | total size | gt backend | comm | var | tasks per node | domain threads | omp threads | nodes | cols per sec |     time
 |------------:|-----------:|:----------:|:---------:|:-------:|-------------:|--------------:|-----------:|------:|-----------:|--------:
 |         128 |        128 |         mc |       gcl |     mpi |            1 |             1 |         36 |     1 |    10989.2 |  1.49092
 |         128 |        256 |         mc |       gcl |     mpi |            1 |             1 |         36 |     4 |    10488.9 |  1.56203
