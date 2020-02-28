@@ -2,6 +2,8 @@
 
 # February 28, 2020
 - updated gtbench source code (commit d251eed7ee8f12a1979f32770f6cdf1478b20dd4 (correct hash will be inserted here once PR is merged))
+  - repository was moved to [GridTools Github organization](https://github.com/GridTools)
+  - license was updated
   - added new `gcl` communication backend
   - updated README accordingly
   - excluded first time step from measurements
