@@ -21,14 +21,16 @@ comm_halo_exchanger(grid::sub_grid &g, storage_t::storage_info_t const &sinfo) {
   auto co_ptr = g.m_comm_obj.get();
   auto patterns_ptr = g.m_patterns;
   const auto domain_id = g.m_domain_id;
-  return [co_ptr, patterns_ptr, domain_id](const storage_t &storage) mutable {
+  auto context_ptr = g.m_context;
+  auto token = g.m_token;
+  return [co_ptr, patterns_ptr, domain_id, context_ptr,
+          token](const storage_t &storage) mutable {
     auto &co = *co_ptr;
     auto &patterns = *patterns_ptr;
-
     auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
 
 #ifdef __CUDACC__
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 
     co.exchange(patterns(field)).wait();
