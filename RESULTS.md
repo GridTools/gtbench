@@ -1,8 +1,28 @@
+# Performance Results gtbench
+
+The following numbers report performance measurements conducted at Piz Daint at CSCS. Both CPU and GPU `gtbench` versions
+are tested using various parameter configurations. The parameter space is described in the following table.
+
+| Parameter name      | Description |
+|---------------------|-------------|
+| `local size`        | local domain size per compute node (for example `256` means `256 x 256 x 60` grid points)
+| `total size`        | total domain size per `gtbench` run (for example `1024` means `1024 x 1024 x 60` grid points)
+| `gridtools backend` | GridTools compute backend, possible values are `x86`, `mc` and `cuda`
+| `comm`              | communcications backend, possible values are `simple`, `gcl` and `ghex`
+| `var`               | low-level transport library, possible value is `mpi`
+| `nodes`             | number of compute nodes
+| `tasks per node`    | MPI tasks per compute node
+| `domain threads`    | number of threads per MPI task (number of sub-domains per task)
+| `openmp threads`    | number of openmp threads per sub-domain
+| `columns / s /node` | computed columns per second and node (higher is better)
+| `wall clock time`   | median time reported for the `gtbench` simulation in seconds (lower is better)
 
 
-system  = daint_mc
+## Results on Piz Daint multicore partition
 
-|  local size | total size | gridtools backend | comm | var | nodes | tasks per node | domain threads | openmp threads | columns/ s/ node | wall clock time [s]
+compute node: Cray XC40 (Two Intel® Xeon® E5-2695 v4 @ 2.10GHz (2 x 18 cores, 64/128 GB RAM))
+
+|  local size | total size | gridtools backend | comm | var | nodes | tasks per node | domain threads | openmp threads | columns/ s/node | wall clock time [s]
 |------------:|-----------:|:----------:|:---------:|:-------:|------:|-------------:|--------------:|-----------:|-----------:|---------:
 |         128 |        128 |         mc |       gcl |     mpi |     1 |            1 |             1 |         36 |      10989.2 |  1.49092
 |         128 |        256 |         mc |       gcl |     mpi |     4 |            1 |             1 |         36 |      10488.9 |  1.56203
@@ -358,9 +378,11 @@ system  = daint_mc
 |        1024 |       8192 |        x86 |    simple |     mpi |    64 |           36 |             1 |          1 |      20670.8 |  50.7273
 
 
-daint_gpu
+## Results on Piz Daint GPU partition
 
-|  local size | total size | gridtools backend | comm | var | nodes | tasks per node | domain threads | openmp threads | columns/ s/ node | wall clock time [s]
+compute node: Cray XC50 (Intel® Xeon® E5-2690 v3 @ 2.60GHz (12 cores, 64GB RAM) and NVIDIA® Tesla® P100 16GB)
+
+|  local size | total size | gridtools backend | comm | var | nodes | tasks per node | domain threads | openmp threads | columns/ s/node | wall clock time [s]
 |------------:|-----------:|:----------:|:---------:|:-------:|------:|-------------:|--------------:|-----------:|-----------:|--------:
 |         256 |        256 |       cuda |       gcl |     mpi |     1 |            1 |             1 |          1 |     117615.0 |  0.55721
 |         256 |        512 |       cuda |       gcl |     mpi |     4 |            1 |             1 |          1 |      81335.3 | 0.805752
