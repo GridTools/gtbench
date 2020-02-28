@@ -17,6 +17,7 @@ are tested using various parameter configurations. The parameter space is descri
 | `columns / s /node` | computed columns per second and node (higher is better)
 | `wall clock time`   | median time reported for the `gtbench` simulation in seconds (lower is better)
 
+Hence, the total domain `total size` is decomposed in `nodes x tasks per node x domain threads` sub-domains.
 
 ## Results on Piz Daint multicore partition
 
