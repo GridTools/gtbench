@@ -1,7 +1,7 @@
 # Changelog
 
-# February 28, 2020, commit d251eed7ee8f12a1979f32770f6cdf1478b20dd4 (correct hash will be inserted here once PR is merged)
-- updated gtbench source code
+# February 28, 2020
+- updated gtbench source code (commit d251eed7ee8f12a1979f32770f6cdf1478b20dd4 (correct hash will be inserted here once PR is merged))
   - added new `gcl` communication backend
   - excluded first time step from measurements
   - use different stream synchronization and compilation flags for `cuda` backend
