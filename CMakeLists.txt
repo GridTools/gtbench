@@ -40,6 +40,7 @@ function(compile_as_cuda)
 endfunction()
 
 add_library(common INTERFACE)
+target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
 
 # Global setup
 if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")

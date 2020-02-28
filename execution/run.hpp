@@ -81,6 +81,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto step = stepper(n, delta, exchange);
 
+  communication::barrier(comm_grid);
   if (tmax > 0)
     step(state, dt); // do not measure execution time of inital step
 
