@@ -89,7 +89,12 @@ int main(int argc, char **argv) {
 
   // benchmark executions
   std::vector<std::vector<execution::result>> all_results(num_threads);
+#ifdef __CUDACC__
+  auto execution_func = [&](int id = 0, int cuda_device = 0) {
+      cudaSetDevice(cuda_device);
+#else
   auto execution_func = [&](int id = 0) {
+#endif
     for (std::size_t r = 0; r < runs; ++r) {
       all_results[id].push_back(execution::run(
           communication::sub_grid(comm_grid, id),
@@ -100,8 +105,15 @@ int main(int argc, char **argv) {
 #if defined(GTBENCH_USE_GHEX)
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
-  for (int i = 0; i < num_threads; ++i)
+  for (int i = 0; i < num_threads; ++i) {
+#ifdef __CUDACC__
+    int cuda_device;
+    cudaGetDevice(&cuda_device);
+    threads.push_back(std::thread{execution_func, i, cuda_device});
+#else
     threads.push_back(std::thread{execution_func, i});
+#endif
+  }
   for (auto &t : threads)
     t.join();
   for (std::size_t i = 0; i < all_results[0].size(); ++i)
