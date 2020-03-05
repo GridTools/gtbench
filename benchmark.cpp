@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
   std::vector<std::vector<execution::result>> all_results(num_threads);
 #ifdef __CUDACC__
   auto execution_func = [&](int id = 0, int cuda_device = 0) {
-      cudaSetDevice(cuda_device);
+    cudaSetDevice(cuda_device);
 #else
   auto execution_func = [&](int id = 0) {
 #endif
@@ -105,10 +105,12 @@ int main(int argc, char **argv) {
 #if defined(GTBENCH_USE_GHEX)
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
+#ifdef __CUDACC__
+  int cuda_device;
+  cudaGetDevice(&cuda_device);
+#endif
   for (int i = 0; i < num_threads; ++i) {
 #ifdef __CUDACC__
-    int cuda_device;
-    cudaGetDevice(&cuda_device);
     threads.push_back(std::thread{execution_func, i, cuda_device});
 #else
     threads.push_back(std::thread{execution_func, i});
