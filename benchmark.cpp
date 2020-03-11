@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "./communication/backends.hpp"
+#include "./communication/device.hpp"
 #include "./execution/run.hpp"
 #include "./numerics/solver.hpp"
 
@@ -55,6 +56,8 @@ int main(int argc, char **argv) {
   // communication setup
   auto comm_world = communication::GTBENCH_COMMUNICATION_BACKEND::world(
       argc, argv, multi_threaded);
+
+  const auto device_id = communication::set_device();
 
   auto fmt = [&]() -> std::ostream & {
     return std::cout << std::endl << std::setw(26) << std::left;
@@ -105,13 +108,9 @@ int main(int argc, char **argv) {
 #if defined(GTBENCH_USE_GHEX)
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
-#ifdef __CUDACC__
-  int cuda_device;
-  cudaGetDevice(&cuda_device);
-#endif
   for (int i = 0; i < num_threads; ++i) {
 #ifdef __CUDACC__
-    threads.push_back(std::thread{execution_func, i, cuda_device});
+    threads.push_back(std::thread{execution_func, i, device_id});
 #else
     threads.push_back(std::thread{execution_func, i});
 #endif
