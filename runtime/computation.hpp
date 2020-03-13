@@ -14,6 +14,8 @@
 
 namespace runtime {
 
+namespace computation {
+
 namespace impl {
 template <class F> void init_field(storage_t &storage, F f, real_t t) {
   auto view = gt::make_host_view(storage);
@@ -64,6 +66,13 @@ numerics::solver_state init_state(Discrete const &discrete, real_t t = 0_r) {
   return state;
 }
 
+inline void sync(numerics::solver_state &state) {
+#ifdef __CUDACC__
+  if (cudaDeviceSynchronize() != cudaSuccess)
+    throw std::runtime_error("device sync failed");
+#endif
+}
+
 template <class Discrete>
 double compute_error(numerics::solver_state const &state,
                      Discrete const &discrete, real_t t) {
@@ -71,4 +80,5 @@ double compute_error(numerics::solver_state const &state,
                                    discrete_analytical::data(discrete), t);
 }
 
+} // namespace computation
 } // namespace runtime

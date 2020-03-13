@@ -14,8 +14,8 @@ set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
 set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 
-set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backend")
-set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "single_node" "simple_mpi" "gcl")
+set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
+set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node")
 
 set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
@@ -43,7 +43,7 @@ add_library(common INTERFACE)
 target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
 
 # Global setup
-if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
+if(GTBENCH_RUNTIME STREQUAL "ghex_comm")
   find_package(GHEX REQUIRED)
   target_link_libraries(common INTERFACE GHEX::ghexlib)
   if (GHEX_USE_UCP)
@@ -53,11 +53,11 @@ if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
       endif()
   endif()
   target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
-elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "gcl")
+elseif(GTBENCH_RUNTIME STREQUAL "gcl")
   find_package(MPI REQUIRED COMPONENTS CXX)
   target_link_libraries(common INTERFACE MPI::MPI_CXX GridTools::gcl)
   target_compile_definitions(common INTERFACE GTBENCH_USE_GCL)
-elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
+elseif(GTBENCH_RUNTIME STREQUAL "simple_mpi")
   find_package(MPI REQUIRED COMPONENTS CXX)
   target_link_libraries(common INTERFACE MPI::MPI_CXX)
   target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
@@ -69,19 +69,19 @@ endif()
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
-  GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
+  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
   )
 target_link_libraries(common INTERFACE GridTools::gridtools)
 
 # Subdirectories
-add_subdirectory(communication)
+add_subdirectory(runtime)
 add_subdirectory(numerics)
 
 # Current directory
 compile_as_cuda(convergence_tests.cpp benchmark.cpp)
 
 add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion communication)
+target_link_libraries(convergence_tests advection diffusion runtime)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion communication)
+target_link_libraries(benchmark advection diffusion runtime)
