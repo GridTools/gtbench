@@ -33,7 +33,7 @@ result run(CommGrid &&comm_grid, Stepper &&stepper, real_t tmax, real_t dt,
 
   auto state = runtime::init_state(initial);
 
-  const vec<real_t, 3> delta = initial.delta;
+  const vec<real_t, 3> delta = runtime::discrete_analytical::delta(initial);
 
   auto exchange = communication::halo_exchanger(comm_grid, state.sinfo);
 

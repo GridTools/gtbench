@@ -40,7 +40,7 @@ inline auto remap(discrete<Analytical> const &d, F f,
       [f = std::move(f), delta = delta(d), r = d.global_resolution,
        o = d.local_offset, staggered_offset](vec<long, 3> const &p, real_t t) {
         return f({(p.x - halo + o.x) * delta.x, (p.y - halo + o.y) * delta.y,
-                  (p.z - halo + staggered_offset) * delta.z});
+                  (p.z + staggered_offset) * delta.z}, t);
       };
 }
 
