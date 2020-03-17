@@ -10,8 +10,7 @@
 #include <iostream>
 
 #include "./numerics/solver.hpp"
-#include "./runtime/runtime.hpp"
-#include "./runtime/single_node/run.hpp"
+#include "./runtime/run.hpp"
 #include "./verification/analytical.hpp"
 #include "./verification/convergence.hpp"
 
