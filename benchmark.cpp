@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     runs = std::atoll(argv[2]);
 
   // communication setup
-  auto rt = runtime::GTBENCH_RUNTIME(argc, argv);
+  runtime::GTBENCH_RUNTIME rt(argc, argv);
 
   auto fmt = [&]() -> std::ostream & {
     return std::cout << std::endl << std::setw(26) << std::left;

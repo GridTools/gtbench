@@ -15,7 +15,7 @@
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  auto rt = runtime::GTBENCH_RUNTIME(argc, argv);
+  runtime::GTBENCH_RUNTIME rt(argc, argv);
 
   auto run_tests = [&rt](std::string const &title, auto const &exact,
                          auto const &stepper) {
