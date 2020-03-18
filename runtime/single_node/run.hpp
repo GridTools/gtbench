@@ -17,23 +17,23 @@
 
 namespace runtime {
 
-struct single_node {
-  single_node(int, char **) {}
+namespace single_node {
+
+struct world {
+  world(int, char **) {}
 };
 
-namespace single_node_impl {
-numerics::exchange_t setup(vec<std::size_t, 3> const &resolution);
-}
+numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution);
 
 template <class Analytical, class Stepper>
-result runtime_solve(single_node, Analytical analytical, Stepper stepper,
+result runtime_solve(world, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
   const auto exact = discrete_analytical::discretize(
       analytical, global_resolution, global_resolution, {0, 0});
 
   auto state = computation::init_state(exact);
-  auto exchange = single_node_impl::setup(global_resolution);
+  auto exchange = exchange_func(global_resolution);
 
   auto step = stepper(state, exchange);
 
@@ -55,5 +55,7 @@ result runtime_solve(single_node, Analytical analytical, Stepper stepper,
   double error = computation::compute_error(state, exact, t);
 
   return {error, time};
+}
+
 }
 } // namespace runtime

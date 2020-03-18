@@ -18,26 +18,31 @@
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  // user input handling
-  std::size_t runs = 101;
-  const std::size_t nz = 60;
+  runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
 
-  if (argc < 2 || argc > 4) {
-    std::cerr << "Usage: " << argv[0] << " N [RUNS] [THREADS]" << std::endl;
-    std::cerr << "N: global domain size, full domain will be NxNx" << nz
-              << std::endl;
-    std::cerr << "RUNS: number of runs, reported is the median and "
-              << "95% confidence intervals (for RUNS > 100, "
-              << "default value: " << runs << std::endl;
-    return 1;
+  cxxopts::Options options(argv[0], "GTBench main benchmark.");
+  options.add_options()("h,help", "Print this help message and exit.")(
+      "N,domain-size", "Size of the domain along horizontal axes.",
+      cxxopts::value<std::size_t>(), "N")(
+      "r,runs", "Number of runs, reported is the median result.",
+      cxxopts::value<std::size_t>()->default_value("101"), "RUNS");
+  options.parse_positional({"domain-size"});
+  options.positional_help("DOMAIN-SIZE").show_positional_help();
+
+  runtime::register_options(rtw, options);
+
+  auto args = options.parse(argc, argv);
+
+  if (args.count("help") || !args.count("domain-size")) {
+    std::cout << options.help() << std::endl;
+    return 0;
   }
 
-  const std::size_t n = std::atoll(argv[1]);
-  if (argc > 2)
-    runs = std::atoll(argv[2]);
+  auto rt = runtime::init(rtw, args);
 
-  // communication setup
-  runtime::GTBENCH_RUNTIME rt(argc, argv);
+  const std::size_t n = args["domain-size"].as<std::size_t>();
+  const std::size_t runs = args["runs"].as<std::size_t>();
+  const std::size_t nz = 60;
 
   auto fmt = [&]() -> std::ostream & {
     return std::cout << std::endl << std::setw(26) << std::left;
@@ -50,8 +55,7 @@ int main(int argc, char **argv) {
 #define GTBENCH_STR(var) GTBENCH_STR2(var)
   fmt() << "Floating-point type:" << GTBENCH_STR(GTBENCH_FLOAT);
   fmt() << "GridTools backend:" << GTBENCH_STR(GTBENCH_BACKEND);
-  fmt() << "GTBench runtime:"
-        << GTBENCH_STR(GTBENCH_RUNTIME);
+  fmt() << "GTBench runtime:" << GTBENCH_STR(GTBENCH_RUNTIME);
 #undef GTBENCH_STR
 #undef GTBENCH_STR2
 
@@ -65,7 +69,8 @@ int main(int argc, char **argv) {
   // benchmark executions
   std::vector<runtime::result> results;
   for (std::size_t r = 0; r < runs; ++r) {
-    results.push_back(runtime::solve(rt, exact, stepper, {n, n, nz}, 0.1, 1e-3));
+    results.push_back(
+        runtime::solve(rt, exact, stepper, {n, n, nz}, 0.1, 1e-3));
   }
 
   // computation and reporting of median and confidence interval times

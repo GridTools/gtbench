@@ -15,7 +15,21 @@
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  runtime::GTBENCH_RUNTIME rt(argc, argv);
+  runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
+
+  cxxopts::Options options(argv[0], "GTBench convergence tests.");
+  options.add_options()("h,help", "Print this help message and exit.");
+
+  runtime::register_options(rtw, options);
+
+  auto args = options.parse(argc, argv);
+
+  if (args.count("help")) {
+    std::cout << options.help() << std::endl;
+    return 0;
+  }
+
+  auto rt = runtime::init(rtw, args);
 
   auto run_tests = [&rt](std::string const &title, auto const &exact,
                          auto const &stepper) {

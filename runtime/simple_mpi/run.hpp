@@ -18,26 +18,31 @@
 #include "../runtime.hpp"
 
 namespace runtime {
+namespace simple_mpi {
 
-struct simple_mpi {
-  simple_mpi(int &argc, char **&argv);
-  simple_mpi(simple_mpi const &) = delete;
-  simple_mpi(simple_mpi &&) = delete;
-  ~simple_mpi();
+struct world {
+  world(int &argc, char **&argv);
+  world(world const &) = delete;
+  world(world &&) = delete;
+  ~world();
 
-  simple_mpi &operator=(simple_mpi const &) = delete;
-  simple_mpi &operator=(simple_mpi &&) = delete;
+  world &operator=(world const &) = delete;
+  world &operator=(world &&) = delete;
+};
 
+void runtime_register_options(world const&, cxxopts::Options &options);
+
+struct runtime {
   std::array<int, 2> cart_dims;
 };
 
-namespace simple_mpi_impl {
+runtime runtime_init(world const&, cxxopts::ParseResult const &options);
 
-class grid {
+class process_grid {
 public:
-  grid(vec<std::size_t, 3> const &global_resolution,
+  process_grid(vec<std::size_t, 3> const &global_resolution,
        std::array<int, 2> cart_dims);
-  ~grid();
+  ~process_grid();
 
   vec<std::size_t, 3> local_resolution() const;
   vec<std::size_t, 2> local_offset() const;
@@ -52,13 +57,11 @@ private:
   std::unique_ptr<impl> pimpl;
 };
 
-} // namespace simple_mpi_impl
-
 template <class Analytical, class Stepper>
-result runtime_solve(simple_mpi &rt, Analytical analytical, Stepper stepper,
+result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
-  simple_mpi_impl::grid grid(global_resolution, rt.cart_dims);
+  process_grid grid(global_resolution, rt.cart_dims);
 
   const auto exact = discrete_analytical::discretize(
       analytical, global_resolution, grid.local_resolution(),
@@ -85,4 +88,5 @@ result runtime_solve(simple_mpi &rt, Analytical analytical, Stepper stepper,
   return {error, time};
 }
 
+} // namespace simple_mpi
 } // namespace runtime

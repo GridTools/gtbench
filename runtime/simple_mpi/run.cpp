@@ -13,30 +13,56 @@
 #include "./run.hpp"
 
 namespace runtime {
-simple_mpi::simple_mpi(int &argc, char **&argv) : cart_dims{0, 0} {
+namespace simple_mpi {
+
+world::world(int &argc, char **&argv) {
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
 
-  int size;
+  int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Dims_create(size, 2, cart_dims.data());
-
-  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if (size > 1 && rank != 0)
     std::cout.setstate(std::ios_base::failbit);
 }
 
-simple_mpi::~simple_mpi() { MPI_Finalize(); }
+world::~world() { MPI_Finalize(); }
 
-namespace simple_mpi_impl {
+void runtime_register_options(world const&, cxxopts::Options &options) {
+  options.add_options("Runtime-specific")(
+      "cart-dims", "Comma-separated dimensions of cartesian communicator.",
+      cxxopts::value<std::vector<int>>(), "PX,PY");
+}
+
+runtime runtime_init(world const&, cxxopts::ParseResult const &options) {
+  int size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  runtime rt = {0};
+  if (options.count("cart-dims")) {
+    auto values = options["cart-dims"].as<std::vector<int>>();
+    if (values.size() != 2) {
+      throw std::runtime_error("Wrong number of arguments in --cart-dims.");
+    }
+    if (values[0] * values[1] != size) {
+      throw std::runtime_error(
+          "The product of cart dims must be equal to the number of MPI ranks.");
+    }
+    std::copy(std::begin(values), std::end(values), std::begin(rt.cart_dims));
+  } else {
+    MPI_Dims_create(size, 2, rt.cart_dims.data());
+  }
+
+  return rt;
+}
 
 template <class T> struct halo_info { T lower, upper; };
 
-struct grid::impl {
+struct process_grid::impl {
   impl(vec<std::size_t, 3> const &global_resolution,
-       std::array<int, 2> cart_dims) : comm_cart(MPI_COMM_NULL) {
+       std::array<int, 2> cart_dims)
+      : comm_cart(MPI_COMM_NULL) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::array<int, 2> periods = {1, 1};
@@ -170,24 +196,25 @@ struct grid::impl {
   MPI_Comm comm_cart;
 };
 
-grid::grid(vec<std::size_t, 3> const &global_resolution,
-           std::array<int, 2> cart_dims)
+process_grid::process_grid(vec<std::size_t, 3> const &global_resolution,
+                           std::array<int, 2> cart_dims)
     : pimpl(std::make_unique<impl>(global_resolution, cart_dims)) {}
 
-grid::~grid() {}
+process_grid::~process_grid() {}
 
-vec<std::size_t, 3> grid::local_resolution() const {
+vec<std::size_t, 3> process_grid::local_resolution() const {
   return pimpl->local_resolution;
 }
-vec<std::size_t, 2> grid::local_offset() const { return pimpl->local_offset; }
+vec<std::size_t, 2> process_grid::local_offset() const {
+  return pimpl->local_offset;
+}
 
 std::function<void(storage_t &)>
-grid::exchanger(storage_info_ijk_t const &sinfo) const {
+process_grid::exchanger(storage_info_ijk_t const &sinfo) const {
   return pimpl->exchanger(sinfo);
 }
 
-double grid::wtime() const { return MPI_Wtime(); }
+double process_grid::wtime() const { return MPI_Wtime(); }
 
-} // namespace simple_mpi_impl
-
+} // namespace simple_mpi
 } // namespace runtime

@@ -12,7 +12,7 @@
 #include <gridtools/boundary_conditions/boundary.hpp>
 
 namespace runtime {
-namespace single_node_impl {
+namespace single_node {
 
 struct periodic_boundary {
   template <gt::sign I, gt::sign J, gt::sign K, typename DataField>
@@ -26,7 +26,7 @@ struct periodic_boundary {
   }
 };
 
-numerics::exchange_t setup(vec<std::size_t, 3> const &resolution) {
+numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution) {
   gt::uint_t nx = resolution.x;
   gt::uint_t ny = resolution.y;
   gt::uint_t nz = resolution.z;
@@ -42,5 +42,5 @@ numerics::exchange_t setup(vec<std::size_t, 3> const &resolution) {
   };
 }
 
-} // namespace single_node_impl
+} // namespace single_node
 } // namespace runtime
