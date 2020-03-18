@@ -9,4 +9,5 @@
  */
 #pragma once
 
+#include "./simple_mpi/run.hpp"
 #include "./single_node/run.hpp"
