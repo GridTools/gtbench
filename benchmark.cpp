@@ -20,28 +20,22 @@
 int main(int argc, char **argv) {
   runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
 
-  cxxopts::Options options(argv[0], "GTBench main benchmark.");
-  options.add_options()("h,help", "Print this help message and exit.")(
-      "N,domain-size", "Size of the domain along horizontal axes.",
-      cxxopts::value<std::size_t>(), "N")(
-      "r,runs", "Number of runs, reported is the median result.",
-      cxxopts::value<std::size_t>()->default_value("101"), "RUNS");
-  options.parse_positional({"domain-size"});
-  options.positional_help("DOMAIN-SIZE").show_positional_help();
+  options opts;
+  opts("domain-size", "size of domain along horizontal axes", "N");
+  opts("runs", "number of runs, reported is the median result", "RUNS", {101});
+  runtime::register_options(rtw, opts);
 
-  runtime::register_options(rtw, options);
+  auto args = opts.parse(argc, argv);
 
-  auto args = options.parse(argc, argv);
-
-  if (args.count("help") || !args.count("domain-size")) {
-    std::cout << options.help() << std::endl;
-    return 0;
+  if (!args.has("domain-size")) {
+    std::cerr << "value for --domain-size must be provided" << std::endl;
+    return 1;
   }
 
   auto rt = runtime::init(rtw, args);
 
-  const std::size_t n = args["domain-size"].as<std::size_t>();
-  const std::size_t runs = args["runs"].as<std::size_t>();
+  const std::size_t n = args.get<std::size_t>("domain-size");
+  const std::size_t runs = args.get<std::size_t>("runs");
   const std::size_t nz = 60;
 
   auto fmt = [&]() -> std::ostream & {

@@ -9,8 +9,7 @@
  */
 #pragma once
 
-#include <cxxopts.hpp>
-
+#include "../common/options.hpp"
 #include "../common/types.hpp"
 
 namespace runtime {
@@ -21,20 +20,19 @@ struct result {
 };
 
 template <class World>
-void runtime_register_options(World const &, cxxopts::Options &) {}
+void runtime_register_options(World const &, options &) {}
 
 template <class World>
-World runtime_init(World const &world, cxxopts::ParseResult const &) {
+World runtime_init(World const &world, options_values const &) {
   return world;
 }
 
-template <class Runtime>
-void register_options(Runtime &&rt, cxxopts::Options &options) {
+template <class Runtime> void register_options(Runtime &&rt, options &options) {
   return runtime_register_options(std::forward<Runtime>(rt), options);
 }
 
 template <class Runtime>
-decltype(auto) init(Runtime &&rt, cxxopts::ParseResult const &options) {
+decltype(auto) init(Runtime &&rt, options_values const &options) {
   return runtime_init(std::forward<Runtime>(rt), options);
 }
 

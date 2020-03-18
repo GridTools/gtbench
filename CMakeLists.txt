@@ -20,7 +20,6 @@ set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node")
 set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
 find_package(GridTools 1.1 REQUIRED)
-find_package(cxxopts 2 REQUIRED)
 
 if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
                                         OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
@@ -73,9 +72,9 @@ target_compile_definitions(common INTERFACE
   GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
   )
 target_link_libraries(common INTERFACE GridTools::gridtools)
-target_link_libraries(common INTERFACE cxxopts::cxxopts)
 
 # Subdirectories
+add_subdirectory(common)
 add_subdirectory(runtime)
 add_subdirectory(numerics)
 

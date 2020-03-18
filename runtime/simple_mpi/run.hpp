@@ -30,18 +30,18 @@ struct world {
   world &operator=(world &&) = delete;
 };
 
-void runtime_register_options(world const&, cxxopts::Options &options);
+void runtime_register_options(world const &, options &options);
 
 struct runtime {
   std::array<int, 2> cart_dims;
 };
 
-runtime runtime_init(world const&, cxxopts::ParseResult const &options);
+runtime runtime_init(world const &, options_values const &options);
 
 class process_grid {
 public:
   process_grid(vec<std::size_t, 3> const &global_resolution,
-       std::array<int, 2> cart_dims);
+               std::array<int, 2> cart_dims);
   ~process_grid();
 
   vec<std::size_t, 3> local_resolution() const;

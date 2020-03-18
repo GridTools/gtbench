@@ -17,17 +17,10 @@
 int main(int argc, char **argv) {
   runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
 
-  cxxopts::Options options(argv[0], "GTBench convergence tests.");
-  options.add_options()("h,help", "Print this help message and exit.");
+  options opts;
+  runtime::register_options(rtw, opts);
 
-  runtime::register_options(rtw, options);
-
-  auto args = options.parse(argc, argv);
-
-  if (args.count("help")) {
-    std::cout << options.help() << std::endl;
-    return 0;
-  }
+  auto args = opts.parse(argc, argv);
 
   auto rt = runtime::init(rtw, args);
 

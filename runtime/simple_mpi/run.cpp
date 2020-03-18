@@ -29,25 +29,23 @@ world::world(int &argc, char **&argv) {
 
 world::~world() { MPI_Finalize(); }
 
-void runtime_register_options(world const&, cxxopts::Options &options) {
-  options.add_options("Runtime-specific")(
-      "cart-dims", "Comma-separated dimensions of cartesian communicator.",
-      cxxopts::value<std::vector<int>>(), "PX,PY");
+void runtime_register_options(world const&, options &options) {
+  options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
 }
 
-runtime runtime_init(world const&, cxxopts::ParseResult const &options) {
+runtime runtime_init(world const&, options_values const &options) {
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   runtime rt = {0};
-  if (options.count("cart-dims")) {
-    auto values = options["cart-dims"].as<std::vector<int>>();
+  if (options.has("cart-dims")) {
+    auto values = options.get<std::array<int, 2>>("cart-dims");
     if (values.size() != 2) {
-      throw std::runtime_error("Wrong number of arguments in --cart-dims.");
+      throw std::runtime_error("wrong number of arguments in --cart-dims.");
     }
     if (values[0] * values[1] != size) {
       throw std::runtime_error(
-          "The product of cart dims must be equal to the number of MPI ranks.");
+          "the product of cart dims must be equal to the number of MPI ranks.");
     }
     std::copy(std::begin(values), std::end(values), std::begin(rt.cart_dims));
   } else {
