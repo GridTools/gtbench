@@ -32,7 +32,10 @@ public:
   }
 
   template <class T> T get(std::string const &name) const {
-    return parse(m_map.at(name), type<T>());
+    auto value = m_map.find(name);
+    if (value == m_map.end())
+      options_impl::abort("no value found for option '" + name + "'");
+    return parse(value->second, type<T>());
   }
 
   operator bool() const { return !m_map.empty(); }
