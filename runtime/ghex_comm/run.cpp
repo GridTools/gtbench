@@ -10,7 +10,6 @@
 
 #include "./run.hpp"
 
-
 namespace runtime {
 
 namespace ghex_comm {
@@ -55,6 +54,29 @@ world::world(int &argc, char **&argv) {
 }
 
 world::~world() { MPI_Finalize(); }
+
+grid::sub_grid grid::operator[](unsigned int i) {
+  const auto &dom = m_domains[i];
+  if (!m_tokens[i])
+    m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
+  auto comm = m_context->get_communicator(*m_tokens[i]);
+  comm.barrier();
+  return {
+      m_rank,
+      m_size,
+      dom.domain_id(),
+      m_context.get(),
+      m_patterns.get(),
+      *m_tokens[i],
+      comm_obj_ptr_t{new comm_obj_type{
+          ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
+      comm,
+      m_global_resolution,
+      {(std::size_t)dom.first()[0], (std::size_t)dom.first()[1]},
+      {(std::size_t)(dom.last()[0] - dom.first()[0] + 1),
+       (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
+       (std::size_t)(dom.last()[2] - dom.first()[2] + 1)}};
+}
 
 void runtime_register_options(world const &, options &options) {
   options("sub-domains", "number of sub-domains", "S", {1});
