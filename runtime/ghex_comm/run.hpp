@@ -312,12 +312,6 @@ public:
   }
 };
 
-inline grid comm_grid(const world &,
-                      vec<std::size_t, 3> const &global_resolution,
-                      int num_threads) {
-  return {global_resolution, num_threads};
-}
-
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid::sub_grid &grid,
                     storage_t::storage_info_t const &sinfo);
@@ -339,11 +333,11 @@ template <class Analytical, class Stepper>
 result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
-  auto grid = comm_grid(rt.w, global_resolution, rt.num_threads);
+  grid comm_grid = {global_resolution, rt.num_threads};
 
   std::vector<::runtime::result> results(rt.num_threads);
   auto execution_func = [&](int id = 0) {
-    auto sub_grid = grid[id];
+    auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
         analytical,
         {sub_grid.global_resolution.x, sub_grid.global_resolution.y,
