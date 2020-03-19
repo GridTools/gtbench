@@ -178,6 +178,8 @@ struct world {
   world &operator=(world &&) = delete;
 };
 
+struct sub_grid;
+
 class grid {
 public: // member types
   using domain_id_type = typename local_domain::domain_id_type;
@@ -191,41 +193,6 @@ public: // member types
   using domain_vec = std::vector<local_domain>;
   using context_ptr_t = std::unique_ptr<context_t>;
   using thread_token = context_t::thread_token;
-
-  struct sub_grid {
-    int m_rank;
-    int m_size;
-    domain_id_type m_domain_id;
-    context_t *m_context;
-    patterns_type *m_patterns;
-    mutable thread_token m_token;
-    comm_obj_ptr_t m_comm_obj;
-    communicator_t m_comm;
-    vec<std::size_t, 2> global_resolution;
-    vec<std::size_t, 2> offset;
-    vec<std::size_t, 3> resolution;
-
-    std::function<void(storage_t &)>
-    halo_exchanger(storage_info_ijk_t const &sinfo) {
-      auto co_ptr = m_comm_obj.get();
-      auto patterns_ptr = m_patterns;
-      const auto domain_id = m_domain_id;
-      auto context_ptr = m_context;
-      auto token = m_token;
-      return [co_ptr, patterns_ptr, domain_id, context_ptr,
-              token](const storage_t &storage) mutable {
-        auto &co = *co_ptr;
-        auto &patterns = *patterns_ptr;
-        auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
-
-#ifdef __CUDACC__
-        cudaStreamSynchronize(0);
-#endif
-
-        co.exchange(patterns(field)).wait();
-      };
-    }
-  };
 
 private: // members
   halo_generator m_hg;
@@ -310,6 +277,41 @@ public:
     for (auto &o : offsets)
       o += x_0;
     return offsets;
+  }
+};
+
+struct sub_grid {
+  int m_rank;
+  int m_size;
+  grid::domain_id_type m_domain_id;
+  context_t *m_context;
+  grid::patterns_type *m_patterns;
+  mutable grid::thread_token m_token;
+  grid::comm_obj_ptr_t m_comm_obj;
+  communicator_t m_comm;
+  vec<std::size_t, 2> global_resolution;
+  vec<std::size_t, 2> offset;
+  vec<std::size_t, 3> resolution;
+
+  std::function<void(storage_t &)>
+  halo_exchanger(storage_info_ijk_t const &sinfo) {
+    auto co_ptr = m_comm_obj.get();
+    auto patterns_ptr = m_patterns;
+    const auto domain_id = m_domain_id;
+    auto context_ptr = m_context;
+    auto token = m_token;
+    return [co_ptr, patterns_ptr, domain_id, context_ptr,
+            token](const storage_t &storage) mutable {
+      auto &co = *co_ptr;
+      auto &patterns = *patterns_ptr;
+      auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
+
+#ifdef __CUDACC__
+      cudaStreamSynchronize(0);
+#endif
+
+      co.exchange(patterns(field)).wait();
+    };
   }
 };
 

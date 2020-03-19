@@ -55,7 +55,7 @@ world::world(int &argc, char **&argv) {
 
 world::~world() { MPI_Finalize(); }
 
-grid::sub_grid grid::operator[](unsigned int i) {
+sub_grid grid::operator[](unsigned int i) {
   const auto &dom = m_domains[i];
   if (!m_tokens[i])
     m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
