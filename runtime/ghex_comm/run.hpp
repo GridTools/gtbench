@@ -17,6 +17,7 @@
 
 #include "./factorize.hpp"
 #include <ghex/communication_object_2.hpp>
+#include <ghex/glue/gridtools/field.hpp>
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
 #include <ghex/threads/atomic/primitives.hpp>
@@ -203,6 +204,27 @@ public: // member types
     vec<std::size_t, 2> global_resolution;
     vec<std::size_t, 2> offset;
     vec<std::size_t, 3> resolution;
+
+    std::function<void(storage_t &)>
+    halo_exchanger(storage_info_ijk_t const &sinfo) {
+      auto co_ptr = m_comm_obj.get();
+      auto patterns_ptr = m_patterns;
+      const auto domain_id = m_domain_id;
+      auto context_ptr = m_context;
+      auto token = m_token;
+      return [co_ptr, patterns_ptr, domain_id, context_ptr,
+              token](const storage_t &storage) mutable {
+        auto &co = *co_ptr;
+        auto &patterns = *patterns_ptr;
+        auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
+
+#ifdef __CUDACC__
+        cudaStreamSynchronize(0);
+#endif
+
+        co.exchange(patterns(field)).wait();
+      };
+    }
   };
 
 private: // members
@@ -312,14 +334,6 @@ public:
   }
 };
 
-std::function<void(storage_t &)>
-comm_halo_exchanger(grid::sub_grid &grid,
-                    storage_t::storage_info_t const &sinfo);
-
-double comm_global_max(grid::sub_grid const &grid, double t);
-
-void comm_barrier(grid::sub_grid &grid);
-
 void runtime_register_options(world const &, options &options);
 
 struct runtime {
@@ -345,7 +359,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
         sub_grid.resolution, sub_grid.offset);
 
     auto state = computation::init_state(exact);
-    auto exchange = comm_halo_exchanger(sub_grid, state.sinfo);
+    auto exchange = sub_grid.halo_exchanger(state.sinfo);
     auto step = stepper(state, exchange);
 
     if (tmax > 0)
@@ -360,6 +374,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
       step(state, dt);
 
     computation::sync(state);
+    sub_grid.m_comm.barrier();
 
     auto stop = clock::now();
     double time = std::chrono::duration<double>(stop - start).count();
