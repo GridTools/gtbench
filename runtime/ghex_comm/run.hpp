@@ -168,76 +168,13 @@ public: // member functions
 };
 
 struct world {
-
-  struct moved_bit {
-    bool m_moved = false;
-    moved_bit() = default;
-    moved_bit(const moved_bit &) = default;
-    moved_bit(moved_bit &&other) noexcept
-        : m_moved{std::exchange(other.m_moved, true)} {}
-    moved_bit &operator=(const moved_bit &) = default;
-    moved_bit &operator=(moved_bit &&other) noexcept {
-      m_moved = std::exchange(other.m_moved, true);
-      return *this;
-    }
-    operator bool() const { return m_moved; }
-  };
-  moved_bit m_moved;
-
-  world(int &argc, char **&argv, bool mt = true) {
-    if (mt) {
-      int provided;
-      int res = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-      if (res != MPI_SUCCESS)
-        throw std::runtime_error("MPI init failed");
-    } else {
-      MPI_Init(&argc, &argv);
-    }
-
-    int size, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-#ifdef __CUDACC__
-    int device_count = 1;
-    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
-      throw std::runtime_error("cudaGetDeviceCount failed");
-    MPI_Comm shmem_comm;
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                        &shmem_comm);
-    int node_rank = 0;
-    MPI_Comm_rank(shmem_comm, &node_rank);
-    MPI_Comm_free(&shmem_comm);
-    const int device_id = node_rank % device_count;
-    if (cudaSetDevice(device_id) != cudaSuccess)
-      throw std::runtime_error("cudaSetDevice failed");
-    if (device_count > 1) {
-      for (int i = 0; i < device_count; ++i) {
-        if (i != device_id) {
-          int flag;
-          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-            throw std::runtime_error("cudaDeviceAccessPeer failed");
-          if (flag) {
-            cudaDeviceEnablePeerAccess(i, 0);
-          }
-        }
-      }
-    }
-#endif
-
-    if (size > 1 && rank != 0)
-      std::cout.setstate(std::ios_base::failbit);
-  }
-
+  world(int &argc, char **&argv);
   world(world const &) = delete;
-  world &operator=(world const &) = delete;
-  world(world &&other) = default;
-  world &operator=(world &&other) = default;
+  world(world &&) = delete;
+  ~world();
 
-  ~world() {
-    if (!m_moved)
-      MPI_Finalize();
-  }
+  world &operator=(world const &) = delete;
+  world &operator=(world &&) = delete;
 };
 
 class grid {
