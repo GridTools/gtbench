@@ -281,15 +281,11 @@ public:
 };
 
 struct sub_grid {
-  int m_rank;
-  int m_size;
   grid::domain_id_type m_domain_id;
   context_t *m_context;
   grid::patterns_type *m_patterns;
   mutable grid::thread_token m_token;
   grid::comm_obj_ptr_t m_comm_obj;
-  communicator_t m_comm;
-  vec<std::size_t, 2> global_resolution;
   vec<std::size_t, 2> offset;
   vec<std::size_t, 3> resolution;
 
@@ -334,10 +330,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   auto execution_func = [&](int id = 0) {
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
-        analytical,
-        {sub_grid.global_resolution.x, sub_grid.global_resolution.y,
-         sub_grid.resolution.z},
-        sub_grid.resolution, sub_grid.offset);
+        analytical, global_resolution, sub_grid.resolution, sub_grid.offset);
 
     auto state = computation::init_state(exact);
     auto exchange = sub_grid.halo_exchanger(state.sinfo);
@@ -355,7 +348,6 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
       step(state, dt);
 
     computation::sync(state);
-    sub_grid.m_comm.barrier();
 
     auto stop = clock::now();
     double time = std::chrono::duration<double>(stop - start).count();

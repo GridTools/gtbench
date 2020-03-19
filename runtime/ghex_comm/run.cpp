@@ -62,16 +62,12 @@ sub_grid grid::operator[](unsigned int i) {
   auto comm = m_context->get_communicator(*m_tokens[i]);
   comm.barrier();
   return {
-      m_rank,
-      m_size,
       dom.domain_id(),
       m_context.get(),
       m_patterns.get(),
       *m_tokens[i],
       comm_obj_ptr_t{new comm_obj_type{
           ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
-      comm,
-      m_global_resolution,
       {(std::size_t)dom.first()[0], (std::size_t)dom.first()[1]},
       {(std::size_t)(dom.last()[0] - dom.first()[0] + 1),
        (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
