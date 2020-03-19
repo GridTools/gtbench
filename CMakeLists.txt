@@ -82,7 +82,7 @@ add_subdirectory(numerics)
 compile_as_cuda(convergence_tests.cpp benchmark.cpp)
 
 add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion runtime)
+target_link_libraries(convergence_tests advection diffusion options runtime)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion runtime)
+target_link_libraries(benchmark advection diffusion options runtime)
