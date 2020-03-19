@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include "./gcl/run.hpp"
 #include "./ghex_comm/run.hpp"
 #include "./simple_mpi/run.hpp"
 #include "./single_node/run.hpp"
