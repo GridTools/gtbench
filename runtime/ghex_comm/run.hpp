@@ -335,7 +335,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      real_t dt) {
   grid comm_grid = {global_resolution, rt.num_threads};
 
-  std::vector<::runtime::result> results(rt.num_threads);
+  std::vector<result> results(rt.num_threads);
   auto execution_func = [&](int id = 0) {
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
@@ -376,13 +376,17 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   for (auto &thread : threads)
     thread.join();
 
-  ::runtime::result result{0.0, 0.0};
+  result local_result{0.0, 0.0};
   for (auto const &r : results) {
-    result.error = std::max(result.error, r.error);
-    result.time = std::max(result.time, r.time);
+    local_result.error = std::max(local_result.error, r.error);
+    local_result.time = std::max(local_result.time, r.time);
   }
 
-  return result;
+  result global_result;
+  MPI_Allreduce(&local_result, &global_result, 2, MPI_DOUBLE, MPI_MAX,
+                MPI_COMM_WORLD);
+
+  return global_result;
 }
 
 } // namespace ghex_comm
