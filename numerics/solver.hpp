@@ -28,7 +28,7 @@ struct solver_state {
   vec<real_t, 3> delta;
 
   storage_t::storage_info_t sinfo;
-  storage_t data, u, v, w, data1, data2;
+  storage_t data, data1, data2, u, v, w;
 };
 
 using exchange_t = std::function<void(storage_t &)>;
