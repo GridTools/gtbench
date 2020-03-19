@@ -318,8 +318,6 @@ inline grid comm_grid(const world &,
   return {global_resolution, num_threads};
 }
 
-inline grid::sub_grid comm_sub_grid(grid &grid, int id = 0) { return grid[id]; }
-
 std::function<void(storage_t &)>
 comm_halo_exchanger(grid::sub_grid &grid,
                     storage_t::storage_info_t const &sinfo);
@@ -345,7 +343,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
 
   std::vector<::runtime::result> results(rt.num_threads);
   auto execution_func = [&](int id = 0) {
-    auto sub_grid = comm_sub_grid(grid, id);
+    auto sub_grid = grid[id];
     const auto exact = discrete_analytical::discretize(
         analytical,
         {sub_grid.global_resolution.x, sub_grid.global_resolution.y,
