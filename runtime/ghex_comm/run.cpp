@@ -61,17 +61,30 @@ sub_grid grid::operator[](unsigned int i) {
     m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
   auto comm = m_context->get_communicator(*m_tokens[i]);
   comm.barrier();
-  return {
-      dom.domain_id(),
-      m_context.get(),
-      m_patterns.get(),
-      *m_tokens[i],
-      comm_obj_ptr_t{new comm_obj_type{
-          ::gridtools::ghex::make_communication_object<patterns_type>(comm)}},
-      {(std::size_t)dom.first()[0], (std::size_t)dom.first()[1]},
-      {(std::size_t)(dom.last()[0] - dom.first()[0] + 1),
-       (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
-       (std::size_t)(dom.last()[2] - dom.first()[2] + 1)}};
+
+  vec<std::size_t, 3> local_resolution = {
+      (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
+      (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
+      (std::size_t)(dom.last()[2] - dom.first()[2] + 1)};
+  vec<std::size_t, 2> local_offset = {(std::size_t)dom.first()[0],
+                                      (std::size_t)dom.first()[1]};
+
+  auto comm_obj = std::make_shared<comm_obj_type>(
+      gridtools::ghex::make_communication_object<patterns_type>(comm));
+
+  auto halo_exchange = [comm_obj = std::move(comm_obj),
+                        domain_id = dom.domain_id(),
+                        &patterns = *m_patterns](storage_t &storage) mutable {
+    auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
+
+#ifdef __CUDACC__
+    cudaStreamSynchronize(0);
+#endif
+
+    comm_obj->exchange(patterns(field)).wait();
+  };
+
+  return {local_resolution, local_offset, std::move(halo_exchange)};
 }
 
 void runtime_register_options(world const &, options &options) {

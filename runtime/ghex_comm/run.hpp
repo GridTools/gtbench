@@ -178,12 +178,16 @@ struct world {
   world &operator=(world &&) = delete;
 };
 
-struct sub_grid;
+struct sub_grid {
+  vec<std::size_t, 3> resolution;
+  vec<std::size_t, 2> offset;
+  std::function<void(storage_t &)> halo_exchanger;
+};
 
 class grid {
 public: // member types
-  using domain_id_type = typename local_domain::domain_id_type;
-  using coordinate_type = typename local_domain::coordinate_type;
+  using domain_id_type = local_domain::domain_id_type;
+  using coordinate_type = local_domain::coordinate_type;
   using patterns_type = patterns_t;
   using patterns_ptr_t = std::unique_ptr<patterns_type>;
   using comm_obj_type =
@@ -280,37 +284,6 @@ public:
   }
 };
 
-struct sub_grid {
-  grid::domain_id_type m_domain_id;
-  context_t *m_context;
-  grid::patterns_type *m_patterns;
-  mutable grid::thread_token m_token;
-  grid::comm_obj_ptr_t m_comm_obj;
-  vec<std::size_t, 2> offset;
-  vec<std::size_t, 3> resolution;
-
-  std::function<void(storage_t &)>
-  halo_exchanger(storage_info_ijk_t const &sinfo) {
-    auto co_ptr = m_comm_obj.get();
-    auto patterns_ptr = m_patterns;
-    const auto domain_id = m_domain_id;
-    auto context_ptr = m_context;
-    auto token = m_token;
-    return [co_ptr, patterns_ptr, domain_id, context_ptr,
-            token](const storage_t &storage) mutable {
-      auto &co = *co_ptr;
-      auto &patterns = *patterns_ptr;
-      auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
-
-#ifdef __CUDACC__
-      cudaStreamSynchronize(0);
-#endif
-
-      co.exchange(patterns(field)).wait();
-    };
-  }
-};
-
 void runtime_register_options(world const &, options &options);
 
 struct runtime {
@@ -333,7 +306,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
         analytical, global_resolution, sub_grid.resolution, sub_grid.offset);
 
     auto state = computation::init_state(exact);
-    auto exchange = sub_grid.halo_exchanger(state.sinfo);
+    auto exchange = sub_grid.halo_exchanger;
     auto step = stepper(state, exchange);
 
     if (tmax > 0)
