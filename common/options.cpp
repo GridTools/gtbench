@@ -43,7 +43,7 @@ options_values options::parse(int argc, char **argv) const {
         options_impl::abort("multiple occurences of '" + arg + "'");
 
       std::vector<std::string> values;
-      for (int j = 0; j < opt->nargs; ++j, ++i) {
+      for (std::size_t j = 0; j < opt->nargs; ++j, ++i) {
         if (i + 1 >= argc)
           options_impl::abort(
               "unexpected end of arguments while parsing args for '" + arg +
