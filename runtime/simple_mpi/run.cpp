@@ -7,10 +7,9 @@
  * Please, refer to the LICENSE file in the root directory.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include "./run.hpp"
 
 #include <mpi.h>
-
-#include "./run.hpp"
 
 namespace runtime {
 namespace simple_mpi {
@@ -40,9 +39,6 @@ runtime runtime_init(world const &, options_values const &options) {
   runtime rt = {0};
   if (options.has("cart-dims")) {
     auto values = options.get<std::array<int, 2>>("cart-dims");
-    if (values.size() != 2) {
-      throw std::runtime_error("wrong number of arguments in --cart-dims.");
-    }
     if (values[0] * values[1] != size) {
       throw std::runtime_error(
           "the product of cart dims must be equal to the number of MPI ranks.");
