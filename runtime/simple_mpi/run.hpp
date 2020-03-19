@@ -51,6 +51,7 @@ public:
   exchanger(storage_info_ijk_t const &sinfo) const;
 
   double wtime() const;
+  result collect_results(result r) const;
 
 private:
   struct impl;
@@ -85,7 +86,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   double time = grid.wtime() - start;
   double error = computation::compute_error(state, exact, t);
 
-  return {error, time};
+  return grid.collect_results({error, time});
 }
 
 } // namespace simple_mpi

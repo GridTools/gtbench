@@ -29,11 +29,11 @@ world::world(int &argc, char **&argv) {
 
 world::~world() { MPI_Finalize(); }
 
-void runtime_register_options(world const&, options &options) {
+void runtime_register_options(world const &, options &options) {
   options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
 }
 
-runtime runtime_init(world const&, options_values const &options) {
+runtime runtime_init(world const &, options_values const &options) {
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -188,6 +188,12 @@ struct process_grid::impl {
     };
   }
 
+  result collect_results(result r) const {
+    result reduced;
+    MPI_Allreduce(&r, &reduced, 2, MPI_DOUBLE, MPI_MAX, comm_cart);
+    return reduced;
+  }
+
   vec<std::size_t, 3> local_resolution;
   vec<std::size_t, 2> local_offset;
   // cartesian communicator
@@ -213,6 +219,10 @@ process_grid::exchanger(storage_info_ijk_t const &sinfo) const {
 }
 
 double process_grid::wtime() const { return MPI_Wtime(); }
+
+result process_grid::collect_results(result r) const {
+  return pimpl->collect_results(r);
+}
 
 } // namespace simple_mpi
 } // namespace runtime
