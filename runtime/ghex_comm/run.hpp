@@ -9,32 +9,13 @@
  */
 #pragma once
 
+#include <chrono>
 #include <memory>
+#include <thread>
 
 #include "../computation.hpp"
 #include "../discrete_analytical.hpp"
 #include "../runtime.hpp"
-
-#include "./factorize.hpp"
-#include <ghex/communication_object_2.hpp>
-#include <ghex/glue/gridtools/field.hpp>
-#include <ghex/structured/grid.hpp>
-#include <ghex/structured/pattern.hpp>
-#include <ghex/threads/atomic/primitives.hpp>
-#include <ghex/threads/std_thread/primitives.hpp>
-#include <mpi.h>
-#include <numeric>
-
-#ifdef GTBENCH_USE_GHEX_UCP
-#include <ghex/transport_layer/ucx/context.hpp>
-using transport = gridtools::ghex::tl::ucx_tag;
-#else
-#include <ghex/transport_layer/mpi/context.hpp>
-using transport = gridtools::ghex::tl::mpi_tag;
-#endif
-
-#include <chrono>
-#include <iostream>
 
 namespace runtime {
 
@@ -62,6 +43,8 @@ public:
   ~grid();
 
   sub_grid operator[](unsigned i);
+
+  result collect_results(result const& r) const;
 
 private:
   struct impl;
@@ -127,11 +110,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
     local_result.time = std::max(local_result.time, r.time);
   }
 
-  result global_result;
-  MPI_Allreduce(&local_result, &global_result, 2, MPI_DOUBLE, MPI_MAX,
-                MPI_COMM_WORLD);
-
-  return global_result;
+  return comm_grid.collect_results(local_result);
 }
 
 } // namespace ghex_comm

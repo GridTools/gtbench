@@ -10,6 +10,27 @@
 
 #include "./run.hpp"
 
+#include <numeric>
+
+#include <mpi.h>
+
+#include <ghex/communication_object_2.hpp>
+#include <ghex/glue/gridtools/field.hpp>
+#include <ghex/structured/grid.hpp>
+#include <ghex/structured/pattern.hpp>
+#include <ghex/threads/atomic/primitives.hpp>
+#include <ghex/threads/std_thread/primitives.hpp>
+
+#ifdef GTBENCH_USE_GHEX_UCP
+#include <ghex/transport_layer/ucx/context.hpp>
+using transport = gridtools::ghex::tl::ucx_tag;
+#else
+#include <ghex/transport_layer/mpi/context.hpp>
+using transport = gridtools::ghex::tl::mpi_tag;
+#endif
+
+#include "./factorize.hpp"
+
 namespace runtime {
 
 namespace ghex_comm {
@@ -265,6 +286,12 @@ public:
 
   sub_grid operator[](unsigned int i);
 
+  result collect_results(result r) const {
+    result reduced;
+    MPI_Allreduce(&r, &reduced, 2, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+    return reduced;
+  }
+
   std::vector<std::size_t> compute_offsets(const std::vector<std::size_t> &dx,
                                            std::size_t x_0) const {
     std::vector<std::size_t> offsets(dx.size() + 1, 0);
@@ -313,6 +340,10 @@ grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
 grid::~grid() {}
 
 sub_grid grid::operator[](unsigned id) { return (*pimpl)[id]; }
+
+result grid::collect_results(result const& r) const {
+    return pimpl->collect_results(r);
+}
 
 void runtime_register_options(world const &, options &options) {
   options("sub-domains", "number of sub-domains", "S", {1});
