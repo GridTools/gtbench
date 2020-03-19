@@ -23,10 +23,10 @@
 
 #ifdef GTBENCH_USE_GHEX_UCP
 #include <ghex/transport_layer/ucx/context.hpp>
-using transport = gridtools::ghex::tl::ucx_tag;
+using transport = gt::ghex::tl::ucx_tag;
 #else
 #include <ghex/transport_layer/mpi/context.hpp>
-using transport = gridtools::ghex::tl::mpi_tag;
+using transport = gt::ghex::tl::mpi_tag;
 #endif
 
 #include "./factorize.hpp"
@@ -37,121 +37,92 @@ namespace ghex_comm {
 
 using domain_id_t = int;
 using dimension_t = std::integral_constant<int, 3>;
-using coordinate_base_t = std::array<int, dimension_t::value>;
-using coordinate_t = ::gridtools::ghex::coordinate<coordinate_base_t>;
+using coordinate_t = gt::ghex::coordinate<std::array<int, 3>>;
 
 struct local_domain {
-public: // member types
   using domain_id_type = domain_id_t;
   using dimension = dimension_t;
   using coordinate_type = coordinate_t;
 
-private: // members
-  domain_id_type m_id;
-  coordinate_type m_first;
-  coordinate_type m_last;
+  domain_id_t m_domain_id;
+  coordinate_t m_first;
+  coordinate_t m_last;
 
-public: // ctors
-  template <typename Array>
-  local_domain(domain_id_type id, const Array &first, const Array &last)
-      : m_id{id} {
-    std::copy(first.begin(), first.end(), m_first.begin());
-    std::copy(last.begin(), last.end(), m_last.begin());
-  }
-
-  local_domain(const local_domain &) = default;
-  local_domain(local_domain &&) = default;
-  local_domain &operator=(const local_domain &) = default;
-  local_domain &operator=(local_domain &&) = default;
-
-public: // member functions
-  domain_id_type domain_id() const { return m_id; }
-  const coordinate_type &first() const { return m_first; }
-  const coordinate_type &last() const { return m_last; }
+  domain_id_t domain_id() const { return m_domain_id; }
+  coordinate_t const &first() const { return m_first; }
+  coordinate_t const &last() const { return m_last; }
 };
 
-using threading = gridtools::ghex::threads::std_thread::primitives;
-using context_t = gridtools::ghex::tl::context<transport, threading>;
+using threading = gt::ghex::threads::std_thread::primitives;
+using context_t = gt::ghex::tl::context<transport, threading>;
 using communicator_t = context_t::communicator_type;
-using grid_t =
-    typename ::gridtools::ghex::structured::grid::template type<local_domain>;
+using grid_t = gt::ghex::structured::grid::type<local_domain>;
 using patterns_t =
-    ::gridtools::ghex::pattern_container<communicator_t, grid_t, domain_id_t>;
+    gt::ghex::pattern_container<communicator_t, grid_t, domain_id_t>;
 
 struct halo_generator {
-public: // member types
   using domain_type = local_domain;
-  using dimension = typename domain_type::dimension;
-  using coordinate_type = typename domain_type::coordinate_type;
+  using dimension = dimension_t;
+  using coordinate_type = coordinate_t;
 
   struct box {
-    const coordinate_type &first() const { return m_first; }
-    const coordinate_type &last() const { return m_last; }
-    coordinate_type &first() { return m_first; }
-    coordinate_type &last() { return m_last; }
-    coordinate_type m_first;
-    coordinate_type m_last;
+    const coordinate_t &first() const { return m_first; }
+    const coordinate_t &last() const { return m_last; }
+    coordinate_t m_first;
+    coordinate_t m_last;
   };
 
   struct box2 {
     const box &local() const { return m_local; }
     const box &global() const { return m_global; }
-    box &local() { return m_local; }
-    box &global() { return m_global; }
     box m_local;
     box m_global;
   };
 
-private: // members
-  coordinate_type m_first;
-  coordinate_type m_last;
+  coordinate_t m_first;
+  coordinate_t m_last;
 
-public: // ctors
-  template <typename Array>
-  halo_generator(const Array &g_first, const Array &g_last, int halo_size) {
-    std::copy(g_first.begin(), g_first.end(), m_first.begin());
-    std::copy(g_last.begin(), g_last.end(), m_last.begin());
-  }
-
-  halo_generator(const halo_generator &) = default;
-  halo_generator(halo_generator &&) = default;
-  halo_generator &operator=(const halo_generator &) = default;
-  halo_generator &operator=(halo_generator &&) = default;
-
-public: // member functions
   std::array<box2, 4> operator()(const domain_type &dom) const {
-    // clang-format off
-    coordinate_type my_first_local {                                0,                             -halo,                            0};
-    coordinate_type my_first_global{                   dom.first()[0],               dom.first()[1]-halo,               dom.first()[2]};
-    coordinate_type my_last_local  {     dom.last()[0]-dom.first()[0],                                -1, dom.last()[2]-dom.first()[2]};
-    coordinate_type my_last_global {                    dom.last()[0],                  dom.first()[1]-1,                dom.last()[2]};
-    coordinate_type mx_first_local {                            -halo,                                 0,                            0};
-    coordinate_type mx_first_global{              dom.first()[0]-halo,                    dom.first()[1],               dom.first()[2]};
-    coordinate_type mx_last_local  {                               -1,      dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
-    coordinate_type mx_last_global {                 dom.first()[0]-1,                     dom.last()[1],                dom.last()[2]};
-    coordinate_type px_first_local {   dom.last()[0]-dom.first()[0]+1,                                 0,                            0};
-    coordinate_type px_first_global{                  dom.last()[0]+1,                    dom.first()[1],               dom.first()[2]};
-    coordinate_type px_last_local  {dom.last()[0]-dom.first()[0]+halo,      dom.last()[1]-dom.first()[1], dom.last()[2]-dom.first()[2]};
-    coordinate_type px_last_global {               dom.last()[0]+halo,                     dom.last()[1],                dom.last()[2]};
-    coordinate_type py_first_local {                                0,    dom.last()[1]-dom.first()[1]+1,                            0};
-    coordinate_type py_first_global{                   dom.first()[0],                   dom.last()[1]+1,               dom.first()[2]};
-    coordinate_type py_last_local  {     dom.last()[0]-dom.first()[0], dom.last()[1]-dom.first()[1]+halo, dom.last()[2]-dom.first()[2]};
-    coordinate_type py_last_global {                    dom.last()[0],                dom.last()[1]+halo,                dom.last()[2]};
-    my_first_global[1] = (((my_first_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
-    my_last_global[1]  = ((( my_last_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
-    mx_first_global[0] = (((mx_first_global[0]-m_first[0]) + (m_last[0]-m_first[0]+1)) % (m_last[0]-m_first[0]+1)) + m_first[0];
-    mx_last_global[0]  = ((( mx_last_global[0]-m_first[0]) + (m_last[0]-m_first[0]+1)) % (m_last[0]-m_first[0]+1)) + m_first[0];
-    px_first_global[0] = (((px_first_global[0]-m_first[0]) + (m_last[0]-m_first[0]+1)) % (m_last[0]-m_first[0]+1)) + m_first[0];
-    px_last_global[0]  = ((( px_last_global[0]-m_first[0]) + (m_last[0]-m_first[0]+1)) % (m_last[0]-m_first[0]+1)) + m_first[0];
-    py_first_global[1] = (((py_first_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
-    py_last_global[1]  = ((( py_last_global[1]-m_first[1]) + (m_last[1]-m_first[1]+1)) % (m_last[1]-m_first[1]+1)) + m_first[1];
-    return {
-      box2{ box{my_first_local, my_last_local}, box{my_first_global, my_last_global} },
-      box2{ box{mx_first_local, mx_last_local}, box{mx_first_global, mx_last_global} },
-      box2{ box{px_first_local, px_last_local}, box{px_first_global, px_last_global} },
-      box2{ box{py_first_local, py_last_local}, box{py_first_global, py_last_global} }
+    coordinate_t res = {dom.last()[0] - dom.first()[0],
+                        dom.last()[1] - dom.first()[1],
+                        dom.last()[2] - dom.first()[2]};
+
+    coordinate_t mx_first_local{-halo, 0, 0};
+    coordinate_t mx_last_local{-1, res[1], res[2]};
+    coordinate_t my_first_local{0, -halo, 0};
+    coordinate_t my_last_local{res[0], -1, res[2]};
+    coordinate_t px_first_local{res[0] + 1, 0, 0};
+    coordinate_t px_last_local{res[0] + halo, res[1], res[2]};
+    coordinate_t py_first_local{0, res[1] + 1, 0};
+    coordinate_t py_last_local{res[0], res[1] + halo, res[2]};
+
+    auto local_to_global = [&](coordinate_t const &c) {
+      coordinate_t c_global;
+      for (std::size_t i = 0; i < c.size(); ++i) {
+        auto size = m_last[1] - m_first[i] + 1;
+        c_global[i] =
+            (c[i] + dom.first()[i] - m_first[i] + size) % size + m_first[i];
+      }
+      return c_global;
     };
-    // clang-format on
+
+    coordinate_t mx_first_global = local_to_global(mx_first_local);
+    coordinate_t mx_last_global = local_to_global(mx_last_local);
+    coordinate_t my_first_global = local_to_global(my_first_local);
+    coordinate_t my_last_global = local_to_global(my_last_local);
+    coordinate_t px_first_global = local_to_global(px_first_local);
+    coordinate_t px_last_global = local_to_global(px_last_local);
+    coordinate_t py_first_global = local_to_global(py_first_local);
+    coordinate_t py_last_global = local_to_global(py_last_local);
+
+    return {box2{box{my_first_local, my_last_local},
+                 box{my_first_global, my_last_global}},
+            box2{box{mx_first_local, mx_last_local},
+                 box{mx_first_global, mx_last_global}},
+            box2{box{px_first_local, px_last_local},
+                 box{px_first_global, px_last_global}},
+            box2{box{py_first_local, py_last_local},
+                 box{py_first_global, py_last_global}}};
   }
 };
 
@@ -203,8 +174,7 @@ public: // member types
   using patterns_type = patterns_t;
   using patterns_ptr_t = std::unique_ptr<patterns_type>;
   using comm_obj_type =
-      ::gridtools::ghex::communication_object<communicator_t, grid_t,
-                                              domain_id_t>;
+      gt::ghex::communication_object<communicator_t, grid_t, domain_id_t>;
   using comm_obj_ptr_t = std::unique_ptr<comm_obj_type>;
   using domain_vec = std::vector<local_domain>;
   using context_ptr_t = std::unique_ptr<context_t>;
@@ -227,8 +197,7 @@ public:
       : m_hg{std::array<int, 3>{0, 0, 0},
              std::array<int, 3>{(int)global_resolution.x - 1,
                                 (int)global_resolution.y - 1,
-                                (int)global_resolution.z - 1},
-             halo},
+                                (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
         m_tokens(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
@@ -276,15 +245,44 @@ public:
       }
     }
 
-    m_context =
-        gridtools::ghex::tl::context_factory<transport, threading>::create(
-            num_sub_domains, MPI_COMM_WORLD);
+    m_context = gt::ghex::tl::context_factory<transport, threading>::create(
+        num_sub_domains, MPI_COMM_WORLD);
     m_patterns = std::make_unique<patterns_type>(
-        ::gridtools::ghex::make_pattern<::gridtools::ghex::structured::grid>(
-            *m_context, m_hg, m_domains));
+        gt::ghex::make_pattern<gt::ghex::structured::grid>(*m_context, m_hg,
+                                                           m_domains));
   }
 
-  sub_grid operator[](unsigned int i);
+  sub_grid operator[](unsigned int i) {
+    const auto &dom = m_domains[i];
+    if (!m_tokens[i])
+      m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
+    auto comm = m_context->get_communicator(*m_tokens[i]);
+    comm.barrier();
+
+    vec<std::size_t, 3> local_resolution = {
+        (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
+        (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
+        (std::size_t)(dom.last()[2] - dom.first()[2] + 1)};
+    vec<std::size_t, 2> local_offset = {(std::size_t)dom.first()[0],
+                                        (std::size_t)dom.first()[1]};
+
+    auto comm_obj = std::make_shared<comm_obj_type>(
+        gt::ghex::make_communication_object<patterns_type>(comm));
+
+    auto halo_exchange = [comm_obj = std::move(comm_obj),
+                          domain_id = dom.domain_id(),
+                          &patterns = *m_patterns](storage_t &storage) mutable {
+      auto field = gt::ghex::wrap_gt_field(domain_id, storage);
+
+#ifdef __CUDACC__
+      cudaStreamSynchronize(0);
+#endif
+
+      comm_obj->exchange(patterns(field)).wait();
+    };
+
+    return {local_resolution, local_offset, std::move(halo_exchange)};
+  }
 
   result collect_results(result r) const {
     result reduced;
@@ -302,38 +300,6 @@ public:
   }
 };
 
-sub_grid grid::impl::operator[](unsigned i) {
-  const auto &dom = m_domains[i];
-  if (!m_tokens[i])
-    m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
-  auto comm = m_context->get_communicator(*m_tokens[i]);
-  comm.barrier();
-
-  vec<std::size_t, 3> local_resolution = {
-      (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
-      (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
-      (std::size_t)(dom.last()[2] - dom.first()[2] + 1)};
-  vec<std::size_t, 2> local_offset = {(std::size_t)dom.first()[0],
-                                      (std::size_t)dom.first()[1]};
-
-  auto comm_obj = std::make_shared<comm_obj_type>(
-      gridtools::ghex::make_communication_object<patterns_type>(comm));
-
-  auto halo_exchange = [comm_obj = std::move(comm_obj),
-                        domain_id = dom.domain_id(),
-                        &patterns = *m_patterns](storage_t &storage) mutable {
-    auto field = ::gridtools::ghex::wrap_gt_field(domain_id, storage);
-
-#ifdef __CUDACC__
-    cudaStreamSynchronize(0);
-#endif
-
-    comm_obj->exchange(patterns(field)).wait();
-  };
-
-  return {local_resolution, local_offset, std::move(halo_exchange)};
-}
-
 grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
     : pimpl(std::make_unique<impl>(global_resolution, num_sub_domains)) {}
 
@@ -341,8 +307,8 @@ grid::~grid() {}
 
 sub_grid grid::operator[](unsigned id) { return (*pimpl)[id]; }
 
-result grid::collect_results(result const& r) const {
-    return pimpl->collect_results(r);
+result grid::collect_results(result const &r) const {
+  return pimpl->collect_results(r);
 }
 
 void runtime_register_options(world const &, options &options) {
