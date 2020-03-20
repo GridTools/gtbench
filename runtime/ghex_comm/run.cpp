@@ -87,42 +87,30 @@ struct halo_generator {
                         dom.last()[1] - dom.first()[1],
                         dom.last()[2] - dom.first()[2]};
 
-    coordinate_t mx_first_local{-halo, 0, 0};
-    coordinate_t mx_last_local{-1, res[1], res[2]};
-    coordinate_t my_first_local{0, -halo, 0};
-    coordinate_t my_last_local{res[0], -1, res[2]};
-    coordinate_t px_first_local{res[0] + 1, 0, 0};
-    coordinate_t px_last_local{res[0] + halo, res[1], res[2]};
-    coordinate_t py_first_local{0, res[1] + 1, 0};
-    coordinate_t py_last_local{res[0], res[1] + halo, res[2]};
+    box mx_local = {{-halo, 0, 0}, {-1, res[1], res[2]}};
+    box my_local = {{0, -halo, 0}, {res[0], -1, res[2]}};
+    box px_local = {{res[0] + 1, 0, 0}, {res[0] + halo, res[1], res[2]}};
+    box py_local = {{0, res[1] + 1, 0}, {res[0], res[1] + halo, res[2]}};
 
-    auto local_to_global = [&](coordinate_t const &c) {
-      coordinate_t c_global;
-      for (std::size_t i = 0; i < c.size(); ++i) {
-        auto size = m_last[1] - m_first[i] + 1;
-        c_global[i] =
-            (c[i] + dom.first()[i] - m_first[i] + size) % size + m_first[i];
-      }
-      return c_global;
+    auto local_to_global = [&](coordinate_t const &local, std::size_t axis) {
+      coordinate_t global = {local[0] + dom.first()[0],
+                             local[1] + dom.first()[1],
+                             local[2] + dom.first()[2]};
+      auto res = m_last[axis] - m_first[axis] + 1;
+      global[axis] = (global[axis] - m_first[axis] + res) % res + m_first[axis];
+      return global;
     };
 
-    coordinate_t mx_first_global = local_to_global(mx_first_local);
-    coordinate_t mx_last_global = local_to_global(mx_last_local);
-    coordinate_t my_first_global = local_to_global(my_first_local);
-    coordinate_t my_last_global = local_to_global(my_last_local);
-    coordinate_t px_first_global = local_to_global(px_first_local);
-    coordinate_t px_last_global = local_to_global(px_last_local);
-    coordinate_t py_first_global = local_to_global(py_first_local);
-    coordinate_t py_last_global = local_to_global(py_last_local);
+    auto make_local_global_pair = [&](box const &local, std::size_t axis) {
+      return box2{local,
+                  {local_to_global(local.first(), axis),
+                   local_to_global(local.last(), axis)}};
+    };
 
-    return {box2{box{my_first_local, my_last_local},
-                 box{my_first_global, my_last_global}},
-            box2{box{mx_first_local, mx_last_local},
-                 box{mx_first_global, mx_last_global}},
-            box2{box{px_first_local, px_last_local},
-                 box{px_first_global, px_last_global}},
-            box2{box{py_first_local, py_last_local},
-                 box{py_first_global, py_last_global}}};
+    return {make_local_global_pair(my_local, 1),
+            make_local_global_pair(mx_local, 0),
+            make_local_global_pair(px_local, 0),
+            make_local_global_pair(py_local, 1)};
   }
 };
 
@@ -281,7 +269,6 @@ public:
 #ifdef __CUDACC__
       cudaStreamSynchronize(0);
 #endif
-
       comm_obj->exchange(patterns(field)).wait();
     };
 
