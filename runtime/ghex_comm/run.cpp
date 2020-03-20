@@ -263,8 +263,9 @@ public:
         (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
         (std::size_t)(dom.last()[1] - dom.first()[1] + 1),
         (std::size_t)(dom.last()[2] - dom.first()[2] + 1)};
-    vec<std::size_t, 2> local_offset = {(std::size_t)dom.first()[0],
-                                        (std::size_t)dom.first()[1]};
+    vec<std::size_t, 3> local_offset = {(std::size_t)dom.first()[0],
+                                        (std::size_t)dom.first()[1],
+                                        (std::size_t)dom.first()[2]};
 
     auto comm_obj = std::make_shared<comm_obj_type>(
         gt::ghex::make_communication_object<patterns_type>(comm));

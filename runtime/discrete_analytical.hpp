@@ -19,8 +19,7 @@ namespace impl {
 template <class Analytical> struct discrete {
   Analytical analytical;
 
-  vec<std::size_t, 3> global_resolution, local_resolution;
-  vec<std::size_t, 2> local_offset;
+  vec<std::size_t, 3> global_resolution, local_resolution, local_offset;
 };
 
 template <class Analytical>
@@ -40,7 +39,7 @@ inline auto remap(discrete<Analytical> const &d, F f,
       [f = std::move(f), delta = delta(d), r = d.global_resolution,
        o = d.local_offset, staggered_offset](vec<long, 3> const &p, real_t t) {
         return f({(p.x - halo + o.x) * delta.x, (p.y - halo + o.y) * delta.y,
-                  (p.z + staggered_offset) * delta.z}, t);
+                  (p.z + o.z + staggered_offset) * delta.z}, t);
       };
 }
 
@@ -50,7 +49,7 @@ template <class Analytical>
 impl::discrete<Analytical>
 discretize(Analytical analytical, vec<std::size_t, 3> const &global_resolution,
            vec<std::size_t, 3> const &local_resolution,
-           vec<std::size_t, 2> const &local_offset) {
+           vec<std::size_t, 3> const &local_offset) {
   return {std::move(analytical), global_resolution, local_resolution,
           local_offset};
 }

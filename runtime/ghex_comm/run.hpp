@@ -32,8 +32,7 @@ struct world {
 };
 
 struct sub_grid {
-  vec<std::size_t, 3> resolution;
-  vec<std::size_t, 2> offset;
+  vec<std::size_t, 3> local_resolution, local_offset;
   std::function<void(storage_t &)> halo_exchanger;
 };
 
@@ -44,7 +43,7 @@ public:
 
   sub_grid operator[](unsigned i);
 
-  result collect_results(result const& r) const;
+  result collect_results(result const &r) const;
 
 private:
   struct impl;
@@ -70,7 +69,8 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   auto execution_func = [&](int id = 0) {
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
-        analytical, global_resolution, sub_grid.resolution, sub_grid.offset);
+        analytical, global_resolution, sub_grid.local_resolution,
+        sub_grid.local_offset);
 
     auto state = computation::init_state(exact);
     auto exchange = sub_grid.halo_exchanger;

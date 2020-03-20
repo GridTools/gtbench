@@ -30,7 +30,7 @@ result runtime_solve(world, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
   const auto exact = discrete_analytical::discretize(
-      analytical, global_resolution, global_resolution, {0, 0});
+      analytical, global_resolution, global_resolution, {0, 0, 0});
 
   auto state = computation::init_state(exact);
   auto exchange = exchange_func(global_resolution);

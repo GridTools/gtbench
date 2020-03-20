@@ -45,7 +45,7 @@ public:
   ~process_grid();
 
   vec<std::size_t, 3> local_resolution() const;
-  vec<std::size_t, 2> local_offset() const;
+  vec<std::size_t, 3> local_offset() const;
 
   std::function<void(storage_t &)>
   exchanger(storage_info_ijk_t const &sinfo) const;

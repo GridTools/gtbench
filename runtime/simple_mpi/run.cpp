@@ -67,6 +67,7 @@ struct process_grid::impl {
 
     local_offset.x = global_resolution.x * coords[0] / cart_dims[0];
     local_offset.y = global_resolution.y * coords[1] / cart_dims[1];
+    local_offset.z = 0;
 
     vec<std::size_t, 2> next_offset = {
         global_resolution.x * (coords[0] + 1) / cart_dims[0],
@@ -190,9 +191,7 @@ struct process_grid::impl {
     return reduced;
   }
 
-  vec<std::size_t, 3> local_resolution;
-  vec<std::size_t, 2> local_offset;
-  // cartesian communicator
+  vec<std::size_t, 3> local_resolution, local_offset;
   MPI_Comm comm_cart;
 };
 
@@ -205,7 +204,7 @@ process_grid::~process_grid() {}
 vec<std::size_t, 3> process_grid::local_resolution() const {
   return pimpl->local_resolution;
 }
-vec<std::size_t, 2> process_grid::local_offset() const {
+vec<std::size_t, 3> process_grid::local_offset() const {
   return pimpl->local_offset;
 }
 
