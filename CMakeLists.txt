@@ -43,9 +43,14 @@ target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--defa
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
-  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
   )
 target_link_libraries(common INTERFACE GridTools::gridtools)
+
+add_library(common_runtime INTERFACE)
+target_compile_definitions(common_runtime INTERFACE
+  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
+  )
+  target_link_libraries(common_runtime INTERFACE common)
 
 # Subdirectories
 add_subdirectory(common)
