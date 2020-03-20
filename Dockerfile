@@ -50,8 +50,8 @@ RUN git clone -b release_v1.1 https://github.com/GridTools/gridtools.git && \
     cd ../.. && \
     rm -rf gridtools
 
-ARG GTBENCH_COMMUNICATION_BACKEND=ghex_comm
-RUN if [ "${GTBENCH_COMMUNICATION_BACKEND}" = ghex_comm ]; then \
+ARG GTBENCH_RUNTIME=ghex_comm
+RUN if [ "${GTBENCH_RUNTIME}" = ghex_comm ]; then \
     git clone https://github.com/GridTools/GHEX.git && \
     mkdir -p GHEX/build && \
     cd GHEX/build && \
@@ -73,7 +73,7 @@ RUN cd /gtbench && \
     -DGridTools_DIR=/usr/local/lib/cmake \
     -DGHEX_DIR=/usr/local/lib/cmake \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
-    -DGTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND} \
+    -DGTBENCH_RUNTIME=${GTBENCH_RUNTIME} \
     .. && \
     make -j $(nproc) && \
     cp benchmark convergence_tests /usr/bin/ && \
