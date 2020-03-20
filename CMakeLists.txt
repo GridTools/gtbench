@@ -8,7 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # User options
-set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
+set(GTBENCH_BACKEND "mc" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
 
 set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
@@ -16,8 +16,6 @@ set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 
 set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node")
-
-set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
 
 find_package(GridTools 1.1 REQUIRED)
 
@@ -41,30 +39,6 @@ endfunction()
 
 add_library(common INTERFACE)
 target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
-
-# Global setup
-# if(GTBENCH_RUNTIME STREQUAL "ghex_comm")
-#   find_package(GHEX REQUIRED)
-#   target_link_libraries(common INTERFACE GHEX::ghexlib)
-#   if (GHEX_USE_UCP)
-#       target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_UCP)
-#       if (GHEX_USE_PMIX)
-#         target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_PMIX)
-#       endif()
-#   endif()
-#   target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
-# elseif(GTBENCH_RUNTIME STREQUAL "gcl")
-#   find_package(MPI REQUIRED COMPONENTS CXX)
-#   target_link_libraries(common INTERFACE MPI::MPI_CXX GridTools::gcl)
-#   target_compile_definitions(common INTERFACE GTBENCH_USE_GCL)
-# elseif(GTBENCH_RUNTIME STREQUAL "simple_mpi")
-#   find_package(MPI REQUIRED COMPONENTS CXX)
-#   target_link_libraries(common INTERFACE MPI::MPI_CXX)
-#   target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
-# endif()
-# if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
-#   target_compile_options(common INTERFACE -arch=${GTBENCH_CUDA_ARCH})
-# endif()
 
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
