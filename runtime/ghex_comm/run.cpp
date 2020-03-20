@@ -252,6 +252,9 @@ public:
                                                            m_domains));
   }
 
+  impl(impl const &) = delete;
+  impl &operator=(impl const &) = delete;
+
   sub_grid operator[](unsigned int i) {
     const auto &dom = m_domains[i];
     if (!m_tokens[i])

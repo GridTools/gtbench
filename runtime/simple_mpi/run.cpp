@@ -55,8 +55,7 @@ template <class T> struct halo_info { T lower, upper; };
 
 struct process_grid::impl {
   impl(vec<std::size_t, 3> const &global_resolution,
-       std::array<int, 2> cart_dims)
-      : comm_cart(MPI_COMM_NULL) {
+       std::array<int, 2> cart_dims) {
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     std::array<int, 2> periods = {1, 1};
@@ -82,10 +81,10 @@ struct process_grid::impl {
           "local local_resolution is smaller than halo size!");
   }
 
-  ~impl() {
-    if (comm_cart != MPI_COMM_NULL)
-      MPI_Comm_free(&comm_cart);
-  }
+  ~impl() { MPI_Comm_free(&comm_cart); }
+
+  impl(impl const &) = delete;
+  impl &operator=(impl const &) = delete;
 
   std::function<void(storage_t &)>
   exchanger(storage_info_ijk_t const &sinfo) const {

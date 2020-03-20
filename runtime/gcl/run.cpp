@@ -94,6 +94,9 @@ struct process_grid::impl {
 
   ~impl() { MPI_Comm_free(&comm_cart); }
 
+  impl(impl const &) = delete;
+  impl &operator=(impl const &) = delete;
+
   std::function<void(storage_t &)>
   exchanger(storage_info_ijk_t const &sinfo) const {
     auto pattern = std::make_shared<pattern_t>(
@@ -127,7 +130,6 @@ struct process_grid::impl {
   }
 
   vec<std::size_t, 3> local_resolution, local_offset;
-  // cartesian communicator
   MPI_Comm comm_cart;
 };
 
