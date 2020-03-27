@@ -22,22 +22,32 @@ env:
 
 script:
     - >
-      docker pull fthaler/gtbench:${backend}_${communication_backend};
-      docker build
-      --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+      if [ ${backend} = cuda ]; then
+      base=base_cuda;
+      build_from=nvidia/cuda:10.1-devel-ubuntu18.04;
+      else
+      base=base_cpu;
+      build_from=ubuntu:19.10;
+      fi;
+      docker pull fthaler/gtbench:${base} || true;
+      docker build -t fthaler/gtbench:${base}
+      --cache-from=fthaler/gtbench:${base}
+      --build-arg BUILD_FROM=${build_from}
+      docker/base
+      &&
+      docker build -t fthaler/gtbench:${backend}_${communication_backend}
+      --build-arg BASE=fthaler/gtbench:${base}
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
-      -t gtbench:${backend}_${communication_backend}
       .
       &&
       if [ ! $backend = cuda ]; then
-      docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
-      docker run --rm -it gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
+      docker run --rm -it fthaler/gtbench:${backend}_${communication_backend} /usr/bin/benchmark 10 &&
+      docker run --rm -it fthaler/gtbench:${backend}_${communication_backend} /usr/bin/convergence_tests;
       fi
       &&
       if [ ${TRAVIS_PULL_REQUEST} = false ] && [ ${TRAVIS_BRANCH} = master ]; then
       echo ${DOCKER_TOKEN} | docker login -u fthaler --password-stdin &&
-      docker tag gtbench:${backend}_${communication_backend} fthaler/gtbench:${backend}_${communication_backend} &&
       docker push fthaler/gtbench &&
       docker logout;
       fi
