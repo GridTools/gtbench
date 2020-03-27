@@ -97,9 +97,10 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   };
 
   std::vector<std::thread> threads;
-  threads.reserve(rt.num_threads);
-  for (int i = 0; i < rt.num_threads; ++i)
+  threads.reserve(rt.num_threads - 1);
+  for (int i = 1; i < rt.num_threads; ++i)
     threads.emplace_back(execution_func, i);
+  execution_func(0);
 
   for (auto &thread : threads)
     thread.join();
