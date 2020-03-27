@@ -1,5 +1,5 @@
 ARG BASE=base_cpu
-FROM fthaler/gtbench:base_cpu
+FROM fthaler/gtbench:${BASE}
 LABEL maintainer="Felix Thaler <thaler@cscs.ch>"
 
 COPY . /gtbench
