@@ -112,7 +112,7 @@ private:
     return *this;
   }
 
-  void print_help(std::string const &command) const;
+  std::string help_message(std::string const &command) const;
 
   std::vector<option> m_options;
 };
