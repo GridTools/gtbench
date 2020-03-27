@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
 
   options opts;
-  opts("domain-size", "size of domain along horizontal axes", "N");
+  opts("domain-size", "size of domain along horizontal axes", "NX NY", 2);
   opts("runs", "number of runs, reported is the median result", "RUNS", {101});
   runtime::register_options(rtw, opts);
 
@@ -34,16 +34,18 @@ int main(int argc, char **argv) {
 
   auto rt = runtime::init(rtw, args);
 
-  const std::size_t n = args.get<std::size_t>("domain-size");
-  const std::size_t runs = args.get<std::size_t>("runs");
+  const auto domain_size = args.get<std::array<std::size_t, 2>>("domain-size");
+  const std::size_t nx = domain_size[0];
+  const std::size_t ny = domain_size[1];
   const std::size_t nz = 60;
+  const std::size_t runs = args.get<std::size_t>("runs");
 
   auto fmt = [&]() -> std::ostream & {
     return std::cout << std::endl << std::setw(26) << std::left;
   };
 
   std::cout << "Running GTBENCH";
-  fmt() << "Domain size:" << n << "x" << n << "x" << nz;
+  fmt() << "Domain size:" << nx << "x" << ny << "x" << nz;
 
 #define GTBENCH_STR2(var) #var
 #define GTBENCH_STR(var) GTBENCH_STR2(var)
@@ -57,14 +59,14 @@ int main(int argc, char **argv) {
   const real_t diffusion_coeff = 0.05;
   auto exact = verification::analytical::repeat(
       verification::analytical::advection_diffusion{diffusion_coeff},
-      {(n + nz - 1) / nz, (n + nz - 1) / nz, 1});
+      {(nx + nz - 1) / nz, (ny + nz - 1) / nz, 1});
   auto stepper = numerics::advdiff_stepper(diffusion_coeff);
 
   // benchmark executions
   std::vector<runtime::result> results;
   for (std::size_t r = 0; r < runs; ++r) {
     results.push_back(
-        runtime::solve(rt, exact, stepper, {n, n, nz}, 0.1, 1e-3));
+        runtime::solve(rt, exact, stepper, {nx, ny, nz}, 0.1, 1e-3));
   }
 
   // computation and reporting of median and confidence interval times
@@ -82,10 +84,10 @@ int main(int argc, char **argv) {
               << "s)";
   }
 
-  fmt() << "Columns per second: " << (n * n / median_time);
+  fmt() << "Columns per second: " << (nx * ny / median_time);
   if (runs > 100) {
-    std::cout << " (95% confidence: " << (n * n / upper_time) << " - "
-              << (n * n / lower_time) << ")";
+    std::cout << " (95% confidence: " << (nx * ny / upper_time) << " - "
+              << (nx * ny / lower_time) << ")";
   }
   std::cout << std::endl;
 
