@@ -42,7 +42,7 @@ public:
 
 private:
   template <class T> static T parse_value(std::string const &value) {
-    std::stringstream value_stream(value);
+    std::ostringstream value_stream(value);
     T result;
     value_stream >> result;
     return result;
