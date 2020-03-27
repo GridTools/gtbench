@@ -94,7 +94,7 @@ public:
                       std::initializer_list<T> default_values) {
     std::vector<std::string> default_str_values;
     for (auto const &value : default_values) {
-      std::stringstream value_stream;
+      std::istringstream value_stream;
       value_stream << value;
       default_str_values.push_back(value_stream.str());
     }
