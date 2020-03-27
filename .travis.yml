@@ -50,3 +50,4 @@ script:
       docker push fthaler/gtbench &&
       docker logout;
       fi
+
