@@ -24,7 +24,7 @@ script:
     - >
       docker pull fthaler/gtbench:${backend}_${communication_backend}_base;
       docker build
-      --cache-from gtbench:${backend}_${communication_backend}_base
+      --cache-from fthaler/gtbench:${backend}_${communication_backend}_base
       --target base
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
@@ -33,7 +33,7 @@ script:
       .
       &&
       docker build
-      --cache-from gtbench:${backend}_${communication_backend}_base
+      --cache-from fthaler/gtbench:${backend}_${communication_backend}_base
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
       --build-arg GTBENCH_COMMUNICATION_BACKEND=${communication_backend}
