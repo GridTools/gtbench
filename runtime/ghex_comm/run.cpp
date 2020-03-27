@@ -303,7 +303,10 @@ result grid::collect_results(result const &r) const {
 }
 
 void runtime_register_options(world const &, options &options) {
-  options("sub-domains", "number of sub-domains", "S", {1});
+  options("sub-domains",
+          "number of sub-domains (each sub-domain computation runs in its own "
+          "thread)",
+          "S", {1});
 }
 
 runtime runtime_init(world const &world, options_values const &options) {
