@@ -42,7 +42,7 @@ public:
 
 private:
   template <class T> static T parse_value(std::string const &value) {
-    std::ostringstream value_stream(value);
+    std::istringstream value_stream(value);
     T result;
     value_stream >> result;
     return result;
@@ -94,7 +94,7 @@ public:
                       std::initializer_list<T> default_values) {
     std::vector<std::string> default_str_values;
     for (auto const &value : default_values) {
-      std::istringstream value_stream;
+      std::ostringstream value_stream;
       value_stream << value;
       default_str_values.push_back(value_stream.str());
     }
