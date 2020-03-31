@@ -22,22 +22,31 @@ env:
 
 script:
     - >
-      docker pull fthaler/gtbench:${backend}_${runtime};
+      docker pull fthaler/gtbench:${backend}_${runtime}_base;
       docker build
+      --cache-from fthaler/gtbench:${backend}_${runtime}_base
+      --target base
       --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
       --build-arg GTBENCH_BACKEND=${backend}
-      --build-arg GTBENCH_RUNTIME=${runtime}
-      -t gtbench:${backend}_${runtime}
+      --build-arg GTBENCH_runtime=${runtime}
+      -t fthaler/gtbench:${backend}_${runtime}_base
+      .
+      &&
+      docker build
+      --cache-from fthaler/gtbench:${backend}_${runtime}_base
+      --build-arg BUILD_FROM=$(if [ $backend = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+      --build-arg GTBENCH_BACKEND=${backend}
+      --build-arg GTBENCH_runtime=${runtime}
+      -t fthaler/gtbench:${backend}_${runtime}
       .
       &&
       if [ ! $backend = cuda ]; then
-      docker run --rm -it gtbench:${backend}_${runtime} /usr/bin/benchmark --domain-size 10 10 &&
-      docker run --rm -it gtbench:${backend}_${runtime} /usr/bin/convergence_tests;
+      docker run --rm -it fthaler/gtbench:${backend}_${runtime} /usr/bin/benchmark 10 &&
+      docker run --rm -it fthaler/gtbench:${backend}_${runtime} /usr/bin/convergence_tests;
       fi
       &&
       if [ ${TRAVIS_PULL_REQUEST} = false ] && [ ${TRAVIS_BRANCH} = master ]; then
       echo ${DOCKER_TOKEN} | docker login -u fthaler --password-stdin &&
-      docker tag gtbench:${backend}_${runtime} fthaler/gtbench:${backend}_${runtime} &&
       docker push fthaler/gtbench &&
       docker logout;
       fi
