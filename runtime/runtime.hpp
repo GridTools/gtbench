@@ -11,29 +11,28 @@
 
 #include "../common/options.hpp"
 #include "../common/types.hpp"
+#include "./computation.hpp"
+#include "./discrete_analytical.hpp"
+#include "./result.hpp"
 
 namespace runtime {
 
-struct result {
-  double error;
-  double time;
-};
+template <class RuntimeTag>
+void runtime_register_options(RuntimeTag, options &) {}
 
-template <class World>
-void runtime_register_options(World const &, options &) {}
-
-template <class World>
-World runtime_init(World const &world, options_values const &) {
-  return world;
+template <class RuntimeTag>
+RuntimeTag runtime_init(RuntimeTag, options_values const &) {
+  return {};
 }
 
-template <class Runtime> void register_options(Runtime &&rt, options &options) {
-  return runtime_register_options(std::forward<Runtime>(rt), options);
+template <class RuntimeTag>
+void register_options(RuntimeTag, options &options) {
+  return runtime_register_options(RuntimeTag{}, options);
 }
 
-template <class Runtime>
-decltype(auto) init(Runtime &&rt, options_values const &options) {
-  return runtime_init(std::forward<Runtime>(rt), options);
+template <class RuntimeTag>
+auto init(RuntimeTag, options_values const &options) {
+  return runtime_init(RuntimeTag{}, options);
 }
 
 template <class Runtime, class Analytical, class Stepper>

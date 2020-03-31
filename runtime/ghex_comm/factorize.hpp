@@ -16,7 +16,7 @@
 
 namespace runtime {
 
-namespace ghex_comm {
+namespace ghex_comm_impl {
 
 template <typename I> std::vector<I> factorize(I n) {
   std::vector<I> result;

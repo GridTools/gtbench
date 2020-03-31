@@ -15,14 +15,14 @@
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
+  constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
   options opts;
-  runtime::register_options(rtw, opts);
+  runtime::register_options(rt_tag, opts);
 
   auto args = opts.parse(argc, argv);
 
-  auto rt = runtime::init(rtw, args);
+  auto rt = runtime::init(rt_tag, args);
 
   auto run_tests = [&rt](std::string const &title, auto const &exact,
                          auto const &stepper) {

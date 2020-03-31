@@ -33,7 +33,56 @@ using transport = gt::ghex::tl::mpi_tag;
 
 namespace runtime {
 
-namespace ghex_comm {
+namespace ghex_comm_impl {
+
+runtime::runtime(int num_threads)
+    : m_scope(
+          [=] {
+            if (num_threads > 1) {
+              int provided;
+              MPI_Init_thread(nullptr, nullptr, MPI_THREAD_MULTIPLE, &provided);
+            } else {
+              MPI_Init(nullptr, nullptr);
+            }
+          },
+          MPI_Finalize),
+      m_num_threads(num_threads) {
+  int size, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (size > 1 && rank != 0)
+    std::cout.setstate(std::ios_base::failbit);
+
+#ifdef __CUDACC__
+  if (num_threads > 1) {
+    int device_count = 1;
+    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
+      throw std::runtime_error("cudaGetDeviceCount failed");
+    MPI_Comm shmem_comm;
+    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                        &shmem_comm);
+    int node_rank = 0;
+    MPI_Comm_rank(shmem_comm, &node_rank);
+    MPI_Comm_free(&shmem_comm);
+    const int device_id = node_rank % device_count;
+    if (cudaSetDevice(device_id) != cudaSuccess)
+      throw std::runtime_error("cudaSetDevice failed");
+    if (device_count > 1) {
+      for (int i = 0; i < device_count; ++i) {
+        if (i != device_id) {
+          int flag;
+          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
+            throw std::runtime_error("cudaDeviceAccessPeer failed");
+          if (flag) {
+            cudaDeviceEnablePeerAccess(i, 0);
+          }
+        }
+      }
+    }
+  }
+#endif
+}
 
 using domain_id_t = int;
 using dimension_t = std::integral_constant<int, 3>;
@@ -113,47 +162,6 @@ struct halo_generator {
             make_local_global_pair(py_local, 1)};
   }
 };
-
-world::world(int &argc, char **&argv) {
-  int provided;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-
-  int size, rank;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-#ifdef __CUDACC__
-  int device_count = 1;
-  if (cudaGetDeviceCount(&device_count) != cudaSuccess)
-    throw std::runtime_error("cudaGetDeviceCount failed");
-  MPI_Comm shmem_comm;
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                      &shmem_comm);
-  int node_rank = 0;
-  MPI_Comm_rank(shmem_comm, &node_rank);
-  MPI_Comm_free(&shmem_comm);
-  const int device_id = node_rank % device_count;
-  if (cudaSetDevice(device_id) != cudaSuccess)
-    throw std::runtime_error("cudaSetDevice failed");
-  if (device_count > 1) {
-    for (int i = 0; i < device_count; ++i) {
-      if (i != device_id) {
-        int flag;
-        if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-          throw std::runtime_error("cudaDeviceAccessPeer failed");
-        if (flag) {
-          cudaDeviceEnablePeerAccess(i, 0);
-        }
-      }
-    }
-  }
-#endif
-
-  if (size > 1 && rank != 0)
-    std::cout.setstate(std::ios_base::failbit);
-}
-
-world::~world() { MPI_Finalize(); }
 
 class grid::impl {
 public: // member types
@@ -292,27 +300,27 @@ public:
 };
 
 grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
-    : pimpl(std::make_unique<impl>(global_resolution, num_sub_domains)) {}
+    : m_impl(std::make_unique<impl>(global_resolution, num_sub_domains)) {}
 
 grid::~grid() {}
 
-sub_grid grid::operator[](unsigned id) { return (*pimpl)[id]; }
+sub_grid grid::operator[](unsigned id) { return (*m_impl)[id]; }
 
 result grid::collect_results(result const &r) const {
-  return pimpl->collect_results(r);
+  return m_impl->collect_results(r);
 }
 
-void runtime_register_options(world const &, options &options) {
+void runtime_register_options(ghex_comm, options &options) {
   options("sub-domains",
           "number of sub-domains (each sub-domain computation runs in its own "
           "thread)",
           "S", {1});
 }
 
-runtime runtime_init(world const &world, options_values const &options) {
-  return {world, options.get<int>("sub-domains")};
+runtime runtime_init(ghex_comm, options_values const &options) {
+  return runtime(options.get<int>("sub-domains"));
 }
 
-} // namespace ghex_comm
+} // namespace ghex_comm_impl
 
 } // namespace runtime

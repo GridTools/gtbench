@@ -12,7 +12,7 @@
 #include <gridtools/boundary_conditions/boundary.hpp>
 
 namespace runtime {
-namespace single_node {
+namespace single_node_impl {
 
 struct periodic_boundary {
   template <gt::sign I, gt::sign J, gt::sign K, typename DataField>

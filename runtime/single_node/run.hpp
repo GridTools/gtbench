@@ -11,22 +11,18 @@
 
 #include <chrono>
 
-#include "../computation.hpp"
-#include "../discrete_analytical.hpp"
 #include "../runtime.hpp"
 
 namespace runtime {
 
-namespace single_node {
+struct single_node {};
 
-struct world {
-  world(int, char **) {}
-};
+namespace single_node_impl {
 
 numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution);
 
 template <class Analytical, class Stepper>
-result runtime_solve(world, Analytical analytical, Stepper stepper,
+result runtime_solve(single_node, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
   const auto exact = discrete_analytical::discretize(
@@ -57,5 +53,8 @@ result runtime_solve(world, Analytical analytical, Stepper stepper,
   return {error, time};
 }
 
-}
+} // namespace single_node_impl
+
+using single_node_impl::runtime_solve;
+
 } // namespace runtime

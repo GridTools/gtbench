@@ -18,12 +18,12 @@
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  runtime::GTBENCH_RUNTIME::world rtw(argc, argv);
+  constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
   options opts;
   opts("domain-size", "size of domain along horizontal axes", "NX NY", 2);
   opts("runs", "number of runs, reported is the median result", "RUNS", {101});
-  runtime::register_options(rtw, opts);
+  runtime::register_options(rt_tag, opts);
 
   auto args = opts.parse(argc, argv);
 
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto rt = runtime::init(rtw, args);
+  auto rt = runtime::init(rt_tag, args);
 
   const auto domain_size = args.get<std::array<std::size_t, 2>>("domain-size");
   const std::size_t nx = domain_size[0];

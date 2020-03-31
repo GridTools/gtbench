@@ -13,27 +13,29 @@
 #include <memory>
 #include <thread>
 
-#include "../computation.hpp"
-#include "../discrete_analytical.hpp"
+#include "../function_scope.hpp"
 #include "../runtime.hpp"
 
 namespace runtime {
 
-namespace ghex_comm {
+struct ghex_comm {};
 
-struct world {
-  world(int &argc, char **&argv);
-  world(world const &) = delete;
-  world(world &&) = delete;
-  ~world();
+namespace ghex_comm_impl {
 
-  world &operator=(world const &) = delete;
-  world &operator=(world &&) = delete;
+void runtime_register_options(ghex_comm, options &options);
+
+struct runtime {
+  explicit runtime(int num_threads);
+
+  function_scope m_scope;
+  int m_num_threads;
 };
 
+runtime runtime_init(ghex_comm, options_values const &options);
+
 struct sub_grid {
-  vec<std::size_t, 3> local_resolution, local_offset;
-  std::function<void(storage_t &)> halo_exchanger;
+  vec<std::size_t, 3> m_local_resolution, m_local_offset;
+  std::function<void(storage_t &)> m_halo_exchanger;
 };
 
 class grid {
@@ -47,33 +49,24 @@ public:
 
 private:
   struct impl;
-  std::unique_ptr<impl> pimpl;
+  std::unique_ptr<impl> m_impl;
 };
-
-void runtime_register_options(world const &, options &options);
-
-struct runtime {
-  world const &w;
-  int num_threads;
-};
-
-runtime runtime_init(world const &, options_values const &options);
 
 template <class Analytical, class Stepper>
 result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
-  grid comm_grid = {global_resolution, rt.num_threads};
+  grid comm_grid = {global_resolution, rt.m_num_threads};
 
-  std::vector<result> results(rt.num_threads);
+  std::vector<result> results(rt.m_num_threads);
   auto execution_func = [&](int id = 0) {
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
-        analytical, global_resolution, sub_grid.local_resolution,
-        sub_grid.local_offset);
+        analytical, global_resolution, sub_grid.m_local_resolution,
+        sub_grid.m_local_offset);
 
     auto state = computation::init_state(exact);
-    auto exchange = sub_grid.halo_exchanger;
+    auto exchange = sub_grid.m_halo_exchanger;
     auto step = stepper(state, exchange);
 
     if (tmax > 0)
@@ -97,8 +90,8 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   };
 
   std::vector<std::thread> threads;
-  threads.reserve(rt.num_threads - 1);
-  for (int i = 1; i < rt.num_threads; ++i)
+  threads.reserve(rt.m_num_threads - 1);
+  for (int i = 1; i < rt.m_num_threads; ++i)
     threads.emplace_back(execution_func, i);
   execution_func(0);
 
@@ -114,6 +107,10 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   return comm_grid.collect_results(local_result);
 }
 
-} // namespace ghex_comm
+} // namespace ghex_comm_impl
+
+using ghex_comm_impl::runtime_init;
+using ghex_comm_impl::runtime_register_options;
+using ghex_comm_impl::runtime_solve;
 
 } // namespace runtime
