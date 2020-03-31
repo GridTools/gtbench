@@ -41,7 +41,7 @@ script:
       .
       &&
       if [ ! $backend = cuda ]; then
-      docker run --rm -it fthaler/gtbench:${backend}_${runtime} /usr/bin/benchmark 10 &&
+      docker run --rm -it fthaler/gtbench:${backend}_${runtime} /usr/bin/benchmark --domain-size 10 10 &&
       docker run --rm -it fthaler/gtbench:${backend}_${runtime} /usr/bin/convergence_tests;
       fi
       &&
