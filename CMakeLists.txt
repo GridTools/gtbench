@@ -15,7 +15,7 @@ set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 
 set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
-set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node")
+set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
 find_package(GridTools 1.1 REQUIRED)
 
