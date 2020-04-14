@@ -35,7 +35,7 @@ namespace runtime {
 
 namespace ghex_comm_impl {
 
-runtime::runtime(int num_threads)
+runtime::runtime(int num_threads, std::vector<int> device_mapping)
     : m_scope(
           [=] {
             if (num_threads > 1) {
@@ -46,7 +46,7 @@ runtime::runtime(int num_threads)
             }
           },
           MPI_Finalize),
-      m_num_threads(num_threads) {
+      m_num_threads(num_threads), m_device_mapping(num_threads, 0) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -55,32 +55,18 @@ runtime::runtime(int num_threads)
     std::cout.setstate(std::ios_base::failbit);
 
 #ifdef __CUDACC__
-  if (num_threads > 1) {
-    int device_count = 1;
-    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
-      throw std::runtime_error("cudaGetDeviceCount failed");
-    MPI_Comm shmem_comm;
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                        &shmem_comm);
-    int node_rank = 0;
-    MPI_Comm_rank(shmem_comm, &node_rank);
-    MPI_Comm_free(&shmem_comm);
-    const int device_id = node_rank % device_count;
-    if (cudaSetDevice(device_id) != cudaSuccess)
-      throw std::runtime_error("cudaSetDevice failed");
-    if (device_count > 1) {
-      for (int i = 0; i < device_count; ++i) {
-        if (i != device_id) {
-          int flag;
-          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-            throw std::runtime_error("cudaDeviceAccessPeer failed");
-          if (flag) {
-            cudaDeviceEnablePeerAccess(i, 0);
-          }
-        }
-      }
-    }
+  if (device_mapping.size() > 0) {
+    if (device_mapping.size() != size * num_threads)
+      throw std::runtime_error("device mapping has wrong size");
+    m_device_mapping = device_mapping;
+  } else {
+    m_device_mapping.resize(size * m_num_threads);
+    std::iota(m_device_mapping.begin(), m_device_mapping.end(), 0);
   }
+  m_device_mapping =
+      std::vector<int>(m_device_mapping.begin() + rank * num_threads,
+                       m_device_mapping.begin() + (rank + 1) * num_threads);
+
 #endif
 }
 
@@ -315,10 +301,35 @@ void runtime_register_options(ghex_comm, options &options) {
           "number of sub-domains (each sub-domain computation runs in its own "
           "thread)",
           "S", {1});
+#ifdef __CUDACC__
+  options("device-mapping",
+          "node device mapping: device id per sub-domain in the format "
+          "I_0:I_1:...:I_(N-1) "
+          "where I_i are cuda device ids "
+          "and N = #ranks-per-node x S",
+          "M");
+#endif
 }
 
 runtime runtime_init(ghex_comm, options_values const &options) {
+#ifdef __CUDACC__
+  std::vector<int> device_mapping;
+  if (options.has("device-mapping")) {
+    auto s = options.get<std::string>("device-mapping");
+    const std::string delimiter = ":";
+    if (s.back() != ':')
+      s.push_back(':');
+    std::size_t pos = 0;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+      if (pos > 0u)
+        device_mapping.push_back(std::abs(std::stoi(s.substr(0, pos))));
+      s.erase(0, pos + delimiter.length());
+    }
+  }
+  return runtime(options.get<int>("sub-domains"), device_mapping);
+#else
   return runtime(options.get<int>("sub-domains"));
+#endif
 }
 
 } // namespace ghex_comm_impl

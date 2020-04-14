@@ -12,7 +12,9 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <vector>
 
+#include "../device/set_device.hpp"
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
@@ -25,10 +27,12 @@ namespace ghex_comm_impl {
 void runtime_register_options(ghex_comm, options &options);
 
 struct runtime {
-  explicit runtime(int num_threads);
+  explicit runtime(int num_threads,
+                   std::vector<int> device_mapping = std::vector<int>{});
 
   function_scope m_scope;
   int m_num_threads;
+  std::vector<int> m_device_mapping;
 };
 
 runtime runtime_init(ghex_comm, options_values const &options);
@@ -60,6 +64,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
 
   std::vector<result> results(rt.m_num_threads);
   auto execution_func = [&](int id = 0) {
+    set_device(rt.m_device_mapping[id]);
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
         analytical, global_resolution, sub_grid.m_local_resolution,
@@ -93,6 +98,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   threads.reserve(rt.m_num_threads - 1);
   for (int i = 1; i < rt.m_num_threads; ++i)
     threads.emplace_back(execution_func, i);
+  set_device(rt.m_device_mapping[0]);
   execution_func(0);
 
   for (auto &thread : threads)
