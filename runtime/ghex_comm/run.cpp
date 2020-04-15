@@ -193,38 +193,12 @@ private: // members
   vec<std::size_t, 2> m_global_resolution;
   int m_size;
   int m_rank;
-  // std::array<int, 2> m_cart_dims;
-  // std::array<int, 2> m_thread_cart_dims;
   coordinate_type m_first;
   coordinate_type m_last;
   domain_vec m_domains;
   context_ptr_t m_context;
   patterns_ptr_t m_patterns;
   std::vector<std::unique_ptr<thread_token>> m_tokens;
-
-  /*template <typename I, typename J, typename K, std::size_t N>
-  std::array<std::vector<J>, N> static divide_domain(
-      I n, const std::array<J, N> &sizes, const std::array<K, N> &factors) {
-    // compute the sub-domain size per dimension
-    std::array<double, N> dx;
-    for (std::size_t i = 0; i < N; ++i) {
-      dx[i] = sizes[i] / (double)factors[i];
-      while (dx[i] * factors[i] < sizes[i])
-        dx[i] += std::numeric_limits<double>::epsilon() * sizes[i];
-    }
-    // make a vector of sub-domains per dimension
-    std::array<std::vector<J>, N> result;
-    for (std::size_t i = 0; i < N; ++i) {
-      result[i].resize(factors[i], 1);
-      for (I j = 0; j < factors[i]; ++j) {
-        const I l = j * dx[i];
-        const I u = (j + 1) * dx[i];
-        result[i][j] = u - l;
-      }
-      std::sort(result[i].begin(), result[i].end());
-    }
-    return result;
-  }*/
 
 public:
   impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
@@ -234,7 +208,6 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
-        // m_cart_dims{cart_dims}, m_thread_cart_dims{thread_cart_dims},
         m_tokens(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
