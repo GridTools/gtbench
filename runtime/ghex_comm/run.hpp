@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -27,11 +28,14 @@ namespace ghex_comm_impl {
 void runtime_register_options(ghex_comm, options &options);
 
 struct runtime {
-  explicit runtime(int num_threads,
+  explicit runtime(int num_threads, std::array<int, 2> cart_dims,
+                   std::array<int, 2> thread_cart_dims,
                    std::vector<int> device_mapping = std::vector<int>{});
 
   function_scope m_scope;
   int m_num_threads;
+  std::array<int, 2> m_cart_dims;
+  std::array<int, 2> m_thread_cart_dims;
   std::vector<int> m_device_mapping;
 };
 
@@ -44,7 +48,8 @@ struct sub_grid {
 
 class grid {
 public:
-  grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains);
+  grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
+       std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims);
   ~grid();
 
   sub_grid operator[](unsigned i);
@@ -60,7 +65,8 @@ template <class Analytical, class Stepper>
 result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
-  grid comm_grid = {global_resolution, rt.m_num_threads};
+  grid comm_grid = {global_resolution, rt.m_num_threads, rt.m_cart_dims,
+                    rt.m_thread_cart_dims};
 
   std::vector<result> results(rt.m_num_threads);
   auto execution_func = [&](int id = 0) {
