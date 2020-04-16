@@ -11,6 +11,15 @@
 
 namespace runtime {
 
+<<<<<<< HEAD:runtime/device/set_device.hpp
 int set_device(int);
 
 } // namespace runtime
+=======
+struct result {
+  double error;
+  double time;
+};
+
+} // namespace runtime
+>>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f:runtime/result.hpp
