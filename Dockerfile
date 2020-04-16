@@ -59,7 +59,7 @@ RUN git clone https://github.com/GridTools/GHEX.git && \
 
 FROM base
 ARG GTBENCH_BACKEND=mc
-ARG GTBENCH_COMMUNICATION_BACKEND=ghex_comm
+ARG GTBENCH_RUNTIME=ghex_comm
 COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
@@ -67,7 +67,7 @@ RUN cd /gtbench && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
-    -DGTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND} \
+    -DGTBENCH_RUNTIME=${GTBENCH_RUNTIME} \
     .. && \
     make -j $(nproc) && \
     cp benchmark convergence_tests /usr/bin/ && \

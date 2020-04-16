@@ -103,13 +103,13 @@ There are three GPU targets available, which are set at when configuring GridToo
 3. `HIPCC-AMDGPU` AMD HIP compilation using AMD’s HIP-Clang compiler. **Note**: the deprecated *HCC* compiler is not supported.
 
 
-### Selecting the Communication Backend
+### Selecting the Runtime
 
-The benchmark implementation brings several backends for distributed parallelism. These can be selected using the CMake variable `GTBENCH_COMMUNICATION_BACKEND`:
+The benchmark implementation brings several runtimes, implementing different scheduling and communication strategies. These can be selected using the CMake variable `GTBENCH_RUNTIME`:
 ```console
-$ cmake -DGTBENCH_COMMUNICATION_BACKEND=<COMM_BACKEND> ..
+$ cmake -DGTBENCH_RUNTIME=<RUNTIME> ..
 ```
-where `COMM_BACKEND` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`. `simple_mpi` and `single_node` are for debugging purposes only.
+where `RUNTIME` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`. `simple_mpi` and `single_node` are for debugging purposes only.
 - The `single_node` options is useful for performing "single-node" tests to understand kernel performance.
 - The `simple_mpi` implementation uses a simple MPI 2 sided communication for halo exchanges.
 - The `gcl` implementation uses a optimized MPI based communication library shipped with [GridTools](https://gridtools.github.io/gridtools/latest/user_manual/user_manual.html#halo-exchanges).
@@ -118,16 +118,16 @@ where `COMM_BACKEND` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`. `si
 
 #### Selecting the Transport Layer
 
-If the `ghex_comm` communication backend has been selected, the underlying transport layer will be either 
+If the `ghex_comm` runtime has been selected, the underlying transport layer will be either
 *UCX* or *MPI*. The behaviour can be chosen by defining the the CMake boolean variables `GHEX_USE_UCP` when configuring the GHEX library, see above.
 
 ## Running the Benchmark
 
 ### Benchmark
 
-The benchmark executable takes a single command line parameter, the global horizontal domain size `N`. The simulation will then be performed on a total domain size of `N×N×60` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun` or similar):
+The benchmark executable takes a single command line parameter, the global horizontal domain size `N`. The simulation will then be performed on a total domain size of `NX×NY×60` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun` or similar):
 ```console
-$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark <N>
+$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <NX> <NY>
 ```
 
 Example output of a single-node benchmark run:
@@ -136,39 +136,34 @@ Running GTBENCH
 Domain size:             100x100x60
 Floating-point type:     float
 GridTools backend:       cuda
-Communication backend:   single_node
+Runtime:                 single_node
 Median time:             0.198082s (95% confidence: 0.19754s - 0.200368s)
 Columns per second:      50484.1 (95% confidence: 49908.1 - 50622.6)
 ```
 
 For testing, the number of runs (and thus the run time) can be reduced as follows:
 ```console
-$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark <N> <RUNS>
+$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <N> <NY> --runs <RUNS>
 ```
 For example, run only once:
 ```console
-$ mpi_launcher ./benchmark 24000 1
+$ mpi_launcher ./benchmark --domain-size 24000 24000 --runs 1
 Running GTBENCH
 Domain size:             24000x24000x60
 Floating-point type:     float
 GridTools backend:       cuda
-Communication backend:   ghex_comm
+Runtime:                 ghex_comm
 Median time:             8.97857s
 Columns per second:      6.41528e+07
 ```
 Note that no confidence intervals are given in this case, but they are required for the final benchmark runs.
 
-Provided the `ghex_comm` communication backend was selected, the executable of the benchmark will accept an additional 
-command line option:
-```console
-$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark <N> <RUNS> <NUM_THREADS>
-```
-This will determine the number of threads (and, thus, sub-domains) per rank.
+Note that there are additional per-runtime command line options. Use `./benchmark --help` to list all available options.
 
 
 ### Convergence Tests
 
-To make sure that the solver converges to the analytical solution of the advection-diffusion equation, we provide convergence tests. They might be helpful for evaluating correctness after possible code changes in the computation or communication backends, or the compiler optimization level. To run them, use:
+To make sure that the solver converges to the analytical solution of the advection-diffusion equation, we provide convergence tests. They might be helpful for evaluating correctness after possible code changes in the computation or runtime, or the compiler optimization level. To run them, use:
 ```console
 $ mpi_launcher <LAUNCHER_OPTIONS> ./convergence_tests
 ```

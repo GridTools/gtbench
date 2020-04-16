@@ -9,16 +9,11 @@
  */
 #pragma once
 
-#include "./single_node.hpp"
+namespace runtime {
 
-#ifdef GTBENCH_USE_GHEX
-#include "./ghex_comm.hpp"
-#endif
+struct result {
+  double error;
+  double time;
+};
 
-#ifdef GTBENCH_USE_GCL
-#include "./gcl.hpp"
-#endif
-
-#ifdef GTBENCH_USE_SIMPLE_MPI
-#include "./simple_mpi.hpp"
-#endif
+} // namespace runtime

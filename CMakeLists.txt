@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.5)
-project(lumi-benchmark LANGUAGES CXX)
+project(GTBench LANGUAGES CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -8,16 +8,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # User options
-set(GTBENCH_BACKEND "x86" CACHE STRING "Benchmark backend")
+set(GTBENCH_BACKEND "mc" CACHE STRING "Benchmark backend")
 set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
 
 set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 
-set(GTBENCH_COMMUNICATION_BACKEND "ghex_comm" CACHE STRING "Communication backend")
-set_property(CACHE GTBENCH_COMMUNICATION_BACKEND PROPERTY STRINGS "ghex_comm" "single_node" "simple_mpi" "gcl")
-
-set(GTBENCH_CUDA_ARCH "sm_60" CACHE STRING "Cuda architecture")
+set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
+set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node")
 
 find_package(GridTools 1.1 REQUIRED)
 
@@ -42,46 +40,28 @@ endfunction()
 add_library(common INTERFACE)
 target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
 
-# Global setup
-if(GTBENCH_COMMUNICATION_BACKEND STREQUAL "ghex_comm")
-  find_package(GHEX REQUIRED)
-  target_link_libraries(common INTERFACE GHEX::ghexlib)
-  if (GHEX_USE_UCP)
-      target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_UCP)
-      if (GHEX_USE_PMIX)
-        target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX_PMIX)
-      endif()
-  endif()
-  target_compile_definitions(common INTERFACE GTBENCH_USE_GHEX)
-elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "gcl")
-  find_package(MPI REQUIRED COMPONENTS CXX)
-  target_link_libraries(common INTERFACE MPI::MPI_CXX GridTools::gcl)
-  target_compile_definitions(common INTERFACE GTBENCH_USE_GCL)
-elseif(GTBENCH_COMMUNICATION_BACKEND STREQUAL "simple_mpi")
-  find_package(MPI REQUIRED COMPONENTS CXX)
-  target_link_libraries(common INTERFACE MPI::MPI_CXX)
-  target_compile_definitions(common INTERFACE GTBENCH_USE_SIMPLE_MPI)
-endif()
-if(GTBENCH_BACKEND STREQUAL "cuda" AND GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA")
-  target_compile_options(common INTERFACE -arch=${GTBENCH_CUDA_ARCH})
-endif()
-
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
-  GTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND}
   )
 target_link_libraries(common INTERFACE GridTools::gridtools)
 
+add_library(common_runtime INTERFACE)
+target_compile_definitions(common_runtime INTERFACE
+  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
+  )
+  target_link_libraries(common_runtime INTERFACE common)
+
 # Subdirectories
-add_subdirectory(communication)
+add_subdirectory(common)
+add_subdirectory(runtime)
 add_subdirectory(numerics)
 
 # Current directory
 compile_as_cuda(convergence_tests.cpp benchmark.cpp)
 
 add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion communication)
+target_link_libraries(convergence_tests advection diffusion options runtime)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion communication)
+target_link_libraries(benchmark advection diffusion options runtime)
