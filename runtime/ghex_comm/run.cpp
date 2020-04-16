@@ -85,8 +85,9 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
   MPI_Comm shmem_comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &shmem_comm);
-  int shmem_size;
+  int shmem_size, shmem_rank;
   MPI_Comm_size(shmem_comm, &shmem_size);
+  MPI_Comm_size(shmem_comm, &shmem_rank);
   MPI_Comm_free(&shmem_comm);
   if (!device_mapping.empty()) {
     if (device_mapping.size() != shmem_size * num_threads)
@@ -96,9 +97,9 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
     m_device_mapping.resize(shmem_size * m_num_threads);
     std::iota(m_device_mapping.begin(), m_device_mapping.end(), 0);
   }
-  m_device_mapping =
-      std::vector<int>(m_device_mapping.begin() + rank * num_threads,
-                       m_device_mapping.begin() + (rank + 1) * num_threads);
+  m_device_mapping = std::vector<int>(
+      m_device_mapping.begin() + shmem_rank * num_threads,
+      m_device_mapping.begin() + (shmem_rank + 1) * num_threads);
 #endif
 }
 
