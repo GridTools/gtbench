@@ -9,18 +9,11 @@
  */
 
 #include "./run.hpp"
-<<<<<<< HEAD
 #include "./factorize.hpp"
 
 #include <mpi.h>
 #include <numeric>
 #include <regex>
-=======
-
-#include <numeric>
-
-#include <mpi.h>
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 
 #include <ghex/communication_object_2.hpp>
 #include <ghex/glue/gridtools/field.hpp>
@@ -37,22 +30,13 @@ using transport = gt::ghex::tl::ucx_tag;
 using transport = gt::ghex::tl::mpi_tag;
 #endif
 
-<<<<<<< HEAD
-=======
-#include "./factorize.hpp"
-
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 namespace runtime {
 
 namespace ghex_comm_impl {
 
-<<<<<<< HEAD
 runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
                  std::array<int, 2> thread_cart_dims,
                  std::vector<int> const &device_mapping)
-=======
-runtime::runtime(int num_threads)
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
     : m_scope(
           [=] {
             if (num_threads > 1) {
@@ -63,12 +47,8 @@ runtime::runtime(int num_threads)
             }
           },
           MPI_Finalize),
-<<<<<<< HEAD
       m_num_threads(num_threads), m_cart_dims(cart_dims),
       m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0) {
-=======
-      m_num_threads(num_threads) {
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -76,7 +56,6 @@ runtime::runtime(int num_threads)
   if (size > 1 && rank != 0)
     std::cout.setstate(std::ios_base::failbit);
 
-<<<<<<< HEAD
   MPI_Dims_create(size, 2, m_cart_dims.data());
   if (m_cart_dims[0] * m_cart_dims[1] != size) {
     throw std::runtime_error(
@@ -120,36 +99,6 @@ runtime::runtime(int num_threads)
   m_device_mapping =
       std::vector<int>(m_device_mapping.begin() + rank * num_threads,
                        m_device_mapping.begin() + (rank + 1) * num_threads);
-
-=======
-#ifdef __CUDACC__
-  if (num_threads > 1) {
-    int device_count = 1;
-    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
-      throw std::runtime_error("cudaGetDeviceCount failed");
-    MPI_Comm shmem_comm;
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                        &shmem_comm);
-    int node_rank = 0;
-    MPI_Comm_rank(shmem_comm, &node_rank);
-    MPI_Comm_free(&shmem_comm);
-    const int device_id = node_rank % device_count;
-    if (cudaSetDevice(device_id) != cudaSuccess)
-      throw std::runtime_error("cudaSetDevice failed");
-    if (device_count > 1) {
-      for (int i = 0; i < device_count; ++i) {
-        if (i != device_id) {
-          int flag;
-          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-            throw std::runtime_error("cudaDeviceAccessPeer failed");
-          if (flag) {
-            cudaDeviceEnablePeerAccess(i, 0);
-          }
-        }
-      }
-    }
-  }
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 #endif
 }
 
@@ -258,12 +207,8 @@ private: // members
   std::vector<std::unique_ptr<thread_token>> m_tokens;
 
 public:
-<<<<<<< HEAD
   impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
        std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims)
-=======
-  impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
       : m_hg{std::array<int, 3>{0, 0, 0},
              std::array<int, 3>{(int)global_resolution.x - 1,
                                 (int)global_resolution.y - 1,
@@ -276,16 +221,10 @@ public:
     std::array<int, 2> m_coords;
 
     // divide the domain into m_size sub-domains
-<<<<<<< HEAD
     const auto div_ranks = divide_domain(
         m_size,
         std::array<std::size_t, 2>{global_resolution.x, global_resolution.y},
         cart_dims);
-=======
-    const auto div_ranks =
-        divide_domain(m_size, std::array<std::size_t, 2>{global_resolution.x,
-                                                         global_resolution.y});
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
     // compute the offsets
     std::array<std::vector<std::size_t>, 2> offsets_ranks = {
         compute_offsets(div_ranks[0], 0), compute_offsets(div_ranks[1], 0)};
@@ -302,12 +241,8 @@ public:
     const auto div_threads = divide_domain(
         num_sub_domains,
         std::array<std::size_t, 2>{(std::size_t)(m_last[0] - m_first[0] + 1),
-<<<<<<< HEAD
                                    (std::size_t)(m_last[1] - m_first[1] + 1)},
         thread_cart_dims);
-=======
-                                   (std::size_t)(m_last[1] - m_first[1] + 1)});
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
     // compute the offsets
     std::array<std::vector<std::size_t>, 2> offsets_threads = {
         compute_offsets(div_threads[0], m_first[0]),
@@ -385,15 +320,10 @@ public:
   }
 };
 
-<<<<<<< HEAD
 grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
            std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims)
     : m_impl(std::make_unique<impl>(global_resolution, num_sub_domains,
                                     cart_dims, thread_cart_dims)) {}
-=======
-grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
-    : m_impl(std::make_unique<impl>(global_resolution, num_sub_domains)) {}
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 
 grid::~grid() {}
 
@@ -404,15 +334,11 @@ result grid::collect_results(result const &r) const {
 }
 
 void runtime_register_options(ghex_comm, options &options) {
-<<<<<<< HEAD
   options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
-=======
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
   options("sub-domains",
           "number of sub-domains (each sub-domain computation runs in its own "
           "thread)",
           "S", {1});
-<<<<<<< HEAD
   options("thread-cart-dims",
           "dimensons of cartesian decomposition "
           "among sub-domains",
@@ -454,12 +380,6 @@ runtime runtime_init(ghex_comm, options_values const &options) {
 #else
   return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims);
 #endif
-=======
-}
-
-runtime runtime_init(ghex_comm, options_values const &options) {
-  return runtime(options.get<int>("sub-domains"));
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 }
 
 } // namespace ghex_comm_impl

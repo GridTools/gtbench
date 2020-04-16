@@ -9,7 +9,6 @@
  */
 #pragma once
 
-<<<<<<< HEAD
 #include <array>
 #include <chrono>
 #include <memory>
@@ -17,12 +16,6 @@
 #include <vector>
 
 #include "../device/set_device.hpp"
-=======
-#include <chrono>
-#include <memory>
-#include <thread>
-
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
@@ -35,7 +28,6 @@ namespace ghex_comm_impl {
 void runtime_register_options(ghex_comm, options &options);
 
 struct runtime {
-<<<<<<< HEAD
   explicit runtime(int num_threads, std::array<int, 2> cart_dims,
                    std::array<int, 2> thread_cart_dims,
                    const std::vector<int> &device_mapping = std::vector<int>{});
@@ -45,12 +37,6 @@ struct runtime {
   std::array<int, 2> m_cart_dims;
   std::array<int, 2> m_thread_cart_dims;
   std::vector<int> m_device_mapping;
-=======
-  explicit runtime(int num_threads);
-
-  function_scope m_scope;
-  int m_num_threads;
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
 };
 
 runtime runtime_init(ghex_comm, options_values const &options);
@@ -62,12 +48,8 @@ struct sub_grid {
 
 class grid {
 public:
-<<<<<<< HEAD
   grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
        std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims);
-=======
-  grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains);
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
   ~grid();
 
   sub_grid operator[](unsigned i);
@@ -83,19 +65,12 @@ template <class Analytical, class Stepper>
 result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
-<<<<<<< HEAD
   grid comm_grid = {global_resolution, rt.m_num_threads, rt.m_cart_dims,
                     rt.m_thread_cart_dims};
 
   std::vector<result> results(rt.m_num_threads);
   auto execution_func = [&](int id = 0) {
     set_device(rt.m_device_mapping[id]);
-=======
-  grid comm_grid = {global_resolution, rt.m_num_threads};
-
-  std::vector<result> results(rt.m_num_threads);
-  auto execution_func = [&](int id = 0) {
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
         analytical, global_resolution, sub_grid.m_local_resolution,
@@ -129,10 +104,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   threads.reserve(rt.m_num_threads - 1);
   for (int i = 1; i < rt.m_num_threads; ++i)
     threads.emplace_back(execution_func, i);
-<<<<<<< HEAD
   set_device(rt.m_device_mapping[0]);
-=======
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
   execution_func(0);
 
   for (auto &thread : threads)
@@ -153,8 +125,4 @@ using ghex_comm_impl::runtime_init;
 using ghex_comm_impl::runtime_register_options;
 using ghex_comm_impl::runtime_solve;
 
-<<<<<<< HEAD
 } // namespace runtime
-=======
-} // namespace runtime
->>>>>>> 973387f9f221311817b1fab6a38088622cf12a0f
