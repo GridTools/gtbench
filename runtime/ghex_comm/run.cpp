@@ -87,7 +87,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
                       &shmem_comm);
   int shmem_size, shmem_rank;
   MPI_Comm_size(shmem_comm, &shmem_size);
-  MPI_Comm_size(shmem_comm, &shmem_rank);
+  MPI_Comm_rank(shmem_comm, &shmem_rank);
   MPI_Comm_free(&shmem_comm);
   if (!device_mapping.empty()) {
     if (device_mapping.size() != shmem_size * num_threads)
