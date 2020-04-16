@@ -81,12 +81,17 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
   }
 
 #ifdef __CUDACC__
+  MPI_Comm shmem_comm;
+  MPI_Comm_split_type(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,&shmem_comm);
+  int shmem_size;
+  MPI_Comm_size(shmem_comm, &shmem_size);
+  MPI_Comm_free(&shmem_comm);
   if (!device_mapping.empty()) {
-    if (device_mapping.size() != size * num_threads)
+    if (device_mapping.size() != shmem_size * num_threads)
       throw std::runtime_error("device mapping has wrong size");
     m_device_mapping = device_mapping;
   } else {
-    m_device_mapping.resize(size * m_num_threads);
+    m_device_mapping.resize(shmem_size * m_num_threads);
     std::iota(m_device_mapping.begin(), m_device_mapping.end(), 0);
   }
   m_device_mapping =
