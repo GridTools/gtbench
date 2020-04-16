@@ -13,6 +13,7 @@
 
 #include <mpi.h>
 #include <numeric>
+#include <regex>
 
 #include <ghex/communication_object_2.hpp>
 #include <ghex/glue/gridtools/field.hpp>
@@ -82,7 +83,8 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
 
 #ifdef __CUDACC__
   MPI_Comm shmem_comm;
-  MPI_Comm_split_type(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,&shmem_comm);
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &shmem_comm);
   int shmem_size;
   MPI_Comm_size(shmem_comm, &shmem_size);
   MPI_Comm_free(&shmem_comm);
@@ -362,16 +364,17 @@ runtime runtime_init(ghex_comm, options_values const &options) {
 #ifdef __CUDACC__
   std::vector<int> device_mapping;
   if (options.has("device-mapping")) {
-    auto s = options.get<std::string>("device-mapping");
-    const std::string delimiter = ":";
-    if (s.back() != ':')
-      s.push_back(':');
-    std::size_t pos = 0;
-    while ((pos = s.find(delimiter)) != std::string::npos) {
-      if (pos > 0u)
-        device_mapping.push_back(std::abs(std::stoi(s.substr(0, pos))));
-      s.erase(0, pos + delimiter.length());
-    }
+    const std::regex delimiter(":");
+    const auto input = options.get<std::string>("device-mapping");
+    std::transform(
+        std::sregex_token_iterator(input.begin(), input.end(), delimiter, -1),
+        std::sregex_token_iterator(), std::back_inserter(device_mapping),
+        [](const std::string &token) {
+          const int n = std::stoi(token);
+          if (n < 0)
+            throw std::runtime_error("negative device ids are not allowed");
+          return n;
+        });
   }
   return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims,
                  device_mapping);

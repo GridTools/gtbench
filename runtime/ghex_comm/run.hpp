@@ -30,7 +30,7 @@ void runtime_register_options(ghex_comm, options &options);
 struct runtime {
   explicit runtime(int num_threads, std::array<int, 2> cart_dims,
                    std::array<int, 2> thread_cart_dims,
-                   std::vector<int> device_mapping = std::vector<int>{});
+                   const std::vector<int> &device_mapping = std::vector<int>{});
 
   function_scope m_scope;
   int m_num_threads;
