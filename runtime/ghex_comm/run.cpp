@@ -81,7 +81,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
   }
 
 #ifdef __CUDACC__
-  if (device_mapping.size() > 0) {
+  if (!device_mapping.empty()) {
     if (device_mapping.size() != size * num_threads)
       throw std::runtime_error("device mapping has wrong size");
     m_device_mapping = device_mapping;
