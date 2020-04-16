@@ -17,7 +17,7 @@ int set_device(int device_id) {
   int device_count = 1;
   if (cudaGetDeviceCount(&device_count) != cudaSuccess)
     throw std::runtime_error("cudaGetDeviceCount failed");
-  device_id = device_id % device_count;
+  device_id %= device_count;
   if (cudaSetDevice(device_id) != cudaSuccess)
     throw std::runtime_error("cudaSetDevice failed");
   if (device_count > 1) {
