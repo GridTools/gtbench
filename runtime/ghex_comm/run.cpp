@@ -35,7 +35,7 @@ namespace ghex_comm_impl {
 
 runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
                  std::array<int, 2> thread_cart_dims,
-                 std::vector<int> device_mapping)
+                 std::vector<int> const &device_mapping)
     : m_scope(
           [=] {
             if (num_threads > 1) {
