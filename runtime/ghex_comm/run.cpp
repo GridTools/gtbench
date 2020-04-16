@@ -77,7 +77,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
     if (m_thread_cart_dims[0] * m_thread_cart_dims[1] != num_threads)
       throw std::runtime_error(
           "the product of thread cart dims must be equal to the number of "
-          "threads per rank.3");
+          "threads per rank.");
   }
 
 #ifdef __CUDACC__
