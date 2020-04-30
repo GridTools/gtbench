@@ -9,10 +9,11 @@
  */
 
 #include "./run.hpp"
-
-#include <numeric>
+#include "./factorize.hpp"
 
 #include <mpi.h>
+#include <numeric>
+#include <regex>
 
 #include <ghex/communication_object_2.hpp>
 #include <ghex/glue/gridtools/field.hpp>
@@ -29,13 +30,13 @@ using transport = gt::ghex::tl::ucx_tag;
 using transport = gt::ghex::tl::mpi_tag;
 #endif
 
-#include "./factorize.hpp"
-
 namespace runtime {
 
 namespace ghex_comm_impl {
 
-runtime::runtime(int num_threads)
+runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
+                 std::array<int, 2> thread_cart_dims,
+                 std::vector<int> const &device_mapping)
     : m_scope(
           [=] {
             if (num_threads > 1) {
@@ -46,7 +47,8 @@ runtime::runtime(int num_threads)
             }
           },
           MPI_Finalize),
-      m_num_threads(num_threads) {
+      m_num_threads(num_threads), m_cart_dims(cart_dims),
+      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -54,33 +56,50 @@ runtime::runtime(int num_threads)
   if (size > 1 && rank != 0)
     std::cout.setstate(std::ios_base::failbit);
 
-#ifdef __CUDACC__
-  if (num_threads > 1) {
-    int device_count = 1;
-    if (cudaGetDeviceCount(&device_count) != cudaSuccess)
-      throw std::runtime_error("cudaGetDeviceCount failed");
-    MPI_Comm shmem_comm;
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                        &shmem_comm);
-    int node_rank = 0;
-    MPI_Comm_rank(shmem_comm, &node_rank);
-    MPI_Comm_free(&shmem_comm);
-    const int device_id = node_rank % device_count;
-    if (cudaSetDevice(device_id) != cudaSuccess)
-      throw std::runtime_error("cudaSetDevice failed");
-    if (device_count > 1) {
-      for (int i = 0; i < device_count; ++i) {
-        if (i != device_id) {
-          int flag;
-          if (cudaDeviceCanAccessPeer(&flag, device_id, i) != cudaSuccess)
-            throw std::runtime_error("cudaDeviceAccessPeer failed");
-          if (flag) {
-            cudaDeviceEnablePeerAccess(i, 0);
-          }
-        }
-      }
-    }
+  MPI_Dims_create(size, 2, m_cart_dims.data());
+  if (m_cart_dims[0] * m_cart_dims[1] != size) {
+    throw std::runtime_error(
+        "the product of cart dims must be equal to the number of MPI ranks.");
   }
+  if (m_thread_cart_dims[0] * m_thread_cart_dims[1] != num_threads) {
+    if ((m_thread_cart_dims[0] != 0 && m_thread_cart_dims[1] != 0) ||
+        m_thread_cart_dims[0] > num_threads ||
+        m_thread_cart_dims[1] > num_threads)
+      throw std::runtime_error(
+          "the product of thread cart dims must be equal to the number of "
+          "threads per rank.");
+    if (m_thread_cart_dims[0] == 0 && m_thread_cart_dims[1] == 0)
+      m_thread_cart_dims =
+          partition_factors(factorize(num_threads), std::array<int, 2>{1, 1});
+    else if (m_thread_cart_dims[0] == 0)
+      m_thread_cart_dims[0] = num_threads / m_thread_cart_dims[1];
+    else
+      m_thread_cart_dims[1] = num_threads / m_thread_cart_dims[0];
+    if (m_thread_cart_dims[0] * m_thread_cart_dims[1] != num_threads)
+      throw std::runtime_error(
+          "the product of thread cart dims must be equal to the number of "
+          "threads per rank.");
+  }
+
+#ifdef __CUDACC__
+  MPI_Comm shmem_comm;
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &shmem_comm);
+  int shmem_size, shmem_rank;
+  MPI_Comm_size(shmem_comm, &shmem_size);
+  MPI_Comm_rank(shmem_comm, &shmem_rank);
+  MPI_Comm_free(&shmem_comm);
+  if (!device_mapping.empty()) {
+    if (device_mapping.size() != shmem_size * num_threads)
+      throw std::runtime_error("device mapping has wrong size");
+    m_device_mapping = device_mapping;
+  } else {
+    m_device_mapping.resize(shmem_size * m_num_threads);
+    std::iota(m_device_mapping.begin(), m_device_mapping.end(), 0);
+  }
+  m_device_mapping = std::vector<int>(
+      m_device_mapping.begin() + shmem_rank * num_threads,
+      m_device_mapping.begin() + (shmem_rank + 1) * num_threads);
 #endif
 }
 
@@ -189,7 +208,8 @@ private: // members
   std::vector<std::unique_ptr<thread_token>> m_tokens;
 
 public:
-  impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
+  impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
+       std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims)
       : m_hg{std::array<int, 3>{0, 0, 0},
              std::array<int, 3>{(int)global_resolution.x - 1,
                                 (int)global_resolution.y - 1,
@@ -202,9 +222,10 @@ public:
     std::array<int, 2> m_coords;
 
     // divide the domain into m_size sub-domains
-    const auto div_ranks =
-        divide_domain(m_size, std::array<std::size_t, 2>{global_resolution.x,
-                                                         global_resolution.y});
+    const auto div_ranks = divide_domain(
+        m_size,
+        std::array<std::size_t, 2>{global_resolution.x, global_resolution.y},
+        cart_dims);
     // compute the offsets
     std::array<std::vector<std::size_t>, 2> offsets_ranks = {
         compute_offsets(div_ranks[0], 0), compute_offsets(div_ranks[1], 0)};
@@ -221,7 +242,8 @@ public:
     const auto div_threads = divide_domain(
         num_sub_domains,
         std::array<std::size_t, 2>{(std::size_t)(m_last[0] - m_first[0] + 1),
-                                   (std::size_t)(m_last[1] - m_first[1] + 1)});
+                                   (std::size_t)(m_last[1] - m_first[1] + 1)},
+        thread_cart_dims);
     // compute the offsets
     std::array<std::vector<std::size_t>, 2> offsets_threads = {
         compute_offsets(div_threads[0], m_first[0]),
@@ -299,8 +321,10 @@ public:
   }
 };
 
-grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains)
-    : m_impl(std::make_unique<impl>(global_resolution, num_sub_domains)) {}
+grid::grid(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
+           std::array<int, 2> cart_dims, std::array<int, 2> thread_cart_dims)
+    : m_impl(std::make_unique<impl>(global_resolution, num_sub_domains,
+                                    cart_dims, thread_cart_dims)) {}
 
 grid::~grid() {}
 
@@ -311,14 +335,52 @@ result grid::collect_results(result const &r) const {
 }
 
 void runtime_register_options(ghex_comm, options &options) {
+  options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
   options("sub-domains",
           "number of sub-domains (each sub-domain computation runs in its own "
           "thread)",
           "S", {1});
+  options("thread-cart-dims",
+          "dimensons of cartesian decomposition "
+          "among sub-domains",
+          "TX TY", 2);
+#ifdef __CUDACC__
+  options("device-mapping",
+          "node device mapping: device id per sub-domain in the format "
+          "I_0:I_1:...:I_(N-1) "
+          "where I_i are cuda device ids "
+          "and N = #ranks-per-node x S",
+          "M");
+#endif
 }
 
 runtime runtime_init(ghex_comm, options_values const &options) {
-  return runtime(options.get<int>("sub-domains"));
+  std::array<int, 2> cart_dims = {0, 0};
+  if (options.has("cart-dims"))
+    cart_dims = options.get<std::array<int, 2>>("cart-dims");
+  std::array<int, 2> thread_cart_dims = {0, 0};
+  if (options.has("thread-cart-dims"))
+    thread_cart_dims = options.get<std::array<int, 2>>("thread-cart-dims");
+#ifdef __CUDACC__
+  std::vector<int> device_mapping;
+  if (options.has("device-mapping")) {
+    const std::regex delimiter(":");
+    const auto input = options.get<std::string>("device-mapping");
+    std::transform(
+        std::sregex_token_iterator(input.begin(), input.end(), delimiter, -1),
+        std::sregex_token_iterator(), std::back_inserter(device_mapping),
+        [](const std::string &token) {
+          const int n = std::stoi(token);
+          if (n < 0)
+            throw std::runtime_error("negative device ids are not allowed");
+          return n;
+        });
+  }
+  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims,
+                 device_mapping);
+#else
+  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims);
+#endif
 }
 
 } // namespace ghex_comm_impl

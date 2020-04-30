@@ -11,9 +11,6 @@
 
 namespace runtime {
 
-struct result {
-  double error;
-  double time;
-};
+int set_device(int);
 
 } // namespace runtime
