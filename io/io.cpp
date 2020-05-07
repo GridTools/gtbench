@@ -11,6 +11,7 @@
 
 #include "./io.hpp"
 
+#include "./numpy.hpp"
 #include "./vtk.hpp"
 
 namespace io {
@@ -62,6 +63,10 @@ time_series_from_filename(std::string const &filename,
   if (filename.empty())
     return nullptr;
 
+  if (ends_with(filename, ".npy")) {
+    return std::make_shared<numpy::time_series>(filename, global_resolution,
+                                                local_resolution, local_offset);
+  }
   if (ends_with(filename, ".pvd")) {
     return std::make_shared<vtk::time_series>(filename, global_resolution,
                                               local_resolution, local_offset);

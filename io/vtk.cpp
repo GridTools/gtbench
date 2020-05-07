@@ -14,6 +14,10 @@
 #include <iostream>
 #include <regex>
 
+#ifdef GTBENCH_USE_ZLIB
+#include <zlib.h>
+#endif
+
 #include "./base64.hpp"
 #include "./vtk.hpp"
 
@@ -61,9 +65,9 @@ void write_base64_data(std::ostream &out, std::vector<real_t> const &data) {
 #endif
 }
 
-void write_storage_data(std::ostream &out, storage_t const &storage,
-                        vec<std::size_t, 3> const &resolution) {
-  const auto view = gt::make_host_view<gt::access_mode::read_only>(storage);
+void write_data(std::ostream &out, storage_t const &data,
+                vec<std::size_t, 3> const &resolution) {
+  const auto view = gt::make_host_view<gt::access_mode::read_only>(data);
 
   std::vector<real_t> buffer((resolution.x + 1) * (resolution.y + 1) *
                              (resolution.z + 1));
@@ -73,6 +77,30 @@ void write_storage_data(std::ostream &out, storage_t const &storage,
       for (std::size_t i = 0; i <= resolution.x; ++i)
         buffer[i + (resolution.x + 1) * (j + (resolution.y + 1) * k)] =
             view(halo + i, halo + j, k);
+
+  write_base64_data(out, buffer);
+}
+
+void write_velocity(std::ostream &out, storage_t const &u, storage_t const &v,
+                    storage_t const &w, vec<std::size_t, 3> const &resolution) {
+  const auto u_view = gt::make_host_view<gt::access_mode::read_only>(u);
+  const auto v_view = gt::make_host_view<gt::access_mode::read_only>(v);
+  const auto w_view = gt::make_host_view<gt::access_mode::read_only>(w);
+
+  std::vector<real_t> buffer((resolution.x + 1) * (resolution.y + 1) *
+                             (resolution.z + 1) * 3);
+#pragma omp parallel for collapse(3)
+  for (std::size_t k = 0; k <= resolution.z; ++k)
+    for (std::size_t j = 0; j <= resolution.y; ++j)
+      for (std::size_t i = 0; i <= resolution.x; ++i) {
+        std::size_t index =
+            3 * (i + (resolution.x + 1) * (j + (resolution.y + 1) * k));
+        buffer[index] = u_view(halo + i, halo + j, k);
+        buffer[index + 1] = v_view(halo + i, halo + j, k);
+        buffer[index + 2] = (w_view(halo + i, halo + j, k) +
+                             w_view(halo + i, halo + j, k + 1)) /
+                            2;
+      }
 
   write_base64_data(out, buffer);
 }
@@ -93,7 +121,7 @@ void time_series::write_pvd() const {
 #endif
       << " header_type=\"UInt64\""
 #ifdef GTBENCH_USE_ZLIB
-      << "compressor=\"vtkZLibDataCompressor\"" : "")
+      << " compressor=\"vtkZLibDataCompressor\""
 #endif
       << ">\n";
     out << "<Collection>\n";
@@ -136,10 +164,18 @@ void time_series::write_pvti(numerics::solver_state const &state) const {
       << " Spacing=\"" << state.delta << "\""       //
       << " GhostLevel=\"0\""                        //
       << ">\n";
-  out << "<PPointData>\n";
+  out << "<PPointData"           //
+      << " Scalars=\"data\""     //
+      << " Vectors=\"velocity\"" //
+      << ">\n";
   out << "<PDataArray"                                   //
       << " Name=\"data\""                                //
       << " NumberOfComponents=\"1\" "                    //
+      << " type=\"Float" << (8 * sizeof(real_t)) << "\"" //
+      << "/>\n";
+  out << "<PDataArray"                                   //
+      << " Name=\"velocity\""                            //
+      << " NumberOfComponents=\"3\" "                    //
       << " type=\"Float" << (8 * sizeof(real_t)) << "\"" //
       << "/>\n";
   out << "</PPointData>\n";
@@ -188,7 +224,7 @@ void time_series::write_vti(numerics::solver_state const &state) const {
 #endif
       << " header_type=\"UInt64\""
 #ifdef GTBENCH_USE_ZLIB
-      << "compressor=\"vtkZLibDataCompressor\"" : "")
+      << " compressor=\"vtkZLibDataCompressor\""
 #endif
       << ">\n";
 
@@ -202,7 +238,10 @@ void time_series::write_vti(numerics::solver_state const &state) const {
       << " Extent=\"" << offset_extent << "\"" //
       << ">\n";
 
-  out << "<PointData>\n";
+  out << "<PointData"            //
+      << " Scalars=\"data\""     //
+      << " Vectors=\"velocity\"" //
+      << ">\n";
 
   out << "<DataArray"                                    //
       << " Name=\"data\""                                //
@@ -211,7 +250,18 @@ void time_series::write_vti(numerics::solver_state const &state) const {
       << " format=\"binary\""                            //
       << ">\n";
 
-  write_storage_data(out, state.data, state.resolution);
+  write_data(out, state.data, state.resolution);
+
+  out << "\n</DataArray>\n";
+
+  out << "<DataArray"                                    //
+      << " Name=\"velocity\""                            //
+      << " NumberOfComponents=\"3\""                     //
+      << " type=\"Float" << (8 * sizeof(real_t)) << "\"" //
+      << " format=\"binary\""                            //
+      << ">\n";
+
+  write_velocity(out, state.u, state.v, state.w, state.resolution);
 
   out << "\n</DataArray>\n";
   out << "</PointData>\n";

@@ -9,25 +9,16 @@
  */
 #pragma once
 
-#include <vector>
-
 #include "./io.hpp"
 
 namespace io {
-namespace vtk {
+namespace numpy {
 
 class time_series final : public io::time_series {
-  std::vector<real_t> m_times;
-
-  void write_pvd() const;
-  void write_pvti(numerics::solver_state const &state) const;
-  void write_vti(numerics::solver_state const &state) const;
-
 public:
   using io::time_series::time_series;
   void write_step(real_t time, numerics::solver_state const &state) override;
 };
 
-} // namespace vtk
-
+} // namespace numpy
 } // namespace io
