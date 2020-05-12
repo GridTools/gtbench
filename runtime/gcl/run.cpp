@@ -26,9 +26,10 @@ using pattern_t = gt::halo_exchange_dynamic_ut<storage_info_ijk_t::layout_t,
 #endif
                                                >;
 
-runtime::runtime(std::array<int, 2> const &cart_dims)
+runtime::runtime(std::array<int, 2> const &cart_dims,
+                 std::string const &output_filename)
     : m_scope((void (*)())gt::GCL_Init, gt::GCL_Finalize),
-      m_cart_dims(cart_dims) {
+      m_cart_dims(cart_dims), m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -45,14 +46,12 @@ runtime::runtime(std::array<int, 2> const &cart_dims)
 
 void runtime_register_options(gcl, options &options) {
   options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
+  options("output", "optional data output", "FILE");
 }
 
 runtime runtime_init(gcl, options_values const &options) {
-  std::array<int, 2> cart_dims = {0, 0};
-  if (options.has("cart-dims"))
-    cart_dims = options.get<std::array<int, 2>>("cart-dims");
-
-  return std::move(runtime(cart_dims));
+  return runtime(options.get<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get<std::string>("output", ""));
 }
 
 struct process_grid::impl {

@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 
+#include "../../io/io.hpp"
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
@@ -25,10 +26,12 @@ namespace gcl_impl {
 void runtime_register_options(gcl, options &options);
 
 struct runtime {
-  explicit runtime(std::array<int, 2> const &cart_dims);
+  runtime(std::array<int, 2> const &cart_dims,
+          std::string const &output_filename);
 
   function_scope m_scope;
   std::array<int, 2> m_cart_dims;
+  std::string m_output_filename;
 };
 
 runtime runtime_init(gcl, options_values const &options);
@@ -67,16 +70,26 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   auto exchange = grid.exchanger(state.sinfo);
   auto step = stepper(state, exchange);
 
+  auto write =
+      io::write_time_series(rt.m_output_filename, global_resolution,
+                            grid.local_resolution(), grid.local_offset());
+
+  if (write)
+    write(0, state);
+
   if (tmax > 0)
     step(state, dt);
 
   double start = grid.wtime();
 
   real_t t;
-  for (t = dt; t < tmax; t += dt)
+  for (t = dt; t < tmax; t += dt) {
     step(state, dt);
+  }
 
   computation::sync(state);
+  if (write)
+    write(t, state);
 
   double time = grid.wtime() - start;
   double error = computation::compute_error(state, exact, t);

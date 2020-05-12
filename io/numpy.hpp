@@ -14,11 +14,11 @@
 namespace io {
 namespace numpy {
 
-class time_series final : public io::time_series {
-public:
-  using io::time_series::time_series;
-  void write_step(real_t time, numerics::solver_state const &state) override;
-};
+std::function<void(real_t, numerics::solver_state const &state)>
+write_time_series(std::string const &filename,
+                  vec<std::size_t, 3> const &global_resolution,
+                  vec<std::size_t, 3> const &local_resolution,
+                  vec<std::size_t, 3> const &local_offset);
 
 } // namespace numpy
 } // namespace io

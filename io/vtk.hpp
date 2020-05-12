@@ -16,17 +16,11 @@
 namespace io {
 namespace vtk {
 
-class time_series final : public io::time_series {
-  std::vector<real_t> m_times;
-
-  void write_pvd() const;
-  void write_pvti(numerics::solver_state const &state) const;
-  void write_vti(numerics::solver_state const &state) const;
-
-public:
-  using io::time_series::time_series;
-  void write_step(real_t time, numerics::solver_state const &state) override;
-};
+std::function<void(real_t, numerics::solver_state const &state)>
+write_time_series(std::string const &filename,
+                  vec<std::size_t, 3> const &global_resolution,
+                  vec<std::size_t, 3> const &local_resolution,
+                  vec<std::size_t, 3> const &local_offset);
 
 } // namespace vtk
 

@@ -14,6 +14,7 @@
 #include <regex>
 
 #include "./numpy.hpp"
+#include "./util.hpp"
 
 namespace io {
 namespace numpy {
@@ -43,19 +44,28 @@ void write_storage(std::string const &filename, storage_t const &storage) {
 }
 } // namespace
 
-void time_series::write_step(real_t time, numerics::solver_state const &state) {
-  std::ostringstream fname;
-  std::regex suffix_re("\\.npy$");
-  std::regex_replace(std::ostreambuf_iterator<char>(fname), filename().begin(),
-                     filename().end(), suffix_re, ".");
-  fname << "r" << std::setprecision(std::to_string(ranks() - 1).size())
-        << rank() << ".";
-  fname << "t" << std::setprecision(3) << std::fixed << time;
+std::function<void(real_t, numerics::solver_state const &state)>
+write_time_series(std::string const &filename,
+                  vec<std::size_t, 3> const &global_resolution,
+                  vec<std::size_t, 3> const &local_resolution,
+                  vec<std::size_t, 3> const &local_offset) {
+  auto ranks = io::ranks(global_resolution, local_resolution);
+  auto rank = io::rank(global_resolution, local_resolution, local_offset);
+  return [=](real_t time, numerics::solver_state const &state) {
+    std::ostringstream fname;
+    std::regex suffix_re("\\.npy$");
+    std::regex_replace(std::ostreambuf_iterator<char>(fname), filename.begin(),
+                       filename.end(), suffix_re, ".");
+    fname << "r" << std::setprecision(std::to_string(ranks - 1).size()) << rank
+          << ".";
+    fname << "t" << std::setprecision(3) << std::fixed << time;
 
-  write_storage(fname.str() + ".data.npy", state.data);
-  write_storage(fname.str() + ".u.npy", state.u);
-  write_storage(fname.str() + ".v.npy", state.v);
-  write_storage(fname.str() + ".w.npy", state.w);
+    write_storage(fname.str() + ".data.npy", state.data);
+    write_storage(fname.str() + ".u.npy", state.u);
+    write_storage(fname.str() + ".v.npy", state.v);
+    write_storage(fname.str() + ".w.npy", state.w);
+  };
 }
+
 } // namespace numpy
 } // namespace io

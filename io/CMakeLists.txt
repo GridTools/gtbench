@@ -1,4 +1,4 @@
-add_library(io io.cpp numpy.cpp vtk.cpp)
+add_library(io io.cpp numpy.cpp util.cpp vtk.cpp)
 
 find_package(ZLIB)
 if(ZLIB_FOUND)

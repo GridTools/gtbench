@@ -15,6 +15,7 @@
 #include <thread>
 #include <vector>
 
+#include "../../io/io.hpp"
 #include "../device/set_device.hpp"
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
@@ -28,15 +29,17 @@ namespace ghex_comm_impl {
 void runtime_register_options(ghex_comm, options &options);
 
 struct runtime {
-  explicit runtime(int num_threads, std::array<int, 2> cart_dims,
-                   std::array<int, 2> thread_cart_dims,
-                   const std::vector<int> &device_mapping = std::vector<int>{});
+  runtime(int num_threads, std::array<int, 2> cart_dims,
+          std::array<int, 2> thread_cart_dims,
+          std::vector<int> const &device_mapping,
+          std::string const &output_filename);
 
   function_scope m_scope;
   int m_num_threads;
   std::array<int, 2> m_cart_dims;
   std::array<int, 2> m_thread_cart_dims;
   std::vector<int> m_device_mapping;
+  std::string m_output_filename;
 };
 
 runtime runtime_init(ghex_comm, options_values const &options);
@@ -80,6 +83,12 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
     auto exchange = sub_grid.m_halo_exchanger;
     auto step = stepper(state, exchange);
 
+    auto write = io::write_time_series("output.pvd", global_resolution,
+                                       sub_grid.m_local_resolution,
+                                       sub_grid.m_local_offset);
+    if (write)
+      write(0, state);
+
     if (tmax > 0)
       step(state, dt);
 
@@ -92,6 +101,8 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
       step(state, dt);
 
     computation::sync(state);
+    if (write)
+      write(t, state);
 
     auto stop = clock::now();
     double time = std::chrono::duration<double>(stop - start).count();
