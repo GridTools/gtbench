@@ -83,7 +83,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
     auto exchange = sub_grid.m_halo_exchanger;
     auto step = stepper(state, exchange);
 
-    auto write = io::write_time_series("output.pvd", global_resolution,
+    auto write = io::write_time_series(rt.m_output_filename, global_resolution,
                                        sub_grid.m_local_resolution,
                                        sub_grid.m_local_offset);
     if (write)

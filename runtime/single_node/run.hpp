@@ -23,7 +23,7 @@ namespace single_node_impl {
 void runtime_register_options(single_node, options &options);
 
 struct runtime {
-  std::string m_outputput_filename;
+  std::string m_output_filename;
 };
 
 runtime runtime_init(single_node, options_values const &options);
@@ -31,7 +31,7 @@ runtime runtime_init(single_node, options_values const &options);
 numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution);
 
 template <class Analytical, class Stepper>
-result runtime_solve(single_node, Analytical analytical, Stepper stepper,
+result runtime_solve(runtime const &rt, Analytical analytical, Stepper stepper,
                      vec<std::size_t, 3> const &global_resolution, real_t tmax,
                      real_t dt) {
   const auto exact = discrete_analytical::discretize(
@@ -42,7 +42,7 @@ result runtime_solve(single_node, Analytical analytical, Stepper stepper,
 
   auto step = stepper(state, exchange);
 
-  auto write = io::write_time_series("output.pvd", global_resolution,
+  auto write = io::write_time_series(rt.m_output_filename, global_resolution,
                                      global_resolution, {0, 0, 0});
   if (write)
     write(0, state);

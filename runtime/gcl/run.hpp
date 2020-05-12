@@ -83,9 +83,8 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   double start = grid.wtime();
 
   real_t t;
-  for (t = dt; t < tmax; t += dt) {
+  for (t = dt; t < tmax; t += dt)
     step(state, dt);
-  }
 
   computation::sync(state);
   if (write)
