@@ -38,6 +38,14 @@ public:
     return parse(value->second, type<T>());
   }
 
+  template <class T>
+  T get(std::string const &name, T const &default_value) const {
+    auto value = m_map.find(name);
+    if (value == m_map.end())
+      return default_value;
+    return parse(value->second, type<T>());
+  }
+
   operator bool() const { return !m_map.empty(); }
 
 private:
