@@ -18,14 +18,6 @@
 namespace runtime {
 
 template <class RuntimeTag>
-void runtime_register_options(RuntimeTag, options &) {}
-
-template <class RuntimeTag>
-RuntimeTag runtime_init(RuntimeTag, options_values const &) {
-  return {};
-}
-
-template <class RuntimeTag>
 void register_options(RuntimeTag, options &options) {
   return runtime_register_options(RuntimeTag{}, options);
 }
