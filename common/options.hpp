@@ -39,7 +39,7 @@ public:
   }
 
   template <class T>
-  T get(std::string const &name, T const &default_value) const {
+  T get_or(std::string const &name, T const &default_value) const {
     auto value = m_map.find(name);
     if (value == m_map.end())
       return default_value;

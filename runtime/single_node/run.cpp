@@ -19,7 +19,7 @@ void runtime_register_options(single_node, options &options) {
 }
 
 runtime runtime_init(single_node, options_values const &options) {
-  return {options.get<std::string>("output", "")};
+  return {options.get_or<std::string>("output", "")};
 }
 
 struct periodic_boundary {

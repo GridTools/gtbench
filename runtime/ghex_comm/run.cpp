@@ -374,9 +374,9 @@ runtime runtime_init(ghex_comm, options_values const &options) {
   }
 #endif
   return runtime(options.get<int>("sub-domains"),
-                 options.get<std::array<int, 2>>("cart-dims", {0, 0}),
-                 options.get<std::array<int, 2>>("thread-cart-dims", {0, 0}),
-                 device_mapping, options.get<std::string>("output", ""));
+                 options.get_or<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get_or<std::array<int, 2>>("thread-cart-dims", {0, 0}),
+                 device_mapping, options.get_or<std::string>("output", ""));
 }
 
 } // namespace ghex_comm_impl

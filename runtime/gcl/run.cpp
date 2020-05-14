@@ -50,8 +50,8 @@ void runtime_register_options(gcl, options &options) {
 }
 
 runtime runtime_init(gcl, options_values const &options) {
-  return runtime(options.get<std::array<int, 2>>("cart-dims", {0, 0}),
-                 options.get<std::string>("output", ""));
+  return runtime(options.get_or<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get_or<std::string>("output", ""));
 }
 
 struct process_grid::impl {
