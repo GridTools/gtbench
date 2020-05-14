@@ -40,7 +40,8 @@ public:
       out << chars[(buffer >> 18) & 0x3f] << chars[(buffer >> 12) & 0x3f]
           << (i > 1 ? chars[(buffer >> 6) & 0x3f] : '=')
           << (i > 2 ? chars[buffer & 0x3f] : '=');
-      i = buffer = 0;
+      buffer = 0;
+      i = 0;
     }
     return *this;
   }
