@@ -42,6 +42,7 @@ target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--defa
 
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
+  GTBENCH_BACKEND_${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   )
 target_link_libraries(common INTERFACE GridTools::gridtools)
