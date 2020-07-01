@@ -14,34 +14,34 @@
 
 namespace io {
 class base64_encoder {
-  std::ostream &out;
-  std::uint32_t buffer = 0;
-  unsigned i = 0;
+  std::ostream &m_out;
+  std::uint32_t m_buffer = 0;
+  unsigned m_i = 0;
 
 public:
-  base64_encoder(std::ostream &out) : out(out) {}
+  base64_encoder(std::ostream &out) : m_out(out) {}
   ~base64_encoder() { flush(); }
 
   base64_encoder &write(const void *data, std::size_t size) {
     auto bytes = (const std::uint8_t *)data;
     for (; size > 0; --size) {
-      buffer |= *(bytes++) << 8 * (2 - i++);
-      if (i == 3)
+      m_buffer |= *(bytes++) << 8 * (2 - m_i++);
+      if (m_i == 3)
         flush();
     }
     return *this;
   }
 
   base64_encoder &flush() {
-    if (i != 0) {
+    if (m_i != 0) {
       static constexpr const char *chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                            "abcdefghijklmnopqrstuvwxyz"
                                            "0123456789+/";
-      out << chars[(buffer >> 18) & 0x3f] << chars[(buffer >> 12) & 0x3f]
-          << (i > 1 ? chars[(buffer >> 6) & 0x3f] : '=')
-          << (i > 2 ? chars[buffer & 0x3f] : '=');
-      buffer = 0;
-      i = 0;
+      m_out << chars[(m_buffer >> 18) & 0x3f] << chars[(m_buffer >> 12) & 0x3f]
+            << (m_i > 1 ? chars[(m_buffer >> 6) & 0x3f] : '=')
+            << (m_i > 2 ? chars[m_buffer & 0x3f] : '=');
+      m_buffer = 0;
+      m_i = 0;
     }
     return *this;
   }
