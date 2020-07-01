@@ -7,6 +7,7 @@
  * Please, refer to the LICENSE file in the root directory.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <cassert>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -22,20 +23,44 @@ namespace numpy {
 namespace {
 void write_storage(std::string const &filename, storage_t const &storage) {
   std::ofstream out(filename, std::ios::binary);
-  std::size_t ni = storage.total_length<0>();
-  std::size_t nj = storage.total_length<1>();
-  std::size_t nk = storage.total_length<2>();
-  std::string header =
+
+  // write numpy array format as documented here:
+  // https://numpy.org/doc/1.18/reference/generated/numpy.lib.format.html#format-version-1-0
+
+  // numpy format magic string
+  const char magic[6] = {'\x93', 'N', 'U', 'M', 'P', 'Y'};
+  // numpy format version, currently 1.0 for max compatibility
+  const char version[2] = {1, 0};
+
+  // numpy array format description
+  const std::size_t ni = storage.total_length<0>();
+  const std::size_t nj = storage.total_length<1>();
+  const std::size_t nk = storage.total_length<2>();
+  std::string descr =
       "{\"descr\":\"float" + std::to_string(8 * sizeof(real_t)) +
       "\",\"fortran_order\":False,\"shape\":(" + std::to_string(ni) + "," +
-      std::to_string(nj) + "," + std::to_string(nk) + ")}";
-  while ((8 + header.size()) % 64 != 63)
-    header += " ";
-  header += "\n";
-  std::uint16_t header_len = header.size();
-  out.write("\x93NUMPY\x01\x00", 8);
-  out.write((char const *)&header_len, sizeof(header_len));
-  out << header;
+      std::to_string(nj) + "," + std::to_string(nk) + ")}\n";
+
+  // size of magic string, version number and 16bit header length
+  constexpr std::uint16_t base_header_len =
+      sizeof(magic) + sizeof(version) + sizeof(std::uint16_t);
+  // total header length, rounded up to a multiple of 64 for alignment
+  std::uint16_t total_header_len = (base_header_len + descr.size() + 63) & ~63;
+
+  // header length as stored in the file (size of descr and padding only)
+  std::uint16_t header_len = total_header_len - base_header_len;
+
+  // write header
+  out.write(magic, sizeof(magic));
+  out.write(version, sizeof(version));
+  out.write((const char *)&header_len, sizeof(header_len));
+  out << descr;
+  // padding
+  while (out.tellp() < total_header_len)
+    out << '\x20';
+  assert(out.tellp() % 64 == 0);
+
+  // write data in C-order
   auto view = gt::make_host_view<gt::access_mode::read_only>(storage);
   for (std::size_t i = 0; i < ni; ++i)
     for (std::size_t j = 0; j < nj; ++j)
