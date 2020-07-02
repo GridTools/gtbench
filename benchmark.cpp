@@ -40,8 +40,6 @@ int main(int argc, char **argv) {
   const std::size_t nz = 60;
   const std::size_t runs = args.get<std::size_t>("runs");
 
-  const auto device_id = communication::set_device();
-
   auto fmt = [&]() -> std::ostream & {
     return std::cout << std::endl << std::setw(26) << std::left;
   };

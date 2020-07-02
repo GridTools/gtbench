@@ -180,6 +180,18 @@ struct halo_generator {
             make_local_global_pair(px_local, 0),
             make_local_global_pair(py_local, 1)};
   }
+
+  box2 intersect(const domain_type &, const coordinate_t &first_a_local,
+                 const coordinate_t &, const coordinate_t &first_a_global,
+                 const coordinate_t &last_a_global,
+                 const coordinate_t &first_b_global,
+                 const coordinate_t &last_b_global) const noexcept {
+    const box global_box{max(first_a_global, first_b_global),
+                         min(last_a_global, last_b_global)};
+    const box local_box{first_a_local + (global_box.first() - first_a_global),
+                        first_a_local + (global_box.last() - first_a_global)};
+    return {local_box, global_box};
+  }
 };
 
 class grid::impl {
@@ -291,10 +303,9 @@ public:
     auto comm_obj = std::make_shared<comm_obj_type>(
         gt::ghex::make_communication_object<patterns_type>(comm));
 
-    auto halo_exchange = [comm_obj = std::move(comm_obj),
-                          domain_id = dom.domain_id(),
+    auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
-      auto field = gt::ghex::wrap_gt_field(domain_id, storage);
+      auto field = gt::ghex::wrap_gt_field(domain, storage);
 
 #ifdef __CUDACC__
       cudaStreamSynchronize(0);
