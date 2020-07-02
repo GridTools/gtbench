@@ -43,9 +43,7 @@ Once all necessary and optional dependencies have been installed, GHEX can be in
 ```console
 $ cd /PATH/TO/GHEX-SOURCE
 $ mkdir build && cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=/PATH/TO/GHEX-INSTALLATION \
-        -DGridTools_DIR=/PATH/TO/GRIDTOOLS-INSTALLATION/lib/cmake \
-        ..
+$ cmake -DCMAKE_INSTALL_PREFIX=/PATH/TO/GHEX-INSTALLATION ..
 ```
 
 To enable UCX support, pass additionally the following flags
