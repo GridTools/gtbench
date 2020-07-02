@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        backend: [mc, x86, cuda]
+        runtime: [single_node, simple_mpi, gcl, ghex_comm]
+    steps:
+    - uses: actions/checkout@v2
+      name: checkout
+    - name: pull
+      run: >
+        docker pull fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base;
+        docker build
+        --cache-from fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
+        --cache-from $(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+        --target base
+        --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+        --build-arg GTBENCH_BACKEND=${{ matrix.backend }}
+        --build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
+        -t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
+        .
+    - name: build
+      run: >
+        docker build
+        --cache-from fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
+        --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+        --build-arg GTBENCH_BACKEND=${{ matrix.backend }}
+        --build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
+        -t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}
+        .
+    - name: test
+      if: ${{ matrix.backend != 'cuda' }}
+      run: >
+        docker run --rm -it fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
+        docker run --rm -it fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/convergence_tests;
+    - name: push
+      if: ${{ github.event_name == 'push' }}
+      run: >
+        echo ${{ secrets.DOCKER_TOKEN }} | docker login -u fthaler --password-stdin &&
+        docker push fthaler/gtbench &&
+        docker logout;
+        
