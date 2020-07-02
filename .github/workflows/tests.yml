@@ -40,12 +40,12 @@ jobs:
     - name: test
       if: ${{ matrix.backend != 'cuda' }}
       run: >
-        docker run --rm -it fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
-        docker run --rm -it fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/convergence_tests;
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/convergence_tests
     - name: push
       if: ${{ github.event_name == 'push' }}
       run: >
         echo ${{ secrets.DOCKER_TOKEN }} | docker login -u fthaler --password-stdin &&
         docker push fthaler/gtbench &&
-        docker logout;
+        docker logout
         
