@@ -26,6 +26,10 @@ jobs:
         #--build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
         #-t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
         #.
+    - name: foo
+      run:
+        echo foo; ls -l $PWD; echo $PWD; echo bar
+
     #- name: build
       #run: >
         #docker build
