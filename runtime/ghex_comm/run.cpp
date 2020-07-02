@@ -80,7 +80,6 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           "the product of thread cart dims must be equal to the number of "
           "threads per rank.");
   }
-
 #ifdef __CUDACC__
   MPI_Comm shmem_comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
