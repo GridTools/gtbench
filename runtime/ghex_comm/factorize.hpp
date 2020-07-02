@@ -14,9 +14,9 @@
 #include <type_traits>
 #include <vector>
 
-namespace communication {
+namespace runtime {
 
-namespace ghex_comm {
+namespace ghex_comm_impl {
 
 template <typename I> std::vector<I> factorize(I n) {
   std::vector<I> result;
@@ -65,14 +65,13 @@ std::array<I, N> partition_factors(const std::vector<I> &f,
   return f_d_min;
 }
 
-template <typename I, typename J, std::size_t N>
+template <typename I, typename J, typename K, std::size_t N>
 typename std::enable_if<std::is_integral<I>::value &&
-                            std::is_integral<J>::value,
+                            std::is_integral<J>::value &&
+                            std::is_integral<K>::value,
                         std::array<std::vector<J>, N>>::type
-divide_domain(I n, const std::array<J, N> &sizes) {
-  // factorize n and partition it into N factors according to the size of the
-  // domain
-  const auto factors = partition_factors(factorize(n), sizes);
+divide_domain(I n, const std::array<J, N> &sizes,
+              const std::array<K, N> &factors) {
   // compute the sub-domain size per dimension
   std::array<double, N> dx;
   for (std::size_t i = 0; i < N; ++i) {
@@ -94,5 +93,5 @@ divide_domain(I n, const std::array<J, N> &sizes) {
   return result;
 }
 
-} // namespace ghex_comm
-} // namespace communication
+} // namespace ghex_comm_impl
+} // namespace runtime

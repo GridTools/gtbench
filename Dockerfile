@@ -1,5 +1,5 @@
 ARG BUILD_FROM=ubuntu:19.10
-FROM ${BUILD_FROM}
+FROM ${BUILD_FROM} as base
 LABEL maintainer="Felix Thaler <thaler@cscs.ch>"
 
 RUN apt-get update -qq && \
@@ -27,53 +27,47 @@ RUN export BOOST_VERSION_UNERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
 RUN wget -q http://www.mpich.org/static/downloads/3.1.4/mpich-3.1.4.tar.gz && \
     tar xf mpich-3.1.4.tar.gz && \
     cd mpich-3.1.4 && \
-    ./configure --disable-fortran --enable-fast=all,O3 --prefix=/usr && \
+    ./configure --disable-fortran --enable-fast=all,O3 --prefix=/usr/local/ && \
     make -j $(nproc) && \
     make install && \
     ldconfig && \
     cd .. && \
     rm -rf mpich-3.1.4*
 
-ARG GTBENCH_BACKEND=mc
+ENV CMAKE_PREFIX_PATH=/usr/local/lib/cmake
+
 RUN git clone -b release_v1.1 https://github.com/GridTools/gridtools.git && \
     mkdir -p gridtools/build && \
     cd gridtools/build && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
-    -DGT_ENABLE_BACKEND_X86=ON \
-    -DGT_ENABLE_BACKEND_MC=ON \
-    -DGT_ENABLE_BACKEND_CUDA=$(if [ "${GTBENCH_BACKEND}" = cuda ]; then echo ON; else echo OFF; fi) \
-    -DGT_ENABLE_BACKEND_NAIVE=OFF \
     .. && \
     make -j $(nproc) install && \
     cd ../.. && \
     rm -rf gridtools
 
-ARG GTBENCH_COMMUNICATION_BACKEND=ghex_comm
-RUN if [ "${GTBENCH_COMMUNICATION_BACKEND}" = ghex_comm ]; then \
-    git clone https://github.com/GridTools/GHEX.git && \
+RUN git clone https://github.com/GridTools/GHEX.git && \
     mkdir -p GHEX/build && \
     cd GHEX/build && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DGridTools_DIR=/usr/local/lib/cmake \
     .. && \
     make -j $(nproc) install && \
     cd ../.. && \
-    rm -rf GHEX; \
-    fi
+    rm -rf GHEX
 
+FROM base
+ARG GTBENCH_BACKEND=mc
+ARG GTBENCH_RUNTIME=ghex_comm
 COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DGridTools_DIR=/usr/local/lib/cmake \
-    -DGHEX_DIR=/usr/local/lib/cmake \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
-    -DGTBENCH_COMMUNICATION_BACKEND=${GTBENCH_COMMUNICATION_BACKEND} \
+    -DGTBENCH_RUNTIME=${GTBENCH_RUNTIME} \
     .. && \
     make -j $(nproc) && \
     cp benchmark convergence_tests /usr/bin/ && \

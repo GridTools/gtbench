@@ -9,41 +9,38 @@
  */
 #include <iostream>
 
-#include "./communication/backends.hpp"
-#include "./execution/run.hpp"
 #include "./numerics/solver.hpp"
+#include "./runtime/run.hpp"
 #include "./verification/analytical.hpp"
 #include "./verification/convergence.hpp"
 
 int main(int argc, char **argv) {
-  auto comm_world =
-      communication::GTBENCH_COMMUNICATION_BACKEND::world(argc, argv, false);
+  constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
-  auto run_tests = [&comm_world](std::string const &title, auto &&exact,
-                                 auto &&stepper) {
+  options opts;
+  runtime::register_options(rt_tag, opts);
+
+  auto args = opts.parse(argc, argv);
+
+  auto rt = runtime::init(rt_tag, args);
+
+  auto run_tests = [&rt](std::string const &title, auto const &exact,
+                         auto const &stepper) {
     std::size_t max_resolution = std::is_same<real_t, float>() ? 16 : 32;
 
     std::cout << "=== " << title << " ===" << std::endl;
     std::cout << "Spatial convergence:" << std::endl;
-    auto spatial_error_f = [&comm_world, exact = std::move(exact),
-                            stepper =
-                                std::move(stepper)](std::size_t resolution) {
-      auto grid =
-          communication::grid(comm_world, {resolution, resolution, resolution});
-      return execution::run(communication::sub_grid(grid), stepper, 1e-2,
-                            std::is_same<real_t, float>() ? 1e-3 : 1e-5, exact)
+    auto spatial_error_f = [&](std::size_t n) {
+      return runtime::solve(rt, exact, stepper, {n, n, n}, 1e-2,
+                            std::is_same<real_t, float>() ? 1e-3 : 1e-5)
           .error;
     };
     verification::print_order_verification_result(
         verification::order_verification(spatial_error_f, 8, max_resolution));
 
     std::cout << "Temporal convergence:" << std::endl;
-    auto spacetime_error_f = [&comm_world, exact = std::move(exact),
-                              stepper =
-                                  std::move(stepper)](std::size_t resolution) {
-      auto grid = communication::grid(comm_world, {128, 128, 128});
-      return execution::run(communication::sub_grid(grid), stepper, 1e-1,
-                            1e-1 / resolution, exact)
+    auto spacetime_error_f = [&](std::size_t n) {
+      return runtime::solve(rt, exact, stepper, {128, 128, 128}, 1e-1, 1e-1 / n)
           .error;
     };
     verification::print_order_verification_result(
