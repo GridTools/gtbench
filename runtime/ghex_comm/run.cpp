@@ -36,7 +36,8 @@ namespace ghex_comm_impl {
 
 runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
                  std::array<int, 2> thread_cart_dims,
-                 std::vector<int> const &device_mapping)
+                 std::vector<int> const &device_mapping,
+                 std::string const &output_filename)
     : m_scope(
           [=] {
             if (num_threads > 1) {
@@ -48,7 +49,8 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           },
           MPI_Finalize),
       m_num_threads(num_threads), m_cart_dims(cart_dims),
-      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0) {
+      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0),
+      m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -355,14 +357,8 @@ void runtime_register_options(ghex_comm, options &options) {
 }
 
 runtime runtime_init(ghex_comm, options_values const &options) {
-  std::array<int, 2> cart_dims = {0, 0};
-  if (options.has("cart-dims"))
-    cart_dims = options.get<std::array<int, 2>>("cart-dims");
-  std::array<int, 2> thread_cart_dims = {0, 0};
-  if (options.has("thread-cart-dims"))
-    thread_cart_dims = options.get<std::array<int, 2>>("thread-cart-dims");
-#ifdef __CUDACC__
   std::vector<int> device_mapping;
+#ifdef __CUDACC__
   if (options.has("device-mapping")) {
     const std::regex delimiter(":");
     const auto input = options.get<std::string>("device-mapping");
@@ -376,11 +372,11 @@ runtime runtime_init(ghex_comm, options_values const &options) {
           return n;
         });
   }
-  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims,
-                 device_mapping);
-#else
-  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims);
 #endif
+  return runtime(options.get<int>("sub-domains"),
+                 options.get_or<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get_or<std::array<int, 2>>("thread-cart-dims", {0, 0}),
+                 device_mapping, options.get_or<std::string>("output", ""));
 }
 
 } // namespace ghex_comm_impl
