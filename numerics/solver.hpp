@@ -19,8 +19,7 @@ struct solver_state {
                vec<real_t, 3> const &delta)
       : resolution(resolution), delta(delta),
 
-        sinfo(resolution.x + 2 * halo, resolution.y + 2 * halo,
-              resolution.z + 1),
+        sinfo(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z),
         data(sinfo, "data"), data1(sinfo, "data1"), data2(sinfo, "data2"),
         u(sinfo, "u"), v(sinfo, "v"), w(sinfo, "w") {}
 
