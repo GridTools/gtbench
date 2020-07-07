@@ -30,4 +30,9 @@ inline grid_t computation_grid(gt::uint_t resolution_x, gt::uint_t resolution_y,
       axis_t{resolution_z});
 }
 
+// when we access data across vertical periodic boundaries, we need an infinite
+// extent. Be aware that infinite extents must not be used for cached or
+// temporary data.
+constexpr int infinite_extent = 99999;
+
 } // namespace numerics

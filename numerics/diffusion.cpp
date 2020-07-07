@@ -75,8 +75,8 @@ struct stage_diffusion_w_forward {
   using d2 = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
 
   using data = in_accessor<4, extent<0, 0, 0, 0, -1, 1>>;
-  using data_uncached = in_accessor<
-      5, extent<0, 0, 0, 0, -150 /* RANDOM NUMBER */, 150 /* RANDOM NUMBER */>>;
+  using data_uncached =
+      in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, infinite_extent>>;
 
   using dz = in_accessor<6>;
   using dt = in_accessor<7>;
@@ -152,10 +152,8 @@ struct stage_diffusion_w_backward {
 
   using fact = inout_accessor<4>;
 
-  using d_uncached =
-      in_accessor<5, extent<0, 0, 0, 0, 0, 150 /* RANDOM NUMBER */>>;
-  using d2_uncached =
-      in_accessor<6, extent<0, 0, 0, 0, 0, 150 /* RANDOM NUMBER */>>;
+  using d_uncached = in_accessor<5, extent<0, 0, 0, 0, 0, infinite_extent>>;
+  using d2_uncached = in_accessor<6, extent<0, 0, 0, 0, 0, infinite_extent>>;
 
   using dz = in_accessor<7>;
   using dt = in_accessor<8>;
