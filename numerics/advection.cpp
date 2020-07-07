@@ -125,7 +125,7 @@ struct stage_advection_w_forward {
   using dt = in_accessor<8>;
   using w = in_accessor<9, extent<0, 0, 0, 0, 0, 1>>;
   using data_p1_k_cache = inout_accessor<10, extent<0, 0, 0, 0, -2, 0>>;
-  using a_c_cache = inout_accessor<11>;
+  using a_c_cache = inout_accessor<11, extent<0, 0, 0, 0, -1, 0>>;
 
   using k_size = in_accessor<12>;
 
@@ -162,7 +162,7 @@ struct stage_advection_w_forward {
                                 full_t::first_level::shift<1>) {
     eval(data_p1_k_cache()) = eval(data(0, 0, 1));
 
-    auto old_a_c_cache = eval(a_c_cache());
+    auto old_a_c_cache = eval(a_c_cache(0, 0, -1));
     eval(a_c_cache()) = eval(0.25_r * w(0, 0, 1) / dz());
 
     auto a = -old_a_c_cache;
@@ -182,7 +182,7 @@ struct stage_advection_w_forward {
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<2, -1>) {
     eval(data_p1_k_cache()) = eval(data(0, 0, 1));
 
-    auto old_a_c_cache = eval(a_c_cache());
+    auto old_a_c_cache = eval(a_c_cache(0, 0, -1));
     eval(a_c_cache()) = eval(0.25_r * w(0, 0, 1) / dz());
 
     auto a = -old_a_c_cache;
@@ -203,7 +203,7 @@ struct stage_advection_w_forward {
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
     auto k_offset = eval(k_size()) - 1;
 
-    auto a = eval(-a_c_cache());
+    auto a = eval(-a_c_cache(0, 0, -1));
     eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
     auto b = eval(1_r / dt() - a - c());
     eval(d()) =
