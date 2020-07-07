@@ -219,7 +219,8 @@ void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
 vertical::vertical(vec<std::size_t, 3> const &resolution,
                    vec<real_t, 3> const &delta, real_t coeff)
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
-      sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z),
+      sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo,
+             resolution.z + 1),
       fact_(sinfo_ij_, "fact"), d_(sinfo_, "d"), d2_(sinfo_, "d2"),
       comp1_(gt::make_computation<backend_t<32, 6>>(
           computation_grid(resolution.x, resolution.y, resolution.z),

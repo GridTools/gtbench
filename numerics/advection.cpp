@@ -322,7 +322,8 @@ void horizontal::operator()(storage_t &out, storage_t const &in,
 vertical::vertical(vec<std::size_t, 3> const &resolution,
                    vec<real_t, 3> const &delta)
     : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
-      sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z),
+      sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo,
+             resolution.z + 1),
       alpha_(sinfo_ij_, "alpha"), gamma_(sinfo_ij_, "gamma"),
       fact_(sinfo_ij_, "fact"), d_(sinfo_, "d"), d2_(sinfo_, "d2"),
       comp_(gt::make_computation<backend_t<16, 16>>(
@@ -375,7 +376,8 @@ void vertical::operator()(storage_t &out, storage_t const &in,
 
 runge_kutta_step::runge_kutta_step(vec<std::size_t, 3> const &resolution,
                                    vec<real_t, 3> const &delta)
-    : sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z),
+    : sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo,
+             resolution.z + 1),
       sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
       alpha_(sinfo_ij_, "alpha"), gamma_(sinfo_ij_, "gamma"),
       fact_(sinfo_ij_, "fact"), d_(sinfo_, "d"), d2_(sinfo_, "d2"),
