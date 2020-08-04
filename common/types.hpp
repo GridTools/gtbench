@@ -22,8 +22,16 @@ constexpr real_t operator"" _r(unsigned long long value) {
 
 static constexpr gt::int_t halo = 3;
 
+#ifdef GTBENCH_BACKEND_CUDA
+template <gt::int_t IBlockSize = 32, gt::int_t JBlockSize = 8>
+using backend_t =
+    gt::cuda::backend<gridtools::integral_constant<gt::int_t, IBlockSize>,
+                      gridtools::integral_constant<gt::int_t, JBlockSize>>;
+#else
+template <gt::int_t = 32, gt::int_t = 8>
 using backend_t = gt::backend::GTBENCH_BACKEND;
-using storage_tr = gt::storage_traits<backend_t>;
+#endif
+using storage_tr = gt::storage_traits<backend_t<>>;
 using storage_info_ijk_t =
     storage_tr::storage_info_t<0, 3, gt::halo<halo, halo, 0>>;
 using storage_info_ij_t =
