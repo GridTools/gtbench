@@ -46,7 +46,7 @@ public:
   vec<std::size_t, 3> local_offset() const;
 
   std::function<void(storage_t &)>
-  exchanger(storage_info_ijk_t const &sinfo) const;
+  exchanger(gt::storage::info<3> const &sinfo) const;
 
   double wtime() const;
   result collect_results(result r) const;

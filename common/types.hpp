@@ -9,7 +9,10 @@
  */
 #pragma once
 
-#include <gridtools/storage/storage_facility.hpp>
+#include <gridtools/stencil/cpu_ifirst.hpp>
+#include <gridtools/storage/builder.hpp>
+#include <gridtools/storage/sid.hpp>
+#include <gridtools/storage/cpu_ifirst.hpp>
 
 namespace gt = gridtools;
 
@@ -22,24 +25,20 @@ constexpr real_t operator"" _r(unsigned long long value) {
 
 static constexpr gt::int_t halo = 3;
 
-#ifdef GTBENCH_BACKEND_CUDA
-template <gt::int_t IBlockSize = 32, gt::int_t JBlockSize = 8>
-using backend_t =
-    gt::cuda::backend<gridtools::integral_constant<gt::int_t, IBlockSize>,
-                      gridtools::integral_constant<gt::int_t, JBlockSize>>;
-#else
-template <gt::int_t = 32, gt::int_t = 8>
-using backend_t = gt::backend::GTBENCH_BACKEND;
-#endif
-using storage_tr = gt::storage_traits<backend_t<>>;
-using storage_info_ijk_t =
-    storage_tr::storage_info_t<0, 3, gt::halo<halo, halo, 0>>;
-using storage_info_ij_t =
-    storage_tr::special_storage_info_t<3, gt::selector<1, 1, 0>,
-                                       gt::halo<halo, halo, 0>>;
-using storage_t = storage_tr::data_store_t<real_t, storage_info_ijk_t>;
-using storage_ij_t = storage_tr::data_store_t<real_t, storage_info_ij_t>;
+using backend_t = gt::stencil::GTBENCH_BACKEND<>;
+using storage_tr = gt::storage::GTBENCH_BACKEND;
 
 template <class T, std::size_t N> struct vec;
 template <class T> struct vec<T, 3> { T x, y, z; };
 template <class T> struct vec<T, 2> { T x, y; };
+
+inline auto storage_builder(vec<std::size_t, 3> const &resolution) {
+  return gt::storage::builder<storage_tr>
+  .type<real_t>()
+  .id<0>()
+  .halos(halo, halo, 0)
+  .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo, resolution.z + 1);
+}
+
+using storage_t =
+    decltype(storage_builder(std::declval<vec<std::size_t, 3>>())());

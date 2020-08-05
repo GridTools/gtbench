@@ -9,8 +9,9 @@
  */
 #include "./diffusion.hpp"
 
-#include <gridtools/stencil_composition/expressions/expressions.hpp>
-#include <gridtools/stencil_composition/stencil_functions.hpp>
+#include <gridtools/stencil/cartesian.hpp>
+#include <gridtools/stencil/frontend/run.hpp>
+#include <gridtools/stencil/global_parameter.hpp>
 
 #include "./computation.hpp"
 
@@ -18,11 +19,12 @@ namespace numerics {
 namespace diffusion {
 
 namespace {
-using gt::extent;
-using gt::in_accessor;
-using gt::inout_accessor;
-using gt::make_param_list;
-using namespace gt::expressions;
+using gt::stencil::extent;
+using gt::stencil::make_param_list;
+using gt::stencil::cartesian::call_proc;
+using gt::stencil::cartesian::in_accessor;
+using gt::stencil::cartesian::inout_accessor;
+using namespace gt::stencil::cartesian::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
@@ -200,71 +202,67 @@ struct stage_diffusion_w3 {
 
 } // namespace
 
-horizontal::horizontal(vec<std::size_t, 3> const &resolution,
-                       vec<real_t, 3> const &delta, real_t coeff)
-    : comp_(gt::make_computation<backend_t<16, 12>>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_dx() = gt::make_global_parameter(delta.x),
-          p_dy() = gt::make_global_parameter(delta.y),
-          p_coeff() = gt::make_global_parameter(coeff),
-          gt::make_multistage(
-              gt::execute::parallel(),
-              gt::make_stage<stage_horizontal>(p_out(), p_in(), p_dx(), p_dy(),
-                                               p_dt(), p_coeff())))) {}
-
-void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
+std::function<void(storage_t, storage_t, real_t dt)>
+horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+           real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
+                                                real_t dt) {
+    gt::stencil::run_single_stage(stage_horizontal(), backend_t(), grid, out,
+                                  in,
+                                  gt::stencil::make_global_parameter(delta.x),
+                                  gt::stencil::make_global_parameter(delta.y),
+                                  gt::stencil::make_global_parameter(dt),
+                                  gt::stencil::make_global_parameter(coeff));
+  };
 }
 
-vertical::vertical(vec<std::size_t, 3> const &resolution,
-                   vec<real_t, 3> const &delta, real_t coeff)
-    : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
-      sinfo_(resolution.x + 2 * halo, resolution.y + 2 * halo,
-             resolution.z + 1),
-      fact_(sinfo_ij_, "fact"), d_(sinfo_, "d"), d2_(sinfo_, "d2"),
-      comp1_(gt::make_computation<backend_t<32, 6>>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_k_size() = gt::make_global_parameter((int)resolution.z),
-          p_dz() = gt::make_global_parameter(delta.z),
-          p_coeff() = gt::make_global_parameter(coeff), p_fact() = fact_,
-          p_d() = d_, p_d_uncached() = d_, p_d2() = d2_, p_d2_uncached() = d2_,
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::fill>(
-                      p_data_in()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c2()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d2())),
-              gt::make_stage<stage_diffusion_w_forward>(
-                  p_c(), p_d(), p_c2(), p_d2(), p_data_in(),
-                  p_data_in_uncached(), p_dz(), p_dt(), p_coeff(), p_k_size())),
-          gt::make_multistage(
-              gt::execute::backward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k,
-                            gt::cache_io_policy::fill_and_flush>(p_d()),
-                  gt::cache<gt::cache_type::k,
-                            gt::cache_io_policy::fill_and_flush>(p_d2())),
-              gt::make_stage<stage_diffusion_w_backward>(
-                  p_c(), p_d(), p_c2(), p_d2(), p_fact(), p_d_uncached(),
-                  p_d2_uncached(), p_dz(), p_dt(), p_coeff(), p_k_size())))),
-      comp2_(gt::make_computation<backend_t<64, 1>>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_fact() = fact_, p_d() = d_, p_d2() = d2_,
-          gt::make_multistage(gt::execute::parallel(),
-                              gt::make_stage<stage_diffusion_w3>(
-                                  p_data_out(), p_d(), p_d2(), p_fact())))) {}
+std::function<void(storage_t, storage_t, real_t dt)>
+vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+         real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  auto const spec = [](auto out, auto in, auto in_uncached, auto fact, auto d,
+                       auto d2, auto d_uncached, auto d2_uncached, auto k_size,
+                       auto dz, auto dt, auto coeff) {
+    using namespace gt::stencil;
+    GT_DECLARE_TMP(real_t, c, c2);
+    return multi_pass(
+        execute_forward()
+            .k_cached(cache_io_policy::fill(), in)
+            .k_cached(cache_io_policy::flush(), c, d, c2, d2)
+            .stage(stage_diffusion_w_forward(), c, d, c2, d2, in, in_uncached,
+                   dz, dt, coeff, k_size),
+        execute_backward()
+            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d, d2)
+            .stage(stage_diffusion_w_backward(), c, d, c2, d2, fact, d_uncached,
+                   d2_uncached, dz, dt, coeff, k_size));
+  };
 
-void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp1_.run(p_data_in() = in, p_data_in_uncached() = in,
-             p_dt() = gt::make_global_parameter(dt));
-  comp2_.run(p_data_out() = out);
+  auto field = storage_builder(resolution);
+
+  auto ij_slice = gt::storage::builder<storage_tr>
+    .type<real_t>()
+    .id<1>()
+    .halos(halo, halo)
+    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
+
+  auto alpha = ij_slice();
+  auto gamma = ij_slice();
+  auto fact = ij_slice();
+  auto d = field();
+  auto d2 = field();
+
+  return [grid = std::move(grid), spec = std::move(spec),
+          fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
+          resolution, coeff](storage_t out, storage_t in, real_t dt) {
+    gt::stencil::run(spec, backend_t(), grid, out, in, in, fact, d, d2, d, d2,
+                     gt::stencil::make_global_parameter(resolution.z),
+                     gt::stencil::make_global_parameter(delta.z),
+                     gt::stencil::make_global_parameter(dt),
+                     gt::stencil::make_global_parameter(coeff));
+    gt::stencil::run_single_stage(stage_diffusion_w3(), backend_t(), grid, out,
+                                  d, d2, fact);
+  };
 }
 
 } // namespace diffusion

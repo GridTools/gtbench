@@ -8,8 +8,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # User options
-set(GTBENCH_BACKEND "mc" CACHE STRING "Benchmark backend")
-set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
+set(GTBENCH_BACKEND "cpu_ifirst" CACHE STRING "Benchmark backend")
+set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "cpu_kfirst" "cpu_ifirst" "gpu")
 
 set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
@@ -17,7 +17,7 @@ set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
-find_package(GridTools 1.1 REQUIRED)
+find_package(GridTools 2.0 REQUIRED)
 
 if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
                                         OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
@@ -45,7 +45,7 @@ target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND_${GTBENCH_BACKEND}
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   )
-target_link_libraries(common INTERFACE GridTools::gridtools)
+target_link_libraries(common INTERFACE GridTools::gridtools GridTools::stencil_cpu_ifirst)
 
 add_library(common_runtime INTERFACE)
 target_compile_definitions(common_runtime INTERFACE

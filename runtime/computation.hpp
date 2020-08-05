@@ -18,27 +18,24 @@ namespace computation {
 
 namespace impl {
 template <class F> void init_field(storage_t &storage, F f, real_t t) {
-  auto view = gt::make_host_view(storage);
-  const long ni = storage.total_length<0>();
-  const long nj = storage.total_length<1>();
-  const long nk = storage.total_length<2>();
+  auto view = storage->host_view();
+  const long ni = storage->lengths()[0];
+  const long nj = storage->lengths()[1];
+  const long nk = storage->lengths()[2];
 
 #pragma omp parallel for collapse(3)
   for (long k = 0; k < nk; ++k)
     for (long j = 0; j < nj; ++j)
       for (long i = 0; i < ni; ++i)
         view(i, j, k) = f({i, j, k}, t);
-
-  storage.sync();
 }
 
 template <class F>
 double compute_field_error(storage_t const &storage, F f, real_t t) {
-  storage.sync();
-  auto view = gt::make_host_view<gt::access_mode::read_only>(storage);
-  const long ni = storage.total_length<0>();
-  const long nj = storage.total_length<1>();
-  const long nk = storage.total_length<2>();
+  auto view = storage->const_host_view();
+  const long ni = storage->lengths()[0];
+  const long nj = storage->lengths()[1];
+  const long nk = storage->lengths()[2];
 
   double error = 0.0;
 #pragma omp parallel for collapse(3) reduction(max : error)
