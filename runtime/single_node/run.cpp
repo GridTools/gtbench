@@ -10,6 +10,7 @@
 #include "./run.hpp"
 
 #include <gridtools/boundaries/boundary.hpp>
+#include <gridtools/gcl/low_level/arch.hpp>
 
 namespace runtime {
 namespace single_node_impl {
@@ -43,7 +44,12 @@ numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution) {
       {{halo, halo, halo, halo + nx - 1, halo + nx + halo},
        {halo, halo, halo, halo + ny - 1, halo + ny + halo},
        {0, 0, 0, nz - 1, nz}}};
-  gt::boundaries::boundary<periodic_boundary, backend_t> boundary(
+#ifdef GTBENCH_BACKEND_GPU
+  using arch_t = gt::gcl::gpu;
+#else
+  using arch_t = gt::gcl::cpu;
+#endif
+  gt::boundaries::boundary<periodic_boundary, arch_t> boundary(
       halos, periodic_boundary());
 
   return [boundary = std::move(boundary)](storage_t &storage) {

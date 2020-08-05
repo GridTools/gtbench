@@ -9,10 +9,23 @@
  */
 #pragma once
 
-#include <gridtools/stencil/cpu_ifirst.hpp>
 #include <gridtools/storage/builder.hpp>
 #include <gridtools/storage/sid.hpp>
+
+#ifdef GTBENCH_BACKEND_CPU_IFIRST
+#include <gridtools/stencil/cpu_ifirst.hpp>
 #include <gridtools/storage/cpu_ifirst.hpp>
+#endif
+
+#ifdef GTBENCH_BACKEND_CPU_KFIRST
+#include <gridtools/stencil/cpu_kfirst.hpp>
+#include <gridtools/storage/cpu_kfirst.hpp>
+#endif
+
+#ifdef GTBENCH_BACKEND_GPU
+#include <gridtools/stencil/gpu.hpp>
+#include <gridtools/storage/gpu.hpp>
+#endif
 
 namespace gt = gridtools;
 

@@ -11,34 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        backend: [mc, x86, cuda]
+        backend: [cpu_ifirst, cpu_kfirst, gpu]
         runtime: [single_node, simple_mpi, gcl, ghex_comm]
     steps:
     - uses: actions/checkout@v2
       name: checkout
-    - name: pull
-      run: >
-        docker pull fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base;
-        docker build
-        --cache-from fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
-        --cache-from $(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
-        --target base
-        --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
-        --build-arg GTBENCH_BACKEND=${{ matrix.backend }}
-        --build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
-        -t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
-        .
     - name: build
       run: >
         docker build
-        --cache-from fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}_base
-        --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:10.1-devel-ubuntu18.04; else echo ubuntu:19.10; fi)
+        --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = gpu ]; then echo nvidia/cuda:11.0-devel-ubuntu18.04; else echo ubuntu:20.04; fi)
         --build-arg GTBENCH_BACKEND=${{ matrix.backend }}
         --build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
         -t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}
         .
     - name: test
-      if: ${{ matrix.backend != 'cuda' }}
+      if: ${{ matrix.backend != 'gpu' }}
       run: >
         docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
         docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/convergence_tests
