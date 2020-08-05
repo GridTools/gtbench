@@ -20,7 +20,7 @@ namespace gcl_impl {
 using pattern_t =
     gt::gcl::halo_exchange_dynamic_ut<storage_t::element_type::layout_t,
                                       gt::layout_map<0, 1, 2>, real_t,
-#ifdef __CUDACC__
+#ifdef GTBENCH_BACKEND_GPU
                                       gt::gcl::gpu
 #else
                                       gt::gcl::cpu

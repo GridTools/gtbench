@@ -306,7 +306,7 @@ public:
 
     auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
-#ifdef __CUDACC__
+#ifdef GTBENCH_BACKEND_GPU
       using arch_t = gt::ghex::gpu;
 #else
       using arch_t = gt::ghex::cpu;
