@@ -45,8 +45,7 @@ public:
   vec<std::size_t, 3> local_resolution() const;
   vec<std::size_t, 3> local_offset() const;
 
-  std::function<void(storage_t &)>
-  exchanger(gt::storage::info<3> const &sinfo) const;
+  std::function<void(storage_t &)> exchanger(storage_t const &storage) const;
 
   double wtime() const;
   result collect_results(result r) const;
@@ -67,7 +66,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
       grid.local_offset());
 
   auto state = computation::init_state(exact);
-  auto exchange = grid.exchanger(state.sinfo);
+  auto exchange = grid.exchanger(state.data);
   auto step = stepper(state, exchange);
 
   auto write =
