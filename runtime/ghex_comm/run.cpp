@@ -306,7 +306,12 @@ public:
 
     auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
-      auto field = gt::ghex::wrap_gt_field(domain, storage);
+#ifdef __CUDACC__
+      using arch_t = gt::ghex::gpu;
+#else
+      using arch_t = gt::ghex::cpu;
+#endif
+      auto field = gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
 
 #ifdef __CUDACC__
       cudaStreamSynchronize(0);
