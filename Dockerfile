@@ -3,7 +3,7 @@ FROM ${BUILD_FROM} as base
 LABEL maintainer="Felix Thaler <thaler@cscs.ch>"
 
 RUN apt-get update -qq && \
-    apt-get install -qq -y \
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
     build-essential \
     libmpich-dev \
     wget \

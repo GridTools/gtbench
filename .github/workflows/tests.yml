@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  DOCKER_BUILDKIT: 1
+
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -19,20 +22,22 @@ jobs:
     - name: build
       run: >
         docker build
+        --cache-from fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }}
         --build-arg BUILD_FROM=$(if [ ${{ matrix.backend }} = gpu ]; then echo nvidia/cuda:11.0-devel-ubuntu18.04; else echo ubuntu:20.04; fi)
         --build-arg GTBENCH_BACKEND=${{ matrix.backend }}
         --build-arg GTBENCH_RUNTIME=${{ matrix.runtime }}
-        -t fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }}
+        --build-arg BUILDKIT_INLINE_CACHE=1
+        -t fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }}
         .
     - name: test
       if: ${{ matrix.backend != 'gpu' }}
       run: >
-        docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
-        docker run --rm fthaler/gtbench:${{ matrix.backend }}_${{ matrix.runtime }} /usr/bin/convergence_tests
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} /usr/bin/benchmark --domain-size 10 10 &&
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} /usr/bin/convergence_tests
     - name: push
       if: ${{ github.event_name == 'push' }}
       run: >
         echo ${{ secrets.DOCKER_TOKEN }} | docker login -u fthaler --password-stdin &&
-        docker push fthaler/gtbench &&
+        docker push fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} &&
         docker logout
         
