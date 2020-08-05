@@ -17,12 +17,12 @@ namespace numerics {
 namespace diffusion {
 
 std::function<void(storage_t, storage_t, real_t dt)>
-    horizontal(vec<std::size_t, 3> const &resolution,
-               vec<real_t, 3> const &delta, real_t coeff);
+horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+           real_t coeff);
 
 std::function<void(storage_t, storage_t, real_t dt)>
-    vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
-             real_t coeff);
+vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+         real_t coeff);
 
 } // namespace diffusion
 } // namespace numerics

@@ -311,7 +311,8 @@ public:
 #else
       using arch_t = gt::ghex::cpu;
 #endif
-      auto field = gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
+      auto field =
+          gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
 
 #ifdef __CUDACC__
       cudaStreamSynchronize(0);

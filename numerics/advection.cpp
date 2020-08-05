@@ -406,9 +406,8 @@ runge_kutta_step(vec<std::size_t, 3> const &resolution,
           fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t in0, storage_t u,
                       storage_t v, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t(), grid, in, w, alpha, gamma, fact,
-                     d, d2, d, d2,
-                     gt::stencil::make_global_parameter(resolution.z),
+    gt::stencil::run(spec, backend_t(), grid, in, w, alpha, gamma, fact, d, d2,
+                     d, d2, gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
     gt::stencil::run_single_stage(stage_advection_w3_rk(), backend_t(), grid,
