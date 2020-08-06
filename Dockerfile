@@ -34,7 +34,7 @@ RUN git clone -b release_v2.0 https://github.com/GridTools/gridtools.git && \
     if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTING=Off \
+    -DBUILD_TESTING=OFF \
     .. && \
     make -j $(nproc) install && \
     cd ../.. && \
