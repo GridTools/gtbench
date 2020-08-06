@@ -5,11 +5,12 @@ LABEL maintainer="Felix Thaler <thaler@cscs.ch>"
 RUN apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
     build-essential \
-    libmpich-dev \
-    wget \
+    file \
     git \
+    libmpich-dev \
     tar \
-    software-properties-common && \
+    software-properties-common \
+    wget && \
     rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.14.5
@@ -30,12 +31,25 @@ ENV CMAKE_PREFIX_PATH=/usr/local/lib/cmake
 RUN git clone -b gt2 https://github.com/fthaler/GHEX.git && \
     mkdir -p GHEX/build && \
     cd GHEX/build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     .. && \
     make -j $(nproc) install && \
     cd ../.. && \
     rm -rf GHEX
+
+RUN git clone -b release_v2.0 https://github.com/GridTools/gridtools.git && \
+    mkdir -p gridtools/build && \
+    cd gridtools/build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
+    cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTING=Off \
+    .. && \
+    make -j $(nproc) install && \
+    cd ../.. && \
+    rm -rf gridtools
 
 FROM base
 ARG GTBENCH_BACKEND=cpu_ifirst
@@ -44,6 +58,7 @@ COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
