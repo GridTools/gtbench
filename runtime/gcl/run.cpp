@@ -103,7 +103,7 @@ struct process_grid::impl {
 
     pattern->setup(1);
 
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
     cudaStreamSynchronize(0);
 #endif
 

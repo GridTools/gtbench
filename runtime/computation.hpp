@@ -64,7 +64,7 @@ numerics::solver_state init_state(Discrete const &discrete, real_t t = 0_r) {
 }
 
 inline void sync(numerics::solver_state &state) {
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   if (cudaDeviceSynchronize() != cudaSuccess)
     throw std::runtime_error("device sync failed");
 #endif

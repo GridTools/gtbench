@@ -12,7 +12,7 @@
 
 namespace runtime {
 
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
 int set_device(int device_id) {
   int device_count = 1;
   if (cudaGetDeviceCount(&device_count) != cudaSuccess)
