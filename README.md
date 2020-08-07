@@ -7,10 +7,10 @@ The benchmark implements an advection-diffusion solver using the finite differen
 
 ### GridTools
 
-The benchmark requires version 1.1.2 of GridTools, which can be obtained from the GridTools repository:
+The benchmark requires version 2.0.1 of GridTools, which can be obtained from the GridTools repository:
 
 ```console
-$ git clone --branch v1.1.2 https://github.com/GridTools/gridtools.git
+$ git clone --branch release_v2.0 https://github.com/GridTools/gridtools.git
 ```
 
 GridTools further depends on [Boost](https://www.boost.org/) (minimum version 1.67.0). A recent version of [CMake](https://cmake.org/) is required to build and install GridTools (minimum version 3.14.5).
@@ -19,7 +19,7 @@ Follow the [GridTools documentation](https://gridtools.github.io/gridtools/lates
 
 ### GHEX
 
-The benchmark requires the GHEX library. It can be obtained using:
+For the GHEX runtime, installing the GHEX library is a further requirement. Note that this step can be skipped for single-node (single-process) runs or when using a different runtime than `ghex_comm` for inter-node communication (see further below for details about available runtimes). GHEX can be obtained using:
 
 ```console
 $ git clone https://github.com/GridTools/GHEX.git
@@ -88,18 +88,15 @@ The backend can be selected by setting the `GTBENCH_BACKEND` option when configu
 ```console
 $ cmake -DGTBENCH_BACKEND=<BACKEND> ..
 ```
-where `<BACKEND>` must be either `x86`, `mc`, or `cuda`. The `x86` and `mc` backends are two different CPU-backends of GridTools. On modern CPUs with large vector width and/or many cores, the `mc` backend might perform significantly better. On CPUs without vectorization or small vector width and limited parallelism, the `x86` backend might perform better. The `cuda` backend currently supports running NVIDIA CUDA-capable GPUs and – despite its name – also AMD HIP-capable GPUs.
+where `<BACKEND>` must be either `cpu_kfirst`, `cpu_ifirst`, or `gpu`. The `cpu_kfirst` and `cpu_ifirst` backends are two different CPU-backends of GridTools. On modern CPUs with large vector width and/or many cores, the `cpu_ifirst` backend might perform significantly better. On CPUs without vectorization or small vector width and limited parallelism, the `cpu_kfirst` backend might perform better. The `hip` backend currently supports running NVIDIA CUDA-capable GPUs and AMD HIP-capable GPUs.
 
 ### Selecting the GPU Compilation Framework
 
 **Note** This section is only relevant for GPU targets.
 
-There are three GPU targets available, which are set at when configuring GridTools by setting the CMake `GT_CUDA_COMPILATION_TYPE` parameter:
+For CUDA-capable GPUs, two compilation modes are available, namely compilation of GPU code with the NVIDIA NVCC compiler or alternatively with Clang. If the C++ compiler is set to Clang, the latter is preferred but can be overriden by setting the CMake variable `GT_CLANG_CUDA_MODE` to `NVCC-CUDA`.
 
-1. `NVCC-CUDA`: NVIDIA CUDA compilation using the NVIDIA compiler.
-2. `Clang-CUDA`: Clang CUDA compilation using the compiler.
-3. `HIPCC-AMDGPU` AMD HIP compilation using AMD’s HIP-Clang compiler. **Note**: the deprecated *HCC* compiler is not supported.
-
+For AMD GPUs, the CMake C++ compiler has to be set to HIPCC (using the environment variable `CXX`, as usually with CMake).
 
 ### Selecting the Runtime
 
@@ -107,14 +104,14 @@ The benchmark implementation brings several runtimes, implementing different sch
 ```console
 $ cmake -DGTBENCH_RUNTIME=<RUNTIME> ..
 ```
-where `RUNTIME` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`. `simple_mpi` and `single_node` are for debugging purposes only.
+where `RUNTIME` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`.
 - The `single_node` options is useful for performing "single-node" tests to understand kernel performance.
 - The `simple_mpi` implementation uses a simple MPI 2 sided communication for halo exchanges.
 - The `gcl` implementation uses a optimized MPI based communication library shipped with [GridTools](https://gridtools.github.io/gridtools/latest/user_manual/user_manual.html#halo-exchanges).
 - The `ghex_comm` option will use highly optimized distributed communication via the GHEX library, designed for best performance at scale.
  Additionally, this option will enable a multi-threaded version of the benchmark, where a rank may have more than one sub-domain (over-subscription), which are delegated to separate threads. **Note:** The gridtools computations use openmp threads on the CPU targets which will not be affected by this parameter.
 
-#### Selecting the Transport Layer
+#### Selecting the Transport Layer for GHEX
 
 If the `ghex_comm` runtime has been selected, the underlying transport layer will be either
 *UCX* or *MPI*. The behaviour can be chosen by defining the the CMake boolean variables `GHEX_USE_UCP` when configuring the GHEX library, see above.
@@ -123,7 +120,7 @@ If the `ghex_comm` runtime has been selected, the underlying transport layer wil
 
 ### Benchmark
 
-The benchmark executable takes a single command line parameter, the global horizontal domain size `N`. The simulation will then be performed on a total domain size of `NX×NY×60` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun` or similar):
+The benchmark executable requires the global horizontal domain size as a command line parameter. The simulation will then be performed on a total domain size of `NX×NY×60` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun`, or similar):
 ```console
 $ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <NX> <NY>
 ```
@@ -154,9 +151,9 @@ Runtime:                 ghex_comm
 Median time:             8.97857s
 Columns per second:      6.41528e+07
 ```
-Note that no confidence intervals are given in this case, but they are required for the final benchmark runs.
+Note that no confidence intervals are given in this case.
 
-Note that there are additional per-runtime command line options. Use `./benchmark --help` to list all available options.
+Note that there may be additional runtime-dependent command line options. Use `./benchmark --help` to list all available options.
 
 
 ### Convergence Tests
@@ -168,6 +165,15 @@ $ mpi_launcher <LAUNCHER_OPTIONS> ./convergence_tests
 
 The convergence tests can be run on 1, 2 or 4 MPI ranks.
 
-Example outputs for single and double precision configurations can be found in the files *convergence_float.out* and *convergence_double.out*.
+Convergence orders should be close to the following theoretical numbers:
 
-Note that the expected convergence orders of some tests do not exactly match the theoretical order. This is either due to limited numerical precision or to suboptimal range of tested spatial or temporal resolutions for a specific discretization.
+| Computation           | Spatial Order | Temporal Order |
+|-----------------------|---------------|----------------|
+| Horizontal Diffusion  | 6             | 1              |
+| Vertical Diffusion    | 2             | 1              |
+| Full Diffusion        | 2             | 1              |
+| Horizontal Advection  | 5             | 1              |
+| Vertical Advection    | 2             | 1              |
+| Runge-Kutta Advection | 2             | 1              |
+
+Note that the expected convergence orders of some tests do not exactly match the theoretical order. This is either due to limited numerical precision or to suboptimal range of tested spatial or temporal resolutions for a specific discretization. Deviations are expected to be larger when compiled with single-precision than with double-precision floating point numbers.
