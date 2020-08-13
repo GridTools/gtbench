@@ -208,12 +208,12 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
                                                 real_t dt) {
-    gt::stencil::run_single_stage(stage_horizontal(), backend_t(), grid, out,
-                                  in,
-                                  gt::stencil::make_global_parameter(delta.x),
-                                  gt::stencil::make_global_parameter(delta.y),
-                                  gt::stencil::make_global_parameter(dt),
-                                  gt::stencil::make_global_parameter(coeff));
+    gt::stencil::run_single_stage(
+        stage_horizontal(), backend_t<GTBENCH_BPARAMS_HDIFF>(), grid, out, in,
+        gt::stencil::make_global_parameter(delta.x),
+        gt::stencil::make_global_parameter(delta.y),
+        gt::stencil::make_global_parameter(dt),
+        gt::stencil::make_global_parameter(coeff));
   };
 }
 
@@ -255,13 +255,15 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
   return [grid = std::move(grid), spec = std::move(spec),
           fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
           resolution, coeff](storage_t out, storage_t in, real_t dt) {
-    gt::stencil::run(spec, backend_t(), grid, out, in, in, fact, d, d2, d, d2,
+    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF1>(), grid, out, in,
+                     in, fact, d, d2, d, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt),
                      gt::stencil::make_global_parameter(coeff));
-    gt::stencil::run_single_stage(stage_diffusion_w3(), backend_t(), grid, out,
-                                  d, d2, fact);
+    gt::stencil::run_single_stage(stage_diffusion_w3(),
+                                  backend_t<GTBENCH_BPARAMS_VDIFF2>(), grid,
+                                  out, d, d2, fact);
   };
 }
 

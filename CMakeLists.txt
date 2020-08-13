@@ -17,6 +17,12 @@ set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
+set(GTBENCH_BPARAMS_HDIFF "" CACHE STRING "Parameters for GridTools backend for horizontal diffusion")
+set(GTBENCH_BPARAMS_VDIFF1 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 1)")
+set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 2)")
+set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
+set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
   set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")

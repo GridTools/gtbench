@@ -38,7 +38,8 @@ constexpr real_t operator"" _r(unsigned long long value) {
 
 static constexpr gt::int_t halo = 3;
 
-using backend_t = gt::stencil::GTBENCH_BACKEND<>;
+template <class... Params>
+using backend_t = gt::stencil::GTBENCH_BACKEND<Params...>;
 using storage_tr = gt::storage::GTBENCH_BACKEND;
 
 template <class T, std::size_t N> struct vec;

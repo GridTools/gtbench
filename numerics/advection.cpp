@@ -309,7 +309,7 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   return [grid = std::move(grid), delta](storage_t out, storage_t in,
                                          storage_t u, storage_t v, real_t dt) {
-    gt::stencil::run_single_stage(stage_horizontal(), backend_t(), grid, out,
+    gt::stencil::run_single_stage(stage_horizontal(), backend_t<>(), grid, out,
                                   in, u, v,
                                   gt::stencil::make_global_parameter(delta.x),
                                   gt::stencil::make_global_parameter(delta.y),
@@ -358,8 +358,8 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
           alpha = std::move(alpha), gamma = std::move(gamma),
           fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t(), grid, out, in, w, alpha, gamma, fact, d,
-                     d2, d, d2,
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, w, alpha, gamma, fact,
+                     d, d2, d, d2,
                      gt::stencil::make_global_parameter((int)resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
@@ -406,15 +406,16 @@ runge_kutta_step(vec<std::size_t, 3> const &resolution,
           fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t in0, storage_t u,
                       storage_t v, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t(), grid, in, w, alpha, gamma, fact, d, d2,
-                     d, d2, gt::stencil::make_global_parameter(resolution.z),
+    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_RKADV1>(), grid, in, w,
+                     alpha, gamma, fact, d, d2, d, d2,
+                     gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
-    gt::stencil::run_single_stage(stage_advection_w3_rk(), backend_t(), grid,
-                                  out, d, d2, fact, in, in0, u, v,
-                                  gt::stencil::make_global_parameter(delta.x),
-                                  gt::stencil::make_global_parameter(delta.y),
-                                  gt::stencil::make_global_parameter(dt));
+    gt::stencil::run_single_stage(
+        stage_advection_w3_rk(), backend_t<GTBENCH_BPARAMS_RKADV2>(), grid, out,
+        d, d2, fact, in, in0, u, v, gt::stencil::make_global_parameter(delta.x),
+        gt::stencil::make_global_parameter(delta.y),
+        gt::stencil::make_global_parameter(dt));
   };
 }
 
