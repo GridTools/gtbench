@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
   options opts;
-  opts("domain-size", "size of domain along horizontal axes", "NX NY", 2);
+  opts("domain-size", "size of domain along horizontal axes", "NX NY NZ", 3);
   opts("runs", "number of runs, reported is the median result", "RUNS", {101});
   runtime::register_options(rt_tag, opts);
 
