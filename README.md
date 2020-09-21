@@ -34,6 +34,7 @@ Required:
 Optional:
 - [Unified Communication X (UCX)](https://github.com/openucx/ucx)
 - [PMIx](https://github.com/openpmix/openpmix)
+- [xpmem](https://github.com/hjelmn/xpmem)
 
 Additionally, [CMake](https://cmake.org/) is required for building GHEX.
 
@@ -58,6 +59,13 @@ If PMIx shall be enabled, follow the above pattern by define additionally
         -DGHEX_USE_PMIx=ON \
         -DPMIX_INCLUDE_DIR=/PATH/TO/PMIX-INSTALLATION/include \
         -DPMIX_LIBRARY=/PATH/TO/PMIX-INSTALLATION/lib/libpmix.so
+```
+
+To enable xpmem support, pass additionally the following flags
+```console
+        -DGHEX_USE_XPMEM=ON \
+        -DXPMEM_INCLUDE_DIR=/PATH/TO/XPMEM-INSTALLATION/include \
+        -DXPMEM_LIBRARY=/PATH/TO/XPMEM-INSTALLATION/lib/libxpmem.so
 ```
 
 After successful configuration, type
