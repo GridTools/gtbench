@@ -36,7 +36,8 @@ namespace ghex_comm_impl {
 
 runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
                  std::array<int, 2> thread_cart_dims,
-                 std::vector<int> const &device_mapping)
+                 std::vector<int> const &device_mapping,
+                 std::string const &output_filename)
     : m_scope(
           [=] {
             if (num_threads > 1) {
@@ -48,7 +49,8 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           },
           MPI_Finalize),
       m_num_threads(num_threads), m_cart_dims(cart_dims),
-      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0) {
+      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0),
+      m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -80,7 +82,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           "the product of thread cart dims must be equal to the number of "
           "threads per rank.");
   }
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   MPI_Comm shmem_comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &shmem_comm);
@@ -304,9 +306,15 @@ public:
 
     auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
-      auto field = gt::ghex::wrap_gt_field(domain, storage);
+#ifdef GTBENCH_BACKEND_GPU
+      using arch_t = gt::ghex::gpu;
+#else
+      using arch_t = gt::ghex::cpu;
+#endif
+      auto field =
+          gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
 
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
       cudaStreamSynchronize(0);
 #endif
       comm_obj->exchange(patterns(field)).wait();
@@ -354,7 +362,7 @@ void runtime_register_options(ghex_comm, options &options) {
           "dimensons of cartesian decomposition "
           "among sub-domains",
           "TX TY", 2);
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   options("device-mapping",
           "node device mapping: device id per sub-domain in the format "
           "I_0:I_1:...:I_(N-1) "
@@ -365,14 +373,8 @@ void runtime_register_options(ghex_comm, options &options) {
 }
 
 runtime runtime_init(ghex_comm, options_values const &options) {
-  std::array<int, 2> cart_dims = {0, 0};
-  if (options.has("cart-dims"))
-    cart_dims = options.get<std::array<int, 2>>("cart-dims");
-  std::array<int, 2> thread_cart_dims = {0, 0};
-  if (options.has("thread-cart-dims"))
-    thread_cart_dims = options.get<std::array<int, 2>>("thread-cart-dims");
-#ifdef __CUDACC__
   std::vector<int> device_mapping;
+#ifdef GT_CUDACC
   if (options.has("device-mapping")) {
     const std::regex delimiter(":");
     const auto input = options.get<std::string>("device-mapping");
@@ -386,11 +388,11 @@ runtime runtime_init(ghex_comm, options_values const &options) {
           return n;
         });
   }
-  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims,
-                 device_mapping);
-#else
-  return runtime(options.get<int>("sub-domains"), cart_dims, thread_cart_dims);
 #endif
+  return runtime(options.get<int>("sub-domains"),
+                 options.get_or<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get_or<std::array<int, 2>>("thread-cart-dims", {0, 0}),
+                 device_mapping, options.get_or<std::string>("output", ""));
 }
 
 } // namespace ghex_comm_impl

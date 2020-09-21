@@ -8,8 +8,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # User options
-set(GTBENCH_BACKEND "mc" CACHE STRING "Benchmark backend")
-set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "x86" "mc" "cuda")
+set(GTBENCH_BACKEND "cpu_ifirst" CACHE STRING "Benchmark backend")
+set_property(CACHE GTBENCH_BACKEND PROPERTY STRINGS "cpu_kfirst" "cpu_ifirst" "gpu")
 
 set(GTBENCH_FLOAT "float" CACHE STRING "Floating-point type")
 set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
@@ -17,15 +17,27 @@ set_property(CACHE GTBENCH_FLOAT PROPERTY STRINGS "float" "double")
 set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
-find_package(GridTools 1.1 REQUIRED)
+set(GTBENCH_BPARAMS_HDIFF "" CACHE STRING "Parameters for GridTools backend for horizontal diffusion")
+set(GTBENCH_BPARAMS_VDIFF1 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 1)")
+set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 2)")
+set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
+set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
 
-if(GTBENCH_BACKEND STREQUAL "cuda" AND (NOT DEFINED GRIDTOOLS_CUDA_COMPILATION_TYPE
-                                        OR GRIDTOOLS_CUDA_COMPILATION_TYPE STREQUAL "NVCC-CUDA"))
-  enable_language(CUDA)
-
-  set(CMAKE_CUDA_STANDARD 14)
-  set(CMAKE_CUDA_EXTENSIONS OFF)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
+  set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")
+else()
+  include(CheckLanguage)
+  check_language(CUDA)
+  if (CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_EXTENSIONS OFF)
+  endif()
 endif()
+
+find_package(GridTools 2.0 REQUIRED)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -42,18 +54,26 @@ target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--defa
 
 target_compile_definitions(common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
+  GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   )
-target_link_libraries(common INTERFACE GridTools::gridtools)
+target_link_libraries(common INTERFACE
+  GridTools::gridtools
+  GridTools::stencil_${GTBENCH_BACKEND}
+  GridTools::storage_${GTBENCH_BACKEND}
+  )
 
 add_library(common_runtime INTERFACE)
 target_compile_definitions(common_runtime INTERFACE
   GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
   )
-  target_link_libraries(common_runtime INTERFACE common)
+target_link_libraries(common_runtime INTERFACE
+  common
+  )
 
 # Subdirectories
 add_subdirectory(common)
+add_subdirectory(io)
 add_subdirectory(runtime)
 add_subdirectory(numerics)
 
@@ -61,7 +81,7 @@ add_subdirectory(numerics)
 compile_as_cuda(convergence_tests.cpp benchmark.cpp)
 
 add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion options runtime device)
+target_link_libraries(convergence_tests advection diffusion options runtime device io)
 
 add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion options runtime device)
+target_link_libraries(benchmark advection diffusion options runtime device io)

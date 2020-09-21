@@ -1,14 +1,16 @@
-ARG BUILD_FROM=ubuntu:19.10
+ARG BUILD_FROM=ubuntu:20.04
 FROM ${BUILD_FROM} as base
 LABEL maintainer="Felix Thaler <thaler@cscs.ch>"
 
 RUN apt-get update -qq && \
-    apt-get install -qq -y \
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
     build-essential \
-    wget \
+    file \
     git \
+    libmpich-dev \
     tar \
-    software-properties-common && \
+    software-properties-common \
+    wget && \
     rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.14.5
@@ -24,21 +26,12 @@ RUN export BOOST_VERSION_UNERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
     cp -r boost_${BOOST_VERSION_UNERLINE}/boost /usr/local/include/ && \
     rm -rf boost_${BOOST_VERSION_UNERLINE}*
 
-RUN wget -q http://www.mpich.org/static/downloads/3.1.4/mpich-3.1.4.tar.gz && \
-    tar xf mpich-3.1.4.tar.gz && \
-    cd mpich-3.1.4 && \
-    ./configure --disable-fortran --enable-fast=all,O3 --prefix=/usr/local/ && \
-    make -j $(nproc) && \
-    make install && \
-    ldconfig && \
-    cd .. && \
-    rm -rf mpich-3.1.4*
-
 ENV CMAKE_PREFIX_PATH=/usr/local/lib/cmake
 
-RUN git clone -b release_v1.1 https://github.com/GridTools/gridtools.git && \
+RUN git clone -b release_v2.0 https://github.com/GridTools/gridtools.git && \
     mkdir -p gridtools/build && \
     cd gridtools/build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
@@ -47,9 +40,10 @@ RUN git clone -b release_v1.1 https://github.com/GridTools/gridtools.git && \
     cd ../.. && \
     rm -rf gridtools
 
-RUN git clone https://github.com/GridTools/GHEX.git && \
+RUN git clone -b gt2 https://github.com/fthaler/GHEX.git && \
     mkdir -p GHEX/build && \
     cd GHEX/build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     .. && \
@@ -58,12 +52,13 @@ RUN git clone https://github.com/GridTools/GHEX.git && \
     rm -rf GHEX
 
 FROM base
-ARG GTBENCH_BACKEND=mc
+ARG GTBENCH_BACKEND=cpu_ifirst
 ARG GTBENCH_RUNTIME=ghex_comm
 COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
+    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \

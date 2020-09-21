@@ -14,9 +14,10 @@
 namespace runtime {
 namespace simple_mpi_impl {
 
-runtime::runtime(std::array<int, 2> const &cart_dims)
+runtime::runtime(std::array<int, 2> const &cart_dims,
+                 std::string const &output_filename)
     : m_scope([] { MPI_Init(nullptr, nullptr); }, MPI_Finalize),
-      m_cart_dims(cart_dims) {
+      m_cart_dims(cart_dims), m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -33,14 +34,12 @@ runtime::runtime(std::array<int, 2> const &cart_dims)
 
 void runtime_register_options(simple_mpi, options &options) {
   options("cart-dims", "dimensons of cartesian communicator", "PX PY", 2);
+  options("output", "optional data output", "FILE");
 }
 
 runtime runtime_init(simple_mpi, options_values const &options) {
-  std::array<int, 2> cart_dims = {0, 0};
-  if (options.has("cart-dims"))
-    cart_dims = options.get<std::array<int, 2>>("cart-dims");
-
-  return runtime(cart_dims);
+  return runtime(options.get_or<std::array<int, 2>>("cart-dims", {0, 0}),
+                 options.get_or<std::string>("output", ""));
 }
 
 template <class T> struct halo_info { T lower, upper; };
@@ -79,9 +78,9 @@ struct process_grid::impl {
   impl &operator=(impl const &) = delete;
 
   std::function<void(storage_t &)>
-  exchanger(storage_info_ijk_t const &sinfo) const {
+  exchanger(gt::storage::info<3> const &sinfo) const {
     auto strides = sinfo.strides();
-    auto sizes = sinfo.total_lengths();
+    auto sizes = sinfo.lengths();
 
     // sized of halos to exchange along x- and y-axes
     vec<decltype(sizes), 2> halo_sizes;
@@ -152,7 +151,7 @@ struct process_grid::impl {
             recv_offsets = std::move(recv_offsets),
             send_offsets = std::move(send_offsets)](storage_t &storage) {
       // storage data pointer
-      real_t *ptr = storage.get_storage_ptr()->get_target_ptr();
+      real_t *ptr = storage->get_target_ptr();
 
       // neighbor ranks along x- and y-axes
       vec<halo_info<int>, 2> nb;
@@ -200,7 +199,7 @@ vec<std::size_t, 3> process_grid::local_offset() const {
 }
 
 std::function<void(storage_t &)>
-process_grid::exchanger(storage_info_ijk_t const &sinfo) const {
+process_grid::exchanger(gt::storage::info<3> const &sinfo) const {
   return m_impl->exchanger(sinfo);
 }
 

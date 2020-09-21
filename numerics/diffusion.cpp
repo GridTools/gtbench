@@ -9,21 +9,22 @@
  */
 #include "./diffusion.hpp"
 
-#include <gridtools/stencil_composition/expressions/expressions.hpp>
-#include <gridtools/stencil_composition/stencil_functions.hpp>
+#include <gridtools/stencil/cartesian.hpp>
+#include <gridtools/stencil/frontend/run.hpp>
+#include <gridtools/stencil/global_parameter.hpp>
 
 #include "./computation.hpp"
-#include "./tridiagonal.hpp"
 
 namespace numerics {
 namespace diffusion {
 
 namespace {
-using gt::extent;
-using gt::in_accessor;
-using gt::inout_accessor;
-using gt::make_param_list;
-using namespace gt::expressions;
+using gt::stencil::extent;
+using gt::stencil::make_param_list;
+using gt::stencil::cartesian::call_proc;
+using gt::stencil::cartesian::in_accessor;
+using gt::stencil::cartesian::inout_accessor;
+using namespace gt::stencil::cartesian::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
@@ -69,181 +70,201 @@ struct stage_horizontal {
   }
 };
 
-struct stage_diffusion_w0 {
-  using data = in_accessor<0>;
-  using data_top = inout_accessor<1>;
+struct stage_diffusion_w_forward {
+  using c = inout_accessor<0, extent<0, 0, 0, 0, -1, 0>>;
+  using d = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
+  using c2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
+  using d2 = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
 
-  using param_list = make_param_list<data, data_top>;
+  using data = in_accessor<4, extent<0, 0, 0, 0, -1, 1>>;
+  using data_uncached =
+      in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, infinite_extent>>;
 
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    eval(data_top()) = eval(data());
-  }
-};
+  using dz = in_accessor<6>;
+  using dt = in_accessor<7>;
+  using coeff = in_accessor<8>;
 
-struct stage_diffusion_w_forward1 {
-  using alpha = inout_accessor<0>;
-  using beta = inout_accessor<1>;
-  using gamma = inout_accessor<2>;
-  using a = inout_accessor<3>;
-  using b = inout_accessor<4>;
-  using c = inout_accessor<5, extent<0, 0, 0, 0, -1, 0>>;
-  using d = inout_accessor<6, extent<0, 0, 0, 0, -1, 0>>;
+  using k_size = in_accessor<9>;
 
-  using data = in_accessor<7, extent<0, 0, 0, 0, -1, 1>>;
-  using data_tmp = inout_accessor<8>;
-
-  using dz = in_accessor<9>;
-  using dt = in_accessor<10>;
-  using coeff = in_accessor<11>;
-
-  using param_list = make_param_list<alpha, beta, gamma, a, b, c, d, data,
-                                     data_tmp, dz, dt, coeff>;
+  using param_list =
+      make_param_list<c, d, c2, d2, data, data_uncached, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
-    eval(b()) = eval(1_r / dt() - a() - c());
-    eval(d()) =
-        eval(1_r / dt() * data() +
-             0.5_r * coeff() * (data_tmp() - 2_r * data() + data(0, 0, 1)) /
-                 (dz() * dz()));
+    auto k_offset = eval(k_size()) - 1;
 
-    eval(alpha()) = eval(beta()) = eval(-coeff() / (2_r * dz() * dz()));
-    eval(gamma()) = eval(-b());
+    auto ac = eval(-coeff() / (2_r * dz() * dz()));
+    auto b = eval(1_r / dt() - 2 * ac);
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::first_level>::with(eval, a(), b(), c(), d(),
-                                                    alpha(), beta(), gamma());
+    eval(d()) = eval(1_r / dt() * data() + 0.5_r * coeff() *
+                                               (data_uncached(0, 0, k_offset) -
+                                                2_r * data() + data(0, 0, 1)) /
+                                               (dz() * dz()));
 
-    eval(data_tmp()) = eval(data());
+    b *= 2;
+    eval(c()) = ac / b;
+    eval(d()) = eval(d() / b);
+
+    eval(c2()) = eval(c() / b);
+    eval(d2()) = -0.5_r;
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
-    eval(b()) = eval(1_r / dt() - a() - c());
+    auto ac = eval(-coeff() / (2_r * dz() * dz()));
+    auto b = eval(1_r / dt() - 2 * ac);
+
     eval(d()) =
         eval(1_r / dt() * data() +
              0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
                  (dz() * dz()));
 
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::modify<1, -1>>::with(eval, a(), b(), c(), d(),
-                                                      alpha(), beta(), gamma());
+    eval(c()) = eval(ac / (b - c(0, 0, -1) * ac));
+    eval(d()) = eval((d() - ac * d(0, 0, -1)) / (b - c(0, 0, -1) * ac));
+
+    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * ac));
+    eval(d2()) = eval((-ac * d2(0, 0, -1)) / (b - c2(0, 0, -1) * ac));
   }
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    eval(a()) = eval(c()) = eval(-coeff() / (2_r * dz() * dz()));
-    eval(b()) = eval(1_r / dt() - a() - c());
+    auto k_offset = eval(k_size()) - 1;
+
+    auto ac = eval(-coeff() / (2_r * dz() * dz()));
+    auto b = eval(1_r / dt() - 2 * ac);
+
     eval(d()) =
-        eval(1_r / dt() * data() +
-             0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data_tmp()) /
-                 (dz() * dz()));
-    gridtools::call_proc<tridiagonal::periodic_forward1,
-                         full_t::last_level>::with(eval, a(), b(), c(), d(),
-                                                   alpha(), beta(), gamma());
+        eval(1_r / dt() * data() + 0.5_r * coeff() *
+                                       (data(0, 0, -1) - 2_r * data() +
+                                        data_uncached(0, 0, -k_offset)) /
+                                       (dz() * dz()));
+
+    b += ac * ac / b;
+    eval(c()) = eval(ac / (b - c(0, 0, -1) * ac));
+    eval(d()) = eval((d() - ac * d(0, 0, -1)) / (b - c(0, 0, -1) * ac));
+
+    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * ac));
+    eval(d2()) = eval((ac - ac * d2(0, 0, -1)) / (b - c2(0, 0, -1) * ac));
   }
 };
+struct stage_diffusion_w_backward {
+  using c = inout_accessor<0>;
+  using d = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using c2 = inout_accessor<2>;
+  using d2 = inout_accessor<3, extent<0, 0, 0, 0, 0, 1>>;
 
-using stage_diffusion_w_backward1 = tridiagonal::periodic_backward1;
-using stage_diffusion_w_forward2 = tridiagonal::periodic_forward2;
-using stage_diffusion_w_backward2 = tridiagonal::periodic_backward2;
+  using fact = inout_accessor<4>;
+
+  using d_uncached = in_accessor<5, extent<0, 0, 0, 0, 0, infinite_extent>>;
+  using d2_uncached = in_accessor<6, extent<0, 0, 0, 0, 0, infinite_extent>>;
+
+  using dz = in_accessor<7>;
+  using dt = in_accessor<8>;
+  using coeff = in_accessor<9>;
+  using k_size = in_accessor<10>;
+
+  using param_list = make_param_list<c, d, c2, d2, fact, d_uncached,
+                                     d2_uncached, dz, dt, coeff, k_size>;
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
+    auto k_offset = eval(k_size() - 1);
+    auto beta = eval(-coeff() / (2_r * dz() * dz()));
+    auto gamma = -eval(1_r / dt() - 2 * beta);
+
+    eval(d()) = eval(d() - c() * d(0, 0, 1));
+    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
+
+    eval(fact()) =
+        eval((d() + beta * d_uncached(0, 0, k_offset) / gamma) /
+             (1_r + d2() + beta * d2_uncached(0, 0, k_offset) / gamma));
+  }
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
+    eval(d()) = eval(d() - c() * d(0, 0, 1));
+    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
+  }
+};
 
 struct stage_diffusion_w3 {
   using out = inout_accessor<0>;
   using x = in_accessor<1>;
   using z = in_accessor<2>;
   using fact = in_accessor<3>;
-  using in = in_accessor<4>;
 
-  using dt = in_accessor<5>;
-
-  using param_list = make_param_list<out, x, z, fact, in, dt>;
+  using param_list = make_param_list<out, x, z, fact>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    gridtools::call_proc<tridiagonal::periodic3, full_t>::with(eval, out(), x(),
-                                                               z(), fact());
+    eval(out()) = eval(x() - fact() * z());
   }
 };
 
 } // namespace
 
-horizontal::horizontal(vec<std::size_t, 3> const &resolution,
-                       vec<real_t, 3> const &delta, real_t coeff)
-    : comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_dx() = gt::make_global_parameter(delta.x),
-          p_dy() = gt::make_global_parameter(delta.y),
-          p_coeff() = gt::make_global_parameter(coeff),
-          gt::make_multistage(
-              gt::execute::parallel(),
-              gt::make_stage<stage_horizontal>(p_out(), p_in(), p_dx(), p_dy(),
-                                               p_dt(), p_coeff())))) {}
-
-void horizontal::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp_.run(p_out() = out, p_in() = in, p_dt() = gt::make_global_parameter(dt));
+std::function<void(storage_t, storage_t, real_t dt)>
+horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+           real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
+                                                real_t dt) {
+    gt::stencil::run_single_stage(
+        stage_horizontal(), backend_t<GTBENCH_BPARAMS_HDIFF>(), grid, out, in,
+        gt::stencil::make_global_parameter(delta.x),
+        gt::stencil::make_global_parameter(delta.y),
+        gt::stencil::make_global_parameter(dt),
+        gt::stencil::make_global_parameter(coeff));
+  };
 }
 
-vertical::vertical(vec<std::size_t, 3> const &resolution,
-                   vec<real_t, 3> const &delta, real_t coeff)
-    : sinfo_ij_(resolution.x + 2 * halo, resolution.y + 2 * halo, 1),
-      alpha_(sinfo_ij_, "alpha"), beta_(sinfo_ij_, "beta"),
-      gamma_(sinfo_ij_, "gamma"), fact_(sinfo_ij_, "fact"),
-      data_in_tmp_(sinfo_ij_, "data_in_tmp"), z_top_(sinfo_ij_, "z_top"),
-      x_top_(sinfo_ij_, "x_top"),
-      comp_(gt::make_computation<backend_t>(
-          computation_grid(resolution.x, resolution.y, resolution.z),
-          p_dz() = gt::make_global_parameter(delta.z),
-          p_coeff() = gt::make_global_parameter(coeff), p_alpha() = alpha_,
-          p_beta() = beta_, p_gamma() = gamma_, p_fact() = fact_,
-          p_data_in_tmp() = data_in_tmp_, p_z_top() = z_top_,
-          p_x_top() = x_top_,
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::make_stage<stage_diffusion_w0>(p_data_in(), p_data_in_tmp())),
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_a()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_b()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
-              gt::make_stage<stage_diffusion_w_forward1>(
-                  p_alpha(), p_beta(), p_gamma(), p_a(), p_b(), p_c(), p_d(),
-                  p_data_in(), p_data_in_tmp(), p_dz(), p_dt(), p_coeff())),
-          gt::make_multistage(
-              gt::execute::backward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_x())),
-              gt::make_stage<stage_diffusion_w_backward1>(p_x(), p_c(), p_d())),
-          gt::make_multistage(
-              gt::execute::forward(),
-              gt::define_caches(
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_c()),
-                  gt::cache<gt::cache_type::k, gt::cache_io_policy::flush>(
-                      p_d())),
-              gt::make_stage<stage_diffusion_w_forward2>(
-                  p_a(), p_b(), p_c(), p_d(), p_alpha(), p_gamma())),
-          gt::make_multistage(gt::execute::backward(),
-                              gt::make_stage<stage_diffusion_w_backward2>(
-                                  p_z(), p_c(), p_d(), p_x(), p_beta(),
-                                  p_gamma(), p_fact(), p_z_top(), p_x_top())),
-          gt::make_multistage(gt::execute::parallel(),
-                              gt::make_stage<stage_diffusion_w3>(
-                                  p_data_out(), p_x(), p_z(), p_fact(),
-                                  p_data_in(), p_dt())))) {}
+std::function<void(storage_t, storage_t, real_t dt)>
+vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
+         real_t coeff) {
+  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
+  auto const spec = [](auto out, auto in, auto in_uncached, auto fact, auto d,
+                       auto d2, auto d_uncached, auto d2_uncached, auto k_size,
+                       auto dz, auto dt, auto coeff) {
+    using namespace gt::stencil;
+    GT_DECLARE_TMP(real_t, c, c2);
+    return multi_pass(
+        execute_forward()
+            .k_cached(cache_io_policy::fill(), in)
+            .k_cached(cache_io_policy::flush(), c, d, c2, d2)
+            .stage(stage_diffusion_w_forward(), c, d, c2, d2, in, in_uncached,
+                   dz, dt, coeff, k_size),
+        execute_backward()
+            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d, d2)
+            .stage(stage_diffusion_w_backward(), c, d, c2, d2, fact, d_uncached,
+                   d2_uncached, dz, dt, coeff, k_size));
+  };
 
-void vertical::operator()(storage_t &out, storage_t const &in, real_t dt) {
-  comp_.run(p_data_out() = out, p_data_in() = in,
-            p_dt() = gt::make_global_parameter(dt));
+  auto field = storage_builder(resolution);
+
+  auto ij_slice = gt::storage::builder<storage_tr>
+    .type<real_t>()
+    .id<1>()
+    .halos(halo, halo)
+    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
+
+  auto alpha = ij_slice();
+  auto gamma = ij_slice();
+  auto fact = ij_slice();
+  auto d = field();
+  auto d2 = field();
+
+  return [grid = std::move(grid), spec = std::move(spec),
+          fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
+          resolution, coeff](storage_t out, storage_t in, real_t dt) {
+    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF1>(), grid, out, in,
+                     in, fact, d, d2, d, d2,
+                     gt::stencil::make_global_parameter(resolution.z),
+                     gt::stencil::make_global_parameter(delta.z),
+                     gt::stencil::make_global_parameter(dt),
+                     gt::stencil::make_global_parameter(coeff));
+    gt::stencil::run_single_stage(stage_diffusion_w3(),
+                                  backend_t<GTBENCH_BPARAMS_VDIFF2>(), grid,
+                                  out, d, d2, fact);
+  };
 }
 
 } // namespace diffusion
