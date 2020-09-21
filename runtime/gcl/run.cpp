@@ -9,26 +9,27 @@
  */
 #include "./run.hpp"
 
-#include <gridtools/communication/GCL.hpp>
-#include <gridtools/communication/halo_exchange.hpp>
+#include <gridtools/gcl/GCL.hpp>
+#include <gridtools/gcl/halo_exchange.hpp>
 
 #include <mpi.h>
 
 namespace runtime {
 namespace gcl_impl {
 
-using pattern_t = gt::halo_exchange_dynamic_ut<storage_info_ijk_t::layout_t,
-                                               gt::layout_map<0, 1, 2>, real_t,
-#ifdef __CUDACC__
-                                               gt::gcl_gpu
+using pattern_t =
+    gt::gcl::halo_exchange_dynamic_ut<storage_t::element_type::layout_t,
+                                      gt::layout_map<0, 1, 2>, real_t,
+#ifdef GTBENCH_BACKEND_GPU
+                                      gt::gcl::gpu
 #else
-                                               gt::gcl_cpu
+                                      gt::gcl::cpu
 #endif
-                                               >;
+                                      >;
 
 runtime::runtime(std::array<int, 2> const &cart_dims,
                  std::string const &output_filename)
-    : m_scope((void (*)())gt::GCL_Init, gt::GCL_Finalize),
+    : m_scope((void (*)())gt::gcl::init, gt::gcl::finalize),
       m_cart_dims(cart_dims), m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -89,26 +90,25 @@ struct process_grid::impl {
   impl(impl const &) = delete;
   impl &operator=(impl const &) = delete;
 
-  std::function<void(storage_t &)>
-  exchanger(storage_info_ijk_t const &sinfo) const {
+  std::function<void(storage_t &)> exchanger(storage_t const &storage) const {
     auto pattern = std::make_shared<pattern_t>(
         pattern_t::grid_type::period_type{true, true, false}, m_comm_cart);
 
+    auto total_lengths = gt::storage::make_total_lengths(*storage);
     pattern->add_halo<0>(halo, halo, halo, m_local_resolution.x + halo - 1,
-                         sinfo.padded_length<0>());
+                         total_lengths[0]);
     pattern->add_halo<1>(halo, halo, halo, m_local_resolution.y + halo - 1,
-                         sinfo.padded_length<1>());
-    pattern->add_halo<2>(0, 0, 0, m_local_resolution.z - 1,
-                         sinfo.padded_length<2>());
+                         total_lengths[1]);
+    pattern->add_halo<2>(0, 0, 0, m_local_resolution.z - 1, total_lengths[2]);
 
     pattern->setup(1);
 
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
     cudaStreamSynchronize(0);
 #endif
 
     return [pattern = std::move(pattern)](storage_t &storage) {
-      auto ptr = storage.get_storage_ptr()->get_target_ptr();
+      auto ptr = storage->get_target_ptr();
       pattern->pack(ptr);
       pattern->exchange();
       pattern->unpack(ptr);
@@ -139,8 +139,8 @@ vec<std::size_t, 3> process_grid::local_offset() const {
 }
 
 std::function<void(storage_t &)>
-process_grid::exchanger(storage_info_ijk_t const &sinfo) const {
-  return m_impl->exchanger(sinfo);
+process_grid::exchanger(storage_t const &storage) const {
+  return m_impl->exchanger(storage);
 }
 
 double process_grid::wtime() const { return MPI_Wtime(); }

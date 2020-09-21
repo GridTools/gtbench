@@ -33,9 +33,9 @@ void write_storage(std::string const &filename, storage_t const &storage) {
   const char version[2] = {1, 0};
 
   // numpy array format description
-  const std::size_t ni = storage.total_length<0>();
-  const std::size_t nj = storage.total_length<1>();
-  const std::size_t nk = storage.total_length<2>();
+  const std::size_t ni = storage->lengths()[0];
+  const std::size_t nj = storage->lengths()[1];
+  const std::size_t nk = storage->lengths()[2];
   std::string descr =
       "{\"descr\":\"float" + std::to_string(8 * sizeof(real_t)) +
       "\",\"fortran_order\":False,\"shape\":(" + std::to_string(ni) + "," +
@@ -61,7 +61,7 @@ void write_storage(std::string const &filename, storage_t const &storage) {
   assert(out.tellp() % 64 == 0);
 
   // write data in C-order
-  auto view = gt::make_host_view<gt::access_mode::read_only>(storage);
+  auto view = storage->const_host_view();
   for (std::size_t i = 0; i < ni; ++i)
     for (std::size_t j = 0; j < nj; ++j)
       for (std::size_t k = 0; k < nk; ++k)

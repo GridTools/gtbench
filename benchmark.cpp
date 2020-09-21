@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
   options opts;
-  opts("domain-size", "size of domain along horizontal axes", "NX NY", 2);
+  opts("domain-size", "size of domain along horizontal axes", "NX NY NZ", 3);
   opts("runs", "number of runs, reported is the median result", "RUNS", {101});
   runtime::register_options(rt_tag, opts);
 
@@ -34,10 +34,10 @@ int main(int argc, char **argv) {
 
   auto rt = runtime::init(rt_tag, args);
 
-  const auto domain_size = args.get<std::array<std::size_t, 2>>("domain-size");
+  const auto domain_size = args.get<std::array<std::size_t, 3>>("domain-size");
   const std::size_t nx = domain_size[0];
   const std::size_t ny = domain_size[1];
-  const std::size_t nz = 60;
+  const std::size_t nz = domain_size[2];
   const std::size_t runs = args.get<std::size_t>("runs");
 
   auto fmt = [&]() -> std::ostream & {

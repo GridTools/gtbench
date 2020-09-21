@@ -78,9 +78,9 @@ struct process_grid::impl {
   impl &operator=(impl const &) = delete;
 
   std::function<void(storage_t &)>
-  exchanger(storage_info_ijk_t const &sinfo) const {
+  exchanger(gt::storage::info<3> const &sinfo) const {
     auto strides = sinfo.strides();
-    auto sizes = sinfo.total_lengths();
+    auto sizes = sinfo.lengths();
 
     // sized of halos to exchange along x- and y-axes
     vec<decltype(sizes), 2> halo_sizes;
@@ -151,7 +151,7 @@ struct process_grid::impl {
             recv_offsets = std::move(recv_offsets),
             send_offsets = std::move(send_offsets)](storage_t &storage) {
       // storage data pointer
-      real_t *ptr = storage.get_storage_ptr()->get_target_ptr();
+      real_t *ptr = storage->get_target_ptr();
 
       // neighbor ranks along x- and y-axes
       vec<halo_info<int>, 2> nb;
@@ -199,7 +199,7 @@ vec<std::size_t, 3> process_grid::local_offset() const {
 }
 
 std::function<void(storage_t &)>
-process_grid::exchanger(storage_info_ijk_t const &sinfo) const {
+process_grid::exchanger(gt::storage::info<3> const &sinfo) const {
   return m_impl->exchanger(sinfo);
 }
 

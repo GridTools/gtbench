@@ -82,7 +82,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           "the product of thread cart dims must be equal to the number of "
           "threads per rank.");
   }
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   MPI_Comm shmem_comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &shmem_comm);
@@ -306,9 +306,15 @@ public:
 
     auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
-      auto field = gt::ghex::wrap_gt_field(domain, storage);
+#ifdef GTBENCH_BACKEND_GPU
+      using arch_t = gt::ghex::gpu;
+#else
+      using arch_t = gt::ghex::cpu;
+#endif
+      auto field =
+          gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
 
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
       cudaStreamSynchronize(0);
 #endif
       comm_obj->exchange(patterns(field)).wait();
@@ -356,7 +362,7 @@ void runtime_register_options(ghex_comm, options &options) {
           "dimensons of cartesian decomposition "
           "among sub-domains",
           "TX TY", 2);
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   options("device-mapping",
           "node device mapping: device id per sub-domain in the format "
           "I_0:I_1:...:I_(N-1) "
@@ -368,7 +374,7 @@ void runtime_register_options(ghex_comm, options &options) {
 
 runtime runtime_init(ghex_comm, options_values const &options) {
   std::vector<int> device_mapping;
-#ifdef __CUDACC__
+#ifdef GT_CUDACC
   if (options.has("device-mapping")) {
     const std::regex delimiter(":");
     const auto input = options.get<std::string>("device-mapping");

@@ -73,7 +73,7 @@ struct time_series {
   }
 
   void write_data(std::ostream &out, storage_t const &data) const {
-    const auto view = gt::make_host_view<gt::access_mode::read_only>(data);
+    const auto view = data->const_host_view();
 
     std::vector<real_t> buffer((m_local_resolution.x + 1) *
                                (m_local_resolution.y + 1) *
@@ -91,9 +91,9 @@ struct time_series {
 
   void write_velocity(std::ostream &out, storage_t const &u, storage_t const &v,
                       storage_t const &w) const {
-    const auto u_view = gt::make_host_view<gt::access_mode::read_only>(u);
-    const auto v_view = gt::make_host_view<gt::access_mode::read_only>(v);
-    const auto w_view = gt::make_host_view<gt::access_mode::read_only>(w);
+    const auto u_view = u->const_host_view();
+    const auto v_view = v->const_host_view();
+    const auto w_view = w->const_host_view();
 
     std::vector<real_t> buffer((m_local_resolution.x + 1) *
                                (m_local_resolution.y + 1) *
