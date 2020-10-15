@@ -23,7 +23,7 @@ set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for
 set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
 set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
   set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")
 else()
