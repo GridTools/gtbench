@@ -78,10 +78,8 @@ struct process_grid::impl {
   impl &operator=(impl const &) = delete;
 
   std::function<void(storage_t &)>
-  exchanger(gt::storage::info<3> const &sinfo) const {
-    auto strides = sinfo.strides();
-    auto sizes = sinfo.lengths();
-
+  exchanger(gt::array<unsigned, 3> const &sizes,
+            gt::array<unsigned, 3> const &strides) const {
     // sized of halos to exchange along x- and y-axes
     vec<decltype(sizes), 2> halo_sizes;
     halo_sizes.x = {halo, sizes[1] - 2 * halo, sizes[2]};
