@@ -55,7 +55,7 @@ result runtime_solve(runtime const &rt, Analytical analytical, Stepper stepper,
   auto start = clock::now();
 
   real_t t;
-  for (t = dt; t < tmax; t += dt)
+  for (t = dt; t < tmax - dt / 2; t += dt)
     step(state, dt);
 
   computation::sync(state);
