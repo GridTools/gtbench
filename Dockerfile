@@ -26,6 +26,8 @@ RUN export BOOST_VERSION_UNERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
     cp -r boost_${BOOST_VERSION_UNERLINE}/boost /usr/local/include/ && \
     rm -rf boost_${BOOST_VERSION_UNERLINE}*
 
+ENV HCC_AMDGPU_TARGET=gfx906,gfx908
+
 FROM base
 ARG GTBENCH_BACKEND=cpu_ifirst
 ARG GTBENCH_RUNTIME=ghex_comm
