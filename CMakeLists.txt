@@ -23,7 +23,7 @@ set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for
 set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
 set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
   set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")
 else()
@@ -36,7 +36,25 @@ else()
   endif()
 endif()
 
-find_package(GridTools 2.0 REQUIRED)
+# Find or fetch GridTools
+if(NOT _gridtools_already_fetched)
+    find_package(GridTools "2" QUIET)
+endif()
+if(NOT GridTools_FOUND)
+    set(_gridtools_repository "https://github.com/GridTools/gridtools.git")
+    set(_gridtools_tag        "release_v2.0")
+    if(NOT _gridtools_already_fetched)
+        message(STATUS "Fetching GridTools ${_gridtools_tag} from ${_gridtools_repository}")
+    endif()
+    include(FetchContent)
+    FetchContent_Declare(
+        gridtools
+        GIT_REPOSITORY ${_gridtools_repository}
+        GIT_TAG        ${_gridtools_tag}
+    )
+    FetchContent_MakeAvailable(gridtools)
+    set(_gridtools_already_fetched ON CACHE INTERNAL "")
+endif()
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS OFF)

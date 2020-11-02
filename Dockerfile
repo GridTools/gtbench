@@ -26,31 +26,6 @@ RUN export BOOST_VERSION_UNERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
     cp -r boost_${BOOST_VERSION_UNERLINE}/boost /usr/local/include/ && \
     rm -rf boost_${BOOST_VERSION_UNERLINE}*
 
-ENV CMAKE_PREFIX_PATH=/usr/local/lib/cmake
-
-RUN git clone -b release_v2.0 https://github.com/GridTools/gridtools.git && \
-    mkdir -p gridtools/build && \
-    cd gridtools/build && \
-    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
-    cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTING=OFF \
-    .. && \
-    make -j $(nproc) install && \
-    cd ../.. && \
-    rm -rf gridtools
-
-RUN git clone -b gt2 https://github.com/fthaler/GHEX.git && \
-    mkdir -p GHEX/build && \
-    cd GHEX/build && \
-    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
-    cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    .. && \
-    make -j $(nproc) install && \
-    cd ../.. && \
-    rm -rf GHEX
-
 FROM base
 ARG GTBENCH_BACKEND=cpu_ifirst
 ARG GTBENCH_RUNTIME=ghex_comm
