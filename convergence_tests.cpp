@@ -26,25 +26,25 @@ int main(int argc, char **argv) {
 
   auto run_tests = [&rt](std::string const &title, auto const &exact,
                          auto const &stepper) {
-    std::size_t max_resolution = std::is_same<real_t, float>() ? 16 : 32;
-
     std::cout << "=== " << title << " ===" << std::endl;
     std::cout << "Spatial convergence:" << std::endl;
     auto spatial_error_f = [&](std::size_t n) {
-      return runtime::solve(rt, exact, stepper, {n, n, n}, 1e-2,
-                            std::is_same<real_t, float>() ? 1e-3 : 1e-5)
+      real_t tmax = std::is_same<real_t, float>() ? 2e-2 : 1e-3;
+      return runtime::solve(rt, exact, stepper, {n, n, n}, tmax, tmax / 100)
           .error;
     };
+    std::size_t n = std::is_same<real_t, float>() ? 16 : 32;
     verification::print_order_verification_result(
-        verification::order_verification(spatial_error_f, 8, max_resolution));
+        verification::order_verification(spatial_error_f, n / 2, n));
 
     std::cout << "Temporal convergence:" << std::endl;
     auto spacetime_error_f = [&](std::size_t n) {
-      return runtime::solve(rt, exact, stepper, {128, 128, 128}, 1e-1, 1e-1 / n)
+      real_t tmax = std::is_same<real_t, float>() ? 1e-1 : 1e-2;
+      return runtime::solve(rt, exact, stepper, {128, 128, 128}, tmax, tmax / n)
           .error;
     };
     verification::print_order_verification_result(
-        verification::order_verification(spacetime_error_f, 8, max_resolution));
+        verification::order_verification(spacetime_error_f, 8, 16));
   };
 
   const real_t diffusion_coeff = 0.05;
