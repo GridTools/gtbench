@@ -20,8 +20,6 @@
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
 #include <ghex/structured/rma_range_generator.hpp>
-#include <ghex/threads/atomic/primitives.hpp>
-#include <ghex/threads/std_thread/primitives.hpp>
 
 #ifdef GTBENCH_USE_GHEX_UCP
 #include <ghex/transport_layer/ucx/context.hpp>
@@ -30,6 +28,7 @@ using transport = gt::ghex::tl::ucx_tag;
 #include <ghex/transport_layer/mpi/context.hpp>
 using transport = gt::ghex::tl::mpi_tag;
 #endif
+#include <ghex/transport_layer/util/barrier.hpp>
 
 namespace runtime {
 
@@ -123,8 +122,7 @@ struct local_domain {
   coordinate_t const &last() const { return m_last; }
 };
 
-using threading = gt::ghex::threads::std_thread::primitives;
-using context_t = gt::ghex::tl::context<transport, threading>;
+using context_t = gt::ghex::tl::context<transport>;
 using communicator_t = context_t::communicator_type;
 using grid_t = gt::ghex::structured::grid::type<local_domain>;
 using patterns_t =
@@ -204,7 +202,6 @@ public: // member types
   using patterns_ptr_t = std::unique_ptr<patterns_type>;
   using domain_vec = std::vector<local_domain>;
   using context_ptr_t = std::unique_ptr<context_t>;
-  using thread_token = context_t::thread_token;
 
 private: // members
   halo_generator m_hg;
@@ -216,7 +213,7 @@ private: // members
   domain_vec m_domains;
   context_ptr_t m_context;
   patterns_ptr_t m_patterns;
-  std::vector<std::unique_ptr<thread_token>> m_tokens;
+  gridtools::ghex::tl::barrier_t m_barrier;
 
 public:
   impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
@@ -226,7 +223,7 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
-        m_tokens(num_sub_domains) {
+        m_barrier(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
@@ -274,8 +271,8 @@ public:
       }
     }
 
-    m_context = gt::ghex::tl::context_factory<transport, threading>::create(
-        num_sub_domains, MPI_COMM_WORLD);
+    m_context =
+        gt::ghex::tl::context_factory<transport>::create(MPI_COMM_WORLD);
     m_patterns = std::make_unique<patterns_type>(
         gt::ghex::make_pattern<gt::ghex::structured::grid>(*m_context, m_hg,
                                                            m_domains));
@@ -286,10 +283,8 @@ public:
 
   sub_grid operator[](unsigned int i) {
     const auto &dom = m_domains[i];
-    if (!m_tokens[i])
-      m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
-    auto comm = m_context->get_communicator(*m_tokens[i]);
-    comm.barrier();
+    auto comm = m_context->get_communicator();
+    m_barrier(comm);
 
     vec<std::size_t, 3> local_resolution = {
         (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
