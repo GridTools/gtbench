@@ -270,7 +270,6 @@ public:
                                          (int)global_resolution.z - 1}});
       }
     }
-
     m_context =
         gt::ghex::tl::context_factory<transport>::create(MPI_COMM_WORLD);
     m_patterns = std::make_unique<patterns_type>(
