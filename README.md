@@ -5,88 +5,27 @@ The benchmark implements an advection-diffusion solver using the finite differen
 
 ## Dependencies
 
-### GridTools
+GT Bench depends on the GridTools library and, optionally, on the GHEX library. These libraries will
+be installed automatically when building GT Bench with cmake unless specified otherwise.
 
-The benchmark requires version 2.0.1 of GridTools, which can be obtained from the GridTools repository:
-
-```console
-$ git clone --branch release_v2.0 https://github.com/GridTools/gridtools.git
-```
-
-GridTools further depends on [Boost](https://www.boost.org/) (minimum version 1.67.0). A recent version of [CMake](https://cmake.org/) is required to build and install GridTools (minimum version 3.14.5).
-
-Follow the [GridTools documentation](https://gridtools.github.io/gridtools/latest/index.html) for an installation guideline. Note that GPU support has to be enabled when building GridTools if the benchmark is to be run on a GPU system.
-
-### GHEX
-
-For the GHEX runtime, installing the GHEX library is a further requirement. Note that this step can be skipped for single-node (single-process) runs or when using a different runtime than `ghex_comm` for inter-node communication (see further below for details about available runtimes). GHEX can be obtained using:
-
-```console
-$ git clone https://github.com/GridTools/GHEX.git
-```
-
-#### Dependencies
+Further external dependencies are listed below:
 Required:
-- GridTools (see instructions above)
-- [Boost](https://www.boost.org/)
+- [CMake](https://cmake.org/) (minimum version 3.14.5)
+- [Boost](https://www.boost.org/) (minimun version 1.73.0)
 - MPI (for example [OpenMPI](https://github.com/open-mpi/ompi))
 
 Optional:
-- [Unified Communication X (UCX)](https://github.com/openucx/ucx)
-- [PMIx](https://github.com/openpmix/openpmix)
-- [xpmem](https://github.com/hjelmn/xpmem)
-
-Additionally, [CMake](https://cmake.org/) is required for building GHEX.
-
-##### Building GHEX
-
-Once all necessary and optional dependencies have been installed, GHEX can be installed using CMake as follows:
-```console
-$ cd /PATH/TO/GHEX-SOURCE
-$ mkdir build && cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=/PATH/TO/GHEX-INSTALLATION ..
-```
-
-To enable UCX support, pass additionally the following flags
-```console
-        -DGHEX_USE_UCP=ON \
-        -DUCP_INCLUDE_DIR=/PATH/TO/UCX-INSTALLATION/include \
-        -DUCP_LIBRARY=/PATH/TO/UCX-INSTALLATION/lib/libucp.so
-```
-
-If PMIx shall be enabled, follow the above pattern by define additionally
-```console
-        -DGHEX_USE_PMIx=ON \
-        -DPMIX_INCLUDE_DIR=/PATH/TO/PMIX-INSTALLATION/include \
-        -DPMIX_LIBRARY=/PATH/TO/PMIX-INSTALLATION/lib/libpmix.so
-```
-
-To enable xpmem support, pass additionally the following flags
-```console
-        -DGHEX_USE_XPMEM=ON \
-        -DXPMEM_INCLUDE_DIR=/PATH/TO/XPMEM-INSTALLATION/include \
-        -DXPMEM_LIBRARY=/PATH/TO/XPMEM-INSTALLATION/lib/libxpmem.so
-```
-
-After successful configuration, type
-```console
-$ make install
-```
+- [Unified Communication X (UCX)](https://github.com/openucx/ucx) (minimun version 1.8.0)
+- [PMIx](https://github.com/openpmix/openpmix) (minimum version 3.1.4)
+- [xpmem](https://github.com/hjelmn/xpmem) (master is recommended)
 
 ## Building
 
-Once the dependencies are installed, CMake can be used to configure the build as follows:
+Once the external dependencies are installed, CMake can be used to configure the build as follows:
 ```console
 $ cd /PATH/TO/GTBENCH-SOURCE
 $ mkdir build && cd build
 $ cmake ..
-```
-
-Depending on the setup, the GridTools and GHEX installation directories might have to be specified. This can be accomplished by passing additional arguments to cmake:
-```console
-$ cmake -DGridTools_DIR=/PATH/TO/GRIDTOOLS-INSTALLATION \
-        -DGHEX_DIR=/PATH/TO/GHEX-INSTALLATION \
-        ..
 ```
 
 ### Selecting the GridTools Backend
@@ -122,7 +61,28 @@ where `RUNTIME` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`.
 #### Selecting the Transport Layer for GHEX
 
 If the `ghex_comm` runtime has been selected, the underlying transport layer will be either
-*UCX* or *MPI*. The behaviour can be chosen by defining the the CMake boolean variables `GHEX_USE_UCP` when configuring the GHEX library, see above.
+*UCX* or *MPI*. The behaviour can be chosen by defining the the appropriate CMake variables, see below.
+
+To enable UCX support, pass additionally the following flags
+```console
+        -DGHEX_USE_UCP=ON \
+        -DUCP_INCLUDE_DIR=/PATH/TO/UCX-INSTALLATION/include \
+        -DUCP_LIBRARY=/PATH/TO/UCX-INSTALLATION/lib/libucp.so
+```
+
+If PMIx shall be enabled, follow the above pattern by define additionally
+```console
+        -DGHEX_USE_PMIx=ON \
+        -DPMIX_INCLUDE_DIR=/PATH/TO/PMIX-INSTALLATION/include \
+        -DPMIX_LIBRARY=/PATH/TO/PMIX-INSTALLATION/lib/libpmix.so
+```
+
+To enable xpmem support, pass additionally the following flags
+```console
+        -DGHEX_USE_XPMEM=ON \
+        -DXPMEM_INCLUDE_DIR=/PATH/TO/XPMEM-INSTALLATION/include \
+        -DXPMEM_LIBRARY=/PATH/TO/XPMEM-INSTALLATION/lib/libxpmem.so
+```
 
 ## Running the Benchmark
 
