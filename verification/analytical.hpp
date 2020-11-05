@@ -95,13 +95,14 @@ struct horizontal_advection {};
 
 inline auto analytical_data(horizontal_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x - 5 * t) * std::cos(p.y + 2 * t) * std::cos(p.z);
+    return std::sin(p.x - 0.2_r * t) * std::cos(p.y + 0.3_r * t) *
+           std::cos(p.z);
   };
 }
 
 inline auto analytical_velocity(horizontal_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {5, -2, 0};
+    return {0.2_r, -0.3_r, 0};
   };
 }
 
@@ -109,13 +110,13 @@ struct vertical_advection {};
 
 inline auto analytical_data(vertical_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x) * std::cos(p.y) * std::cos(p.z - 3 * t);
+    return std::sin(p.x) * std::cos(p.y) * std::cos(p.z - 0.6_r * t);
   };
 }
 
 inline auto analytical_velocity(vertical_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {0, 0, 3};
+    return {0, 0, 0.6_r};
   };
 }
 
@@ -123,14 +124,14 @@ struct full_advection {};
 
 inline auto analytical_data(full_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> real_t {
-    return std::sin(p.x - 5 * t) * std::cos(p.y + 2 * t) *
-           std::cos(p.z - 3 * t);
+    return std::sin(p.x - 0.1_r * t) * std::cos(p.y + 0.2_r * t) *
+           std::cos(p.z - 0.3_r * t);
   };
 }
 
 inline auto analytical_velocity(full_advection const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
-    return {5, -2, 3};
+    return {0.1_r, -0.2_r, 0.3_r};
   };
 }
 
@@ -149,9 +150,9 @@ inline auto analytical_data(advection_diffusion const &advdiff) {
 inline auto analytical_velocity(advection_diffusion const &) {
   return [](vec<real_t, 3> const &p, real_t t) -> vec<real_t, 3> {
     const real_t a = std::sqrt(2_r) / 2;
-    return {-std::sin(p.x) * std::cos(a * (p.y - p.z)),
-            a * std::cos(p.x) * std::sin(a * (p.y - p.z)),
-            -a * std::cos(p.x) * std::sin(a * (p.y - p.z))};
+    return {-std::sin(p.x) * std::cos(a * (p.y - p.z)) * 0.1_r,
+            a * std::cos(p.x) * std::sin(a * (p.y - p.z)) * 0.1_r,
+            -a * std::cos(p.x) * std::sin(a * (p.y - p.z)) * 0.1_r};
   };
 }
 
