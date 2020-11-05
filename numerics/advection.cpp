@@ -112,193 +112,181 @@ struct stage_horizontal {
 };
 
 struct stage_advection_w_forward {
-  using alpha = inout_accessor<0>;
-  using gamma = inout_accessor<1>;
-  using c = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
-  using d = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
-  using c2 = inout_accessor<4, extent<0, 0, 0, 0, -1, 0>>;
-  using d2 = inout_accessor<5, extent<0, 0, 0, 0, -1, 0>>;
+  using b = inout_accessor<0, extent<0, 0, 0, 0, -1, 0>>;
+  using d1 = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
+  using d2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
 
-  using data =
-      in_accessor<6, extent<0, 0, 0, 0, -infinite_extent, infinite_extent>>;
+  using data = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
+  using data_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
 
-  using dz = in_accessor<7>;
-  using dt = in_accessor<8>;
-  using w = in_accessor<9, extent<0, 0, 0, 0, 0, 1>>;
-  using data_p1_k_cache = inout_accessor<10, extent<0, 0, 0, 0, -2, 0>>;
-  using a_c_cache = inout_accessor<11, extent<0, 0, 0, 0, -1, 0>>;
+  using dz = in_accessor<5>;
+  using dt = in_accessor<6>;
+  using w = in_accessor<7, extent<0, 0, 0, 0, 0, 1>>;
+  using k_size = in_accessor<8>;
 
-  using k_size = in_accessor<12>;
-
-  using param_list = make_param_list<alpha, gamma, c, d, c2, d2, data, dz, dt,
-                                     w, data_p1_k_cache, a_c_cache, k_size>;
+  using param_list =
+      make_param_list<b, d1, d2, data, data_uncached, dz, dt, w, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     auto k_offset = eval(k_size()) - 1;
 
-    eval(data_p1_k_cache()) = eval(data(0, 0, 1));
+    real_t av = eval(-0.25_r / dz() * w());
+    real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
+    real_t d1v = eval(1_r / dt() * data() -
+                      0.25_r / dz() *
+                          (w() * (data() - data_uncached(0, 0, k_offset)) +
+                           w(0, 0, 1) * (data(0, 0, 1) - data())));
+    real_t d2v = -av;
 
-    eval(a_c_cache()) = eval(0.25_r * w(0, 0, 1) / dz());
+    eval(b()) = bv;
+    eval(d1()) = d1v;
+    eval(d2()) = d2v;
+  }
 
-    auto a = eval(-0.25_r * w() / dz());
-    eval(c()) = eval(a_c_cache());
-    auto b = eval(1_r / dt() - a - c());
-    eval(d()) = eval(1_r / dt() * data() - c() * (data_p1_k_cache() - data()) +
-                     a * (data() - data(0, 0, k_offset)));
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -2>) {
+    real_t av = eval(-0.25_r / dz() * w());
+    real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
+    real_t cv_km1 = -av;
+    real_t d1v =
+        eval(1_r / dt() * data() - 0.25_r / dz() *
+                                       (w() * (data() - data(0, 0, -1)) +
+                                        w(0, 0, 1) * (data(0, 0, 1) - data())));
+    real_t d2v = 0_r;
 
-    eval(alpha()) = -a;
-    eval(gamma()) = -b;
-
-    b *= 2;
-    eval(c()) = eval(c() / b);
-    eval(d()) = eval(d() / b);
-
-    eval(c2()) = eval(c() / b);
-    eval(d2()) = eval(gamma() / b);
+    real_t f = eval(av / b(0, 0, -1));
+    eval(b()) = bv - f * cv_km1;
+    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
+    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval,
-                                full_t::first_level::shift<1>) {
-    eval(data_p1_k_cache()) = eval(data(0, 0, 1));
+                                full_t::last_level::shift<-1>) {
+    real_t av = eval(-0.25_r / dz() * w());
+    real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
+    real_t cv = eval(0.25_r / dz() * w(0, 0, 1));
+    real_t cv_km1 = -av;
+    real_t d1v =
+        eval(1_r / dt() * data() - 0.25_r / dz() *
+                                       (w() * (data() - data(0, 0, -1)) +
+                                        w(0, 0, 1) * (data(0, 0, 1) - data())));
+    real_t d2v = -cv;
 
-    auto old_a_c_cache = eval(a_c_cache(0, 0, -1));
-    eval(a_c_cache()) = eval(0.25_r * w(0, 0, 1) / dz());
-
-    auto a = -old_a_c_cache;
-    eval(c()) = eval(a_c_cache());
-    auto b = eval(1_r / dt() - a - c());
-    eval(d()) = eval(1_r / dt() * data_p1_k_cache(0, 0, -1) -
-                     c() * (data_p1_k_cache() - data_p1_k_cache(0, 0, -1)) +
-                     a * (data_p1_k_cache(0, 0, -1) - data(0, 0, -1)));
-
-    eval(c()) = eval(c() / (b - c(0, 0, -1) * a));
-    eval(d()) = eval((d() - a * d(0, 0, -1)) / (b - c(0, 0, -1) * a));
-
-    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * a));
-    eval(d2()) = eval((-a * d2(0, 0, -1)) / (b - c2(0, 0, -1) * a));
-  }
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<2, -1>) {
-    eval(data_p1_k_cache()) = eval(data(0, 0, 1));
-
-    auto old_a_c_cache = eval(a_c_cache(0, 0, -1));
-    eval(a_c_cache()) = eval(0.25_r * w(0, 0, 1) / dz());
-
-    auto a = -old_a_c_cache;
-    eval(c()) = eval(a_c_cache());
-    auto b = eval(1_r / dt() - a - c());
-    eval(d()) =
-        eval(1_r / dt() * data_p1_k_cache(0, 0, -1) -
-             c() * (data_p1_k_cache() - data_p1_k_cache(0, 0, -1)) +
-             a * (data_p1_k_cache(0, 0, -1) - data_p1_k_cache(0, 0, -2)));
-
-    eval(c()) = eval(c() / (b - c(0, 0, -1) * a));
-    eval(d()) = eval((d() - a * d(0, 0, -1)) / (b - c(0, 0, -1) * a));
-
-    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * a));
-    eval(d2()) = eval((-a * d2(0, 0, -1)) / (b - c2(0, 0, -1) * a));
-  }
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    auto k_offset = eval(k_size()) - 1;
-
-    auto a = eval(-a_c_cache(0, 0, -1));
-    eval(c()) = eval(0.25_r * w(0, 0, 1) / dz());
-    auto b = eval(1_r / dt() - a - c());
-    eval(d()) =
-        eval(1_r / dt() * data_p1_k_cache(0, 0, -1) -
-             c() * (data(0, 0, -k_offset) - data_p1_k_cache(0, 0, -1)) +
-             a * (data_p1_k_cache(0, 0, -1) - data_p1_k_cache(0, 0, -2)));
-
-    b += eval(alpha() * alpha() / gamma());
-    eval(c()) = eval(c() / (b - c(0, 0, -1) * a));
-    eval(d()) = eval((d() - a * d(0, 0, -1)) / (b - c(0, 0, -1) * a));
-
-    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * a));
-    eval(d2()) = eval((alpha() - a * d2(0, 0, -1)) / (b - c2(0, 0, -1) * a));
+    real_t f = eval(av / b(0, 0, -1));
+    eval(b()) = bv - f * cv;
+    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
+    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
   }
 };
 
 struct stage_advection_w_backward {
-  using c = in_accessor<0>;
-  using d = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
-  using c2 = in_accessor<2>;
-  using d2 = inout_accessor<3, extent<0, 0, 0, 0, 0, 1>>;
+  using b = in_accessor<0>;
+  using d1 = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using d2 = inout_accessor<2, extent<0, 0, 0, 0, 0, 1>>;
 
-  using alpha = in_accessor<4>;
-  using gamma = in_accessor<5>;
+  using dz = in_accessor<3>;
+  using w = in_accessor<4, extent<0, 0, 0, 0, 1, 1>>;
 
-  using fact = inout_accessor<6>;
-
-  using d_uncached = in_accessor<7, extent<0, 0, 0, 0, 0, infinite_extent>>;
-  using d2_uncached = in_accessor<8, extent<0, 0, 0, 0, 0, infinite_extent>>;
-
-  using k_size = in_accessor<9>;
-
-  using param_list = make_param_list<c, d, c2, d2, alpha, gamma, fact,
-                                     d_uncached, d2_uncached, k_size>;
+  using param_list = make_param_list<b, d1, d2, dz, w>;
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-    auto k_offset = eval(k_size() - 1);
-
-    eval(d()) = eval(d() - c() * d(0, 0, 1));
-
-    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
-    eval(fact()) =
-        eval((d() - alpha() * d_uncached(0, 0, k_offset) / gamma()) /
-             (1_r + d2() - alpha() * d2_uncached(0, 0, k_offset) / gamma()));
+  GT_FUNCTION static void apply(Evaluation eval,
+                                full_t::last_level::shift<-1>) {
+    auto f = eval(1_r / b());
+    eval(d1()) *= f;
+    eval(d2()) *= f;
   }
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(d()) = eval(d() - c() * d(0, 0, 1));
-    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -2>) {
+    auto cv = eval(0.25_r / dz() * w(0, 0, 1));
+    auto f = eval(1_r / b());
+    eval(d1()) = eval((d1() - cv * d1(0, 0, 1)) * f);
+    eval(d2()) = eval((d2() - cv * d2(0, 0, 1)) * f);
   }
 };
 
 struct stage_advection_w3 {
   using out = inout_accessor<0>;
-  using x = in_accessor<1>;
-  using z = in_accessor<2>;
-  using fact = in_accessor<3>;
-  using in = in_accessor<4>;
+  using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using data = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d1 = in_accessor<3, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d2 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
-  using dt = in_accessor<5>;
+  using dz = in_accessor<5>;
+  using dt = in_accessor<6>;
+  using w = in_accessor<7, extent<0, 0, 0, 0, 0, 1>>;
+  using k_size = in_accessor<8>;
 
-  using param_list = make_param_list<out, x, z, fact, in, dt>;
+  using param_list =
+      make_param_list<out, out_top, data, d1, d2, dz, dt, w, k_size>;
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    eval(out()) = eval(x() - fact() * z());
+  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+    auto k_offset = eval(k_size() - 1);
+
+    real_t av = eval(-0.25_r / dz() * w());
+    real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
+    real_t cv = eval(0.25_r / dz() * w(0, 0, 1));
+
+    real_t d1v = eval(1_r / dt() * data() -
+                      0.25_r / dz() *
+                          (w() * (data() - data(0, 0, -1)) +
+                           w(0, 0, 1) * (data(0, 0, -k_offset) - data())));
+
+    eval(out_top()) =
+        eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /
+             (bv + cv * d2(0, 0, -k_offset) + av * d2(0, 0, -1)));
+    eval(out()) = eval(out_top());
+  }
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
+    eval(out_top()) = eval(out_top(0, 0, 1));
+    eval(out()) = eval(d1() + d2() * out_top());
   }
 };
 
 struct stage_advection_w3_rk {
   using out = inout_accessor<0>;
-  using x = in_accessor<1>;
-  using z = in_accessor<2>;
-  using fact = in_accessor<3>;
-  using in = in_accessor<4, extent<-3, 3, -3, 3>>;
-  using in0 = in_accessor<5>;
+  using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using data = in_accessor<2, extent<-3, 3, -3, 3, -infinite_extent, 0>>;
+  using data0 = in_accessor<3>;
+  using d1 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d2 = in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
-  using u = in_accessor<6>;
-  using v = in_accessor<7>;
-  using dx = in_accessor<8>;
-  using dy = in_accessor<9>;
-  using dt = in_accessor<10>;
+  using dx = in_accessor<6>;
+  using dy = in_accessor<7>;
+  using dz = in_accessor<8>;
+  using dt = in_accessor<9>;
+  using u = in_accessor<10>;
+  using v = in_accessor<11>;
+  using w = in_accessor<12, extent<0, 0, 0, 0, 0, 1>>;
+  using k_size = in_accessor<13>;
 
-  using param_list =
-      make_param_list<out, x, z, fact, in, in0, u, v, dx, dy, dt>;
+  using param_list = make_param_list<out, out_top, data, data0, d1, d2, dx, dy,
+                                     dz, dt, u, v, w, k_size>;
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    auto vout = eval(x() - fact() * z());
-    auto flx = call<stage_u, full_t>::with(eval, u(), in(), dx());
-    auto fly = call<stage_v, full_t>::with(eval, v(), in(), dy());
-    eval(out()) = eval(in0() - dt() * (flx + fly) + (vout - in()));
+  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+    real_t outv;
+    call_proc<stage_advection_w3, full_t::last_level>::with(
+        eval, outv, out_top(), data(), d1(), d2(), dz(), dt(), w(), k_size());
+    auto flx = call<stage_u, full_t>::with(eval, u(), data(), dx());
+    auto fly = call<stage_v, full_t>::with(eval, v(), data(), dy());
+    eval(out()) = eval(data0() - dt() * (flx + fly) + (outv - data()));
+  }
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
+    real_t outv;
+    call_proc<stage_advection_w3, full_t::modify<0, -1>>::with(
+        eval, outv, out_top(), data(), d1(), d2(), dz(), dt(), w(), k_size());
+    auto flx = call<stage_u, full_t>::with(eval, u(), data(), dx());
+    auto fly = call<stage_v, full_t>::with(eval, v(), data(), dy());
+    eval(out()) = eval(data0() - dt() * (flx + fly) + (outv - data()));
   }
 };
 
@@ -320,47 +308,27 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
 std::function<void(storage_t, storage_t, storage_t, real_t)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto w, auto alpha, auto gamma,
-                       auto fact, auto d, auto d2, auto d_uncached,
-                       auto d2_uncached, auto k_size, auto dz, auto dt) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto w, auto k_size,
+                       auto dz, auto dt) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, c, c2, p1_k_cache, a_c_cache);
+    GT_DECLARE_TMP(real_t, b, d1, d2, out_top);
     return multi_pass(
         execute_forward()
-            .k_cached(cache_io_policy::flush(), c, d, c2, d2)
-            .k_cached(cache_io_policy::fill(), w)
-            .k_cached(p1_k_cache, a_c_cache)
-            .stage(stage_advection_w_forward(), alpha, gamma, c, d, c2, d2, in,
-                   dz, dt, w, p1_k_cache, a_c_cache, k_size),
+            .k_cached(cache_io_policy::fill(), in)
+            .k_cached(cache_io_policy::flush(), b, d1, d2)
+            .stage(stage_advection_w_forward(), b, d1, d2, in, in_uncached, dz,
+                   dt, w, k_size),
         execute_backward()
-            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d, d2)
-            .stage(stage_advection_w_backward(), c, d, c2, d2, alpha, gamma,
-                   fact, d_uncached, d2_uncached, k_size),
-        execute_parallel().stage(stage_advection_w3(), out, d, d2, fact, in,
-                                 dt));
+            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d1, d2)
+            .stage(stage_advection_w_backward(), b, d1, d2, dz, w),
+        execute_backward().k_cached(out_top).stage(
+            stage_advection_w3(), out, out_top, in, d1, d2, dz, dt, w, k_size));
   };
 
-  auto field = storage_builder(resolution);
-
-  auto ij_slice = gt::storage::builder<storage_tr>
-    .type<real_t>()
-    .id<1>()
-    .halos(halo, halo)
-    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
-
-  auto alpha = ij_slice();
-  auto gamma = ij_slice();
-  auto fact = ij_slice();
-  auto d = field();
-  auto d2 = field();
-
-  return [grid = std::move(grid), spec = std::move(spec),
-          alpha = std::move(alpha), gamma = std::move(gamma),
-          fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
+  return [grid = std::move(grid), spec = std::move(spec), delta,
           resolution](storage_t out, storage_t in, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, w, alpha, gamma, fact,
-                     d, d2, d, d2,
-                     gt::stencil::make_global_parameter((int)resolution.z),
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, w,
+                     gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
   };
@@ -371,51 +339,34 @@ std::function<void(storage_t, storage_t, storage_t, storage_t, storage_t,
 runge_kutta_step(vec<std::size_t, 3> const &resolution,
                  vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto in, auto w, auto alpha, auto gamma, auto fact,
-                       auto d, auto d2, auto d_uncached, auto d2_uncached,
-                       auto k_size, auto dz, auto dt) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto in0, auto u,
+                       auto v, auto w, auto k_size, auto dx, auto dy, auto dz,
+                       auto dt) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, c, c2, p1_k_cache, a_c_cache);
+    GT_DECLARE_TMP(real_t, b, d1, d2, out_top);
     return multi_pass(
         execute_forward()
-            .k_cached(cache_io_policy::flush(), c, d, c2, d2)
-            .k_cached(p1_k_cache, a_c_cache)
-            .stage(stage_advection_w_forward(), alpha, gamma, c, d, c2, d2, in,
-                   dz, dt, w, p1_k_cache, a_c_cache, k_size),
+            .k_cached(cache_io_policy::fill(), in)
+            .k_cached(cache_io_policy::flush(), b, d1, d2)
+            .stage(stage_advection_w_forward(), b, d1, d2, in, in_uncached, dz,
+                   dt, w, k_size),
         execute_backward()
-            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d, d2)
-            .stage(stage_advection_w_backward(), c, d, c2, d2, alpha, gamma,
-                   fact, d_uncached, d2_uncached, k_size));
+            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d1, d2)
+            .stage(stage_advection_w_backward(), b, d1, d2, dz, w),
+        execute_backward().k_cached(out_top).stage(
+            stage_advection_w3_rk(), out, out_top, in, in0, d1, d2, dx, dy, dz,
+            dt, u, v, w, k_size));
   };
 
-  auto field = storage_builder(resolution);
-
-  auto ij_slice = gt::storage::builder<storage_tr>
-    .type<real_t>()
-    .id<1>()
-    .halos(halo, halo)
-    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
-
-  auto alpha = ij_slice();
-  auto gamma = ij_slice();
-  auto fact = ij_slice();
-  auto d = field();
-  auto d2 = field();
-  return [grid = std::move(grid), spec = std::move(spec),
-          alpha = std::move(alpha), gamma = std::move(gamma),
-          fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
+  return [grid = std::move(grid), spec = std::move(spec), delta,
           resolution](storage_t out, storage_t in, storage_t in0, storage_t u,
                       storage_t v, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_RKADV1>(), grid, in, w,
-                     alpha, gamma, fact, d, d2, d, d2,
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, u, v, w,
                      gt::stencil::make_global_parameter(resolution.z),
+                     gt::stencil::make_global_parameter(delta.x),
+                     gt::stencil::make_global_parameter(delta.y),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
-    gt::stencil::run_single_stage(
-        stage_advection_w3_rk(), backend_t<GTBENCH_BPARAMS_RKADV2>(), grid, out,
-        d, d2, fact, in, in0, u, v, gt::stencil::make_global_parameter(delta.x),
-        gt::stencil::make_global_parameter(delta.y),
-        gt::stencil::make_global_parameter(dt));
   };
 }
 
