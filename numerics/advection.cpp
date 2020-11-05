@@ -308,10 +308,10 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
 std::function<void(storage_t, storage_t, storage_t, real_t)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_uncached, auto w, auto k_size,
-                       auto dz, auto dt) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto w, auto d1,
+                       auto d2, auto k_size, auto dz, auto dt) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, b, d1, d2, out_top);
+    GT_DECLARE_TMP(real_t, b, out_top);
     return multi_pass(
         execute_forward()
             .k_cached(cache_io_policy::fill(), in)
@@ -325,9 +325,14 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
             stage_advection_w3(), out, out_top, in, d1, d2, dz, dt, w, k_size));
   };
 
-  return [grid = std::move(grid), spec = std::move(spec), delta,
+  auto field = storage_builder(resolution);
+  auto d1 = field();
+  auto d2 = field();
+
+  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
+          d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, w,
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, w, d1, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
@@ -340,10 +345,10 @@ runge_kutta_step(vec<std::size_t, 3> const &resolution,
                  vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   auto const spec = [](auto out, auto in, auto in_uncached, auto in0, auto u,
-                       auto v, auto w, auto k_size, auto dx, auto dy, auto dz,
-                       auto dt) {
+                       auto v, auto w, auto d1, auto d2, auto k_size, auto dx,
+                       auto dy, auto dz, auto dt) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, b, d1, d2, out_top);
+    GT_DECLARE_TMP(real_t, b, out_top);
     return multi_pass(
         execute_forward()
             .k_cached(cache_io_policy::fill(), in)
@@ -358,11 +363,16 @@ runge_kutta_step(vec<std::size_t, 3> const &resolution,
             dt, u, v, w, k_size));
   };
 
-  return [grid = std::move(grid), spec = std::move(spec), delta,
+  auto field = storage_builder(resolution);
+  auto d1 = field();
+  auto d2 = field();
+
+  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
+          d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t in0, storage_t u,
                       storage_t v, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, u, v, w,
-                     gt::stencil::make_global_parameter(resolution.z),
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, u, v, w, d1,
+                     d2, gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.x),
                      gt::stencil::make_global_parameter(delta.y),
                      gt::stencil::make_global_parameter(delta.z),

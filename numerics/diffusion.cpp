@@ -227,10 +227,10 @@ std::function<void(storage_t, storage_t, real_t dt)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
          real_t coeff) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_uncached, auto k_size,
-                       auto dz, auto dt, auto coeff) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto d1, auto d2,
+                       auto k_size, auto dz, auto dt, auto coeff) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, b, d1, d2, out_top);
+    GT_DECLARE_TMP(real_t, b, out_top);
     return multi_pass(
         execute_forward()
             .k_cached(cache_io_policy::fill(), in)
@@ -245,10 +245,16 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
                                                    coeff, k_size));
   };
 
-  return [grid = std::move(grid), spec = std::move(spec), delta, resolution,
+  auto field = storage_builder(resolution);
+  auto d1 = field();
+  auto d2 = field();
+
+  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
+          d2 = std::move(d2), delta, resolution,
           coeff](storage_t out, storage_t in, real_t dt) {
     gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF1>(), grid, out, in,
-                     in, gt::stencil::make_global_parameter(resolution.z),
+                     in, d1, d2,
+                     gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt),
                      gt::stencil::make_global_parameter(coeff));
