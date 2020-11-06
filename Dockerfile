@@ -13,7 +13,7 @@ RUN apt-get update -qq && \
     wget && \
     rm -rf /var/lib/apt/lists/*
 
-ARG CMAKE_VERSION=3.14.5
+ARG CMAKE_VERSION=3.18.4
 RUN wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz && \
     tar xzf cmake-${CMAKE_VERSION}-Linux-x86_64.tar.gz && \
     cp -r cmake-${CMAKE_VERSION}-Linux-x86_64/bin cmake-${CMAKE_VERSION}-Linux-x86_64/share /usr/local/ && \
