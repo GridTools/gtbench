@@ -118,33 +118,13 @@ inline auto rkadv_stepper() {
 
 inline auto advdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](solver_state const &state, exchange_t exchange) {
-    return [hdiff = diffusion::horizontal(state.resolution, state.delta,
-                                          diffusion_coeff),
-            vdiff = diffusion::vertical(state.resolution, state.delta,
-                                        diffusion_coeff),
-            hadv = advection::horizontal(state.resolution, state.delta),
-            vadv = advection::vertical(state.resolution, state.delta),
-            exchange = std::move(exchange)](solver_state &state,
-                                            real_t dt) mutable {
-      // VDIFF
-      vdiff(state.data1, state.data, dt);
-      std::swap(state.data1, state.data);
-
-      // ADV
-      exchange(state.data);
-      hadv(state.data1, state.data, state.data, state.u, state.v, dt / 3);
-      vadv(state.data1, state.data, state.data1, state.w, dt / 3);
-      exchange(state.data1);
-      hadv(state.data2, state.data1, state.data, state.u, state.v, dt / 2);
-      vadv(state.data2, state.data1, state.data2, state.w, dt / 2);
-      exchange(state.data2);
-      hadv(state.data1, state.data2, state.data, state.u, state.v, dt);
-      vadv(state.data, state.data2, state.data1, state.w, dt);
-
-      // HDIFF
-      exchange(state.data);
-      hdiff(state.data1, state.data, dt);
-      std::swap(state.data1, state.data);
+    return [hdiff = hdiff_stepper(diffusion_coeff)(state, exchange),
+            vdiff = vdiff_stepper(diffusion_coeff)(state, exchange),
+            rkadv = rkadv_stepper()(state, exchange)](solver_state &state,
+                                                      real_t dt) mutable {
+      hdiff(state, dt);
+      rkadv(state, dt);
+      vdiff(state, dt);
     };
   };
 }
