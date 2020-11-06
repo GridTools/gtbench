@@ -290,14 +290,13 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   };
 
   auto field = storage_builder(resolution);
-  auto d1 = field();
   auto d2 = field();
 
-  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
-          d2 = std::move(d2), delta,
-          resolution](storage_t out, storage_t in, storage_t in0, storage_t w,
-                      real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, w, d1, d2,
+  return [grid = std::move(grid), spec = std::move(spec), d2 = std::move(d2),
+          delta, resolution](storage_t out, storage_t in, storage_t in0,
+                             storage_t w, real_t dt) {
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, w,
+                     out /* out is used as temporary storage for d1 */, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
