@@ -93,21 +93,22 @@ struct stage_v {
 struct stage_horizontal {
   using out = inout_accessor<0>;
   using in = in_accessor<1, extent<-3, 3, -3, 3>>;
-  using u = in_accessor<2>;
-  using v = in_accessor<3>;
+  using in0 = in_accessor<2, extent<-3, 3, -3, 3>>;
+  using u = in_accessor<3>;
+  using v = in_accessor<4>;
 
-  using dx = in_accessor<4>;
-  using dy = in_accessor<5>;
-  using dt = in_accessor<6>;
+  using dx = in_accessor<5>;
+  using dy = in_accessor<6>;
+  using dt = in_accessor<7>;
 
-  using param_list = make_param_list<out, in, u, v, dx, dy, dt>;
+  using param_list = make_param_list<out, in, in0, u, v, dx, dy, dt>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
     auto flx = call<stage_u, full_t>::with(eval, u(), in(), dx());
     auto fly = call<stage_v, full_t>::with(eval, v(), in(), dy());
 
-    eval(out()) = eval(in() - dt() * (flx + fly));
+    eval(out()) = eval(in0() - dt() * (flx + fly));
   }
 };
 
@@ -212,16 +213,17 @@ struct stage_advection_w3 {
   using out = inout_accessor<0>;
   using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
   using data = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
-  using d1 = in_accessor<3, extent<0, 0, 0, 0, -infinite_extent, 0>>;
-  using d2 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using data0 = in_accessor<3>;
+  using d1 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d2 = in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
-  using dz = in_accessor<5>;
-  using dt = in_accessor<6>;
-  using w = in_accessor<7, extent<0, 0, 0, 0, 0, 1>>;
-  using k_size = in_accessor<8>;
+  using dz = in_accessor<6>;
+  using dt = in_accessor<7>;
+  using w = in_accessor<8, extent<0, 0, 0, 0, 0, 1>>;
+  using k_size = in_accessor<9>;
 
   using param_list =
-      make_param_list<out, out_top, data, d1, d2, dz, dt, w, k_size>;
+      make_param_list<out, out_top, data, data0, d1, d2, dz, dt, w, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -239,77 +241,38 @@ struct stage_advection_w3 {
     eval(out_top()) =
         eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /
              (bv + cv * d2(0, 0, -k_offset) + av * d2(0, 0, -1)));
-    eval(out()) = eval(out_top());
+    eval(out()) = eval(data0() + (out_top() - data()));
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
     eval(out_top()) = eval(out_top(0, 0, 1));
-    eval(out()) = eval(d1() + d2() * out_top());
-  }
-};
-
-struct stage_advection_w3_rk {
-  using out = inout_accessor<0>;
-  using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
-  using data = in_accessor<2, extent<-3, 3, -3, 3, -infinite_extent, 0>>;
-  using data0 = in_accessor<3>;
-  using d1 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
-  using d2 = in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, 0>>;
-
-  using dx = in_accessor<6>;
-  using dy = in_accessor<7>;
-  using dz = in_accessor<8>;
-  using dt = in_accessor<9>;
-  using u = in_accessor<10>;
-  using v = in_accessor<11>;
-  using w = in_accessor<12, extent<0, 0, 0, 0, 0, 1>>;
-  using k_size = in_accessor<13>;
-
-  using param_list = make_param_list<out, out_top, data, data0, d1, d2, dx, dy,
-                                     dz, dt, u, v, w, k_size>;
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    real_t outv;
-    call_proc<stage_advection_w3, full_t::last_level>::with(
-        eval, outv, out_top(), data(), d1(), d2(), dz(), dt(), w(), k_size());
-    auto flx = call<stage_u, full_t>::with(eval, u(), data(), dx());
-    auto fly = call<stage_v, full_t>::with(eval, v(), data(), dy());
-    eval(out()) = eval(data0() - dt() * (flx + fly) + (outv - data()));
-  }
-
-  template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
-    real_t outv;
-    call_proc<stage_advection_w3, full_t::modify<0, -1>>::with(
-        eval, outv, out_top(), data(), d1(), d2(), dz(), dt(), w(), k_size());
-    auto flx = call<stage_u, full_t>::with(eval, u(), data(), dx());
-    auto fly = call<stage_v, full_t>::with(eval, v(), data(), dy());
-    eval(out()) = eval(data0() - dt() * (flx + fly) + (outv - data()));
+    eval(out()) = eval(data0() + (d1() + d2() * out_top() - data()));
   }
 };
 
 } // namespace
 
-std::function<void(storage_t, storage_t, storage_t, storage_t, real_t)>
+std::function<void(storage_t, storage_t, storage_t, storage_t, storage_t,
+                   real_t)>
 horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   return [grid = std::move(grid), delta](storage_t out, storage_t in,
-                                         storage_t u, storage_t v, real_t dt) {
+                                         storage_t in0, storage_t u,
+                                         storage_t v, real_t dt) {
     gt::stencil::run_single_stage(stage_horizontal(), backend_t<>(), grid, out,
-                                  in, u, v,
+                                  in, in0, u, v,
                                   gt::stencil::make_global_parameter(delta.x),
                                   gt::stencil::make_global_parameter(delta.y),
                                   gt::stencil::make_global_parameter(dt));
   };
 }
 
-std::function<void(storage_t, storage_t, storage_t, real_t)>
+std::function<void(storage_t, storage_t, storage_t, storage_t, real_t)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_uncached, auto w, auto d1,
-                       auto d2, auto k_size, auto dz, auto dt) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto in0, auto w,
+                       auto d1, auto d2, auto k_size, auto dz, auto dt) {
     using namespace gt::stencil;
     GT_DECLARE_TMP(real_t, b, out_top);
     return multi_pass(
@@ -321,8 +284,9 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
         execute_backward()
             .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d1, d2)
             .stage(stage_advection_w_backward(), b, d1, d2, dz, w),
-        execute_backward().k_cached(out_top).stage(
-            stage_advection_w3(), out, out_top, in, d1, d2, dz, dt, w, k_size));
+        execute_backward().k_cached(out_top).stage(stage_advection_w3(), out,
+                                                   out_top, in, in0, d1, d2, dz,
+                                                   dt, w, k_size));
   };
 
   auto field = storage_builder(resolution);
@@ -331,50 +295,10 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
 
   return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
           d2 = std::move(d2), delta,
-          resolution](storage_t out, storage_t in, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, w, d1, d2,
+          resolution](storage_t out, storage_t in, storage_t in0, storage_t w,
+                      real_t dt) {
+    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, w, d1, d2,
                      gt::stencil::make_global_parameter(resolution.z),
-                     gt::stencil::make_global_parameter(delta.z),
-                     gt::stencil::make_global_parameter(dt));
-  };
-}
-
-std::function<void(storage_t, storage_t, storage_t, storage_t, storage_t,
-                   storage_t, real_t)>
-runge_kutta_step(vec<std::size_t, 3> const &resolution,
-                 vec<real_t, 3> const &delta) {
-  auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_uncached, auto in0, auto u,
-                       auto v, auto w, auto d1, auto d2, auto k_size, auto dx,
-                       auto dy, auto dz, auto dt) {
-    using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, b, out_top);
-    return multi_pass(
-        execute_forward()
-            .k_cached(cache_io_policy::fill(), in)
-            .k_cached(cache_io_policy::flush(), b, d1, d2)
-            .stage(stage_advection_w_forward(), b, d1, d2, in, in_uncached, dz,
-                   dt, w, k_size),
-        execute_backward()
-            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d1, d2)
-            .stage(stage_advection_w_backward(), b, d1, d2, dz, w),
-        execute_backward().k_cached(out_top).stage(
-            stage_advection_w3_rk(), out, out_top, in, in0, d1, d2, dx, dy, dz,
-            dt, u, v, w, k_size));
-  };
-
-  auto field = storage_builder(resolution);
-  auto d1 = field();
-  auto d2 = field();
-
-  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
-          d2 = std::move(d2), delta,
-          resolution](storage_t out, storage_t in, storage_t in0, storage_t u,
-                      storage_t v, storage_t w, real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, u, v, w, d1,
-                     d2, gt::stencil::make_global_parameter(resolution.z),
-                     gt::stencil::make_global_parameter(delta.x),
-                     gt::stencil::make_global_parameter(delta.y),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
   };
