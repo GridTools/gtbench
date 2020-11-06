@@ -246,14 +246,12 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
   };
 
   auto field = storage_builder(resolution);
-  auto d1 = field();
   auto d2 = field();
 
-  return [grid = std::move(grid), spec = std::move(spec), d1 = std::move(d1),
-          d2 = std::move(d2), delta, resolution,
-          coeff](storage_t out, storage_t in, real_t dt) {
+  return [grid = std::move(grid), spec = std::move(spec), d2 = std::move(d2),
+          delta, resolution, coeff](storage_t out, storage_t in, real_t dt) {
     gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF1>(), grid, out, in,
-                     in, d1, d2,
+                     in, out /* out is used as temporary storage d1 */, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt),
