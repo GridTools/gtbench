@@ -75,8 +75,8 @@ struct stage_diffusion_w_forward {
   using d1 = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
   using d2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
 
-  using data = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
-  using data_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
+  using in = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
+  using in_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
 
   using dz = in_accessor<5>;
   using dt = in_accessor<6>;
@@ -84,7 +84,7 @@ struct stage_diffusion_w_forward {
   using k_size = in_accessor<8>;
 
   using param_list =
-      make_param_list<b, d1, d2, data, data_uncached, dz, dt, coeff, k_size>;
+      make_param_list<b, d1, d2, in, in_uncached, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
@@ -92,10 +92,10 @@ struct stage_diffusion_w_forward {
 
     real_t av = eval(-coeff() / (2_r * dz() * dz()));
     real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
-    real_t d1v = eval(1_r / dt() * data() + 0.5_r * coeff() *
-                                                (data_uncached(0, 0, k_offset) -
-                                                 2_r * data() + data(0, 0, 1)) /
-                                                (dz() * dz()));
+    real_t d1v = eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                              (in_uncached(0, 0, k_offset) -
+                                               2_r * in() + in(0, 0, 1)) /
+                                              (dz() * dz()));
     real_t d2v = -av;
 
     eval(b()) = bv;
@@ -109,9 +109,9 @@ struct stage_diffusion_w_forward {
     real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
     real_t cv = av;
     real_t d1v =
-        eval(1_r / dt() * data() +
-             0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
-                 (dz() * dz()));
+        eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
+                                     (dz() * dz()));
     real_t d2v = 0_r;
 
     real_t f = eval(av / b(0, 0, -1));
@@ -127,9 +127,9 @@ struct stage_diffusion_w_forward {
     real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
     real_t cv = av;
     real_t d1v =
-        eval(1_r / dt() * data() +
-             0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
-                 (dz() * dz()));
+        eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
+                                     (dz() * dz()));
     real_t d2v = -cv;
 
     real_t f = eval(av / b(0, 0, -1));
@@ -169,7 +169,7 @@ struct stage_diffusion_w_backward {
 struct stage_diffusion_w3 {
   using out = inout_accessor<0>;
   using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
-  using data = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using in = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
   using d1 = in_accessor<3, extent<0, 0, 0, 0, -infinite_extent, 0>>;
   using d2 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
@@ -179,7 +179,7 @@ struct stage_diffusion_w3 {
   using k_size = in_accessor<8>;
 
   using param_list =
-      make_param_list<out, out_top, data, d1, d2, dz, dt, coeff, k_size>;
+      make_param_list<out, out_top, in, d1, d2, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -188,10 +188,10 @@ struct stage_diffusion_w3 {
     real_t av = eval(-coeff() / (2_r * dz() * dz()));
     real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
     real_t cv = av;
-    real_t d1v = eval(1_r / dt() * data() + 0.5_r * coeff() *
-                                                (data(0, 0, -1) - 2_r * data() +
-                                                 data(0, 0, -k_offset)) /
-                                                (dz() * dz()));
+    real_t d1v = eval(1_r / dt() * in() +
+                      0.5_r * coeff() *
+                          (in(0, 0, -1) - 2_r * in() + in(0, 0, -k_offset)) /
+                          (dz() * dz()));
 
     eval(out_top()) =
         eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /

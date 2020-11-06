@@ -117,8 +117,8 @@ struct stage_advection_w_forward {
   using d1 = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
   using d2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
 
-  using data = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
-  using data_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
+  using in = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
+  using in_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
 
   using dz = in_accessor<5>;
   using dt = in_accessor<6>;
@@ -126,7 +126,7 @@ struct stage_advection_w_forward {
   using k_size = in_accessor<8>;
 
   using param_list =
-      make_param_list<b, d1, d2, data, data_uncached, dz, dt, w, k_size>;
+      make_param_list<b, d1, d2, in, in_uncached, dz, dt, w, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
@@ -134,10 +134,10 @@ struct stage_advection_w_forward {
 
     real_t av = eval(-0.25_r / dz() * w());
     real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
-    real_t d1v = eval(1_r / dt() * data() -
+    real_t d1v = eval(1_r / dt() * in() -
                       0.25_r / dz() *
-                          (w() * (data() - data_uncached(0, 0, k_offset)) +
-                           w(0, 0, 1) * (data(0, 0, 1) - data())));
+                          (w() * (in() - in_uncached(0, 0, k_offset)) +
+                           w(0, 0, 1) * (in(0, 0, 1) - in())));
     real_t d2v = -av;
 
     eval(b()) = bv;
@@ -151,9 +151,9 @@ struct stage_advection_w_forward {
     real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
     real_t cv_km1 = -av;
     real_t d1v =
-        eval(1_r / dt() * data() - 0.25_r / dz() *
-                                       (w() * (data() - data(0, 0, -1)) +
-                                        w(0, 0, 1) * (data(0, 0, 1) - data())));
+        eval(1_r / dt() * in() - 0.25_r / dz() *
+                                     (w() * (in() - in(0, 0, -1)) +
+                                      w(0, 0, 1) * (in(0, 0, 1) - in())));
     real_t d2v = 0_r;
 
     real_t f = eval(av / b(0, 0, -1));
@@ -170,9 +170,9 @@ struct stage_advection_w_forward {
     real_t cv = eval(0.25_r / dz() * w(0, 0, 1));
     real_t cv_km1 = -av;
     real_t d1v =
-        eval(1_r / dt() * data() - 0.25_r / dz() *
-                                       (w() * (data() - data(0, 0, -1)) +
-                                        w(0, 0, 1) * (data(0, 0, 1) - data())));
+        eval(1_r / dt() * in() - 0.25_r / dz() *
+                                     (w() * (in() - in(0, 0, -1)) +
+                                      w(0, 0, 1) * (in(0, 0, 1) - in())));
     real_t d2v = -cv;
 
     real_t f = eval(av / b(0, 0, -1));
@@ -212,8 +212,8 @@ struct stage_advection_w_backward {
 struct stage_advection_w3 {
   using out = inout_accessor<0>;
   using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
-  using data = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
-  using data0 = in_accessor<3>;
+  using in = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using in0 = in_accessor<3>;
   using d1 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
   using d2 = in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
@@ -223,7 +223,7 @@ struct stage_advection_w3 {
   using k_size = in_accessor<9>;
 
   using param_list =
-      make_param_list<out, out_top, data, data0, d1, d2, dz, dt, w, k_size>;
+      make_param_list<out, out_top, in, in0, d1, d2, dz, dt, w, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
@@ -233,21 +233,21 @@ struct stage_advection_w3 {
     real_t bv = eval(1_r / dt() + 0.25_r * (w() - w(0, 0, 1)) / dz());
     real_t cv = eval(0.25_r / dz() * w(0, 0, 1));
 
-    real_t d1v = eval(1_r / dt() * data() -
+    real_t d1v = eval(1_r / dt() * in() -
                       0.25_r / dz() *
-                          (w() * (data() - data(0, 0, -1)) +
-                           w(0, 0, 1) * (data(0, 0, -k_offset) - data())));
+                          (w() * (in() - in(0, 0, -1)) +
+                           w(0, 0, 1) * (in(0, 0, -k_offset) - in())));
 
     eval(out_top()) =
         eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /
              (bv + cv * d2(0, 0, -k_offset) + av * d2(0, 0, -1)));
-    eval(out()) = eval(data0() + (out_top() - data()));
+    eval(out()) = eval(in0() + (out_top() - in()));
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
     eval(out_top()) = eval(out_top(0, 0, 1));
-    eval(out()) = eval(data0() + (d1() + d2() * out_top() - data()));
+    eval(out()) = eval(in0() + (d1() + d2() * out_top() - in()));
   }
 };
 
