@@ -32,31 +32,31 @@ int main(int argc, char **argv) {
 
   auto rt = runtime::init(rt_tag, args);
 
-  auto run_tests = [&rt,
-                    full_range](std::string const &title, auto const &exact,
-                                auto const &stepper, real_t tmax_spat_conv,
-                                std::size_t n_spat_conv, real_t tmax_temp_conv,
-                                std::size_t n_temp_conv) {
+  auto run_tests = [&rt, full_range](std::string const &title,
+                                     auto const &exact, auto const &stepper,
+                                     real_t tmax_spatial, std::size_t n_spatial,
+                                     real_t tmax_temporal,
+                                     std::size_t n_temporal) {
     std::cout << "=== " << title << " ===" << std::endl;
     std::cout << "Spatial convergence:" << std::endl;
     auto spatial_error_f = [&](std::size_t n) {
-      return runtime::solve(rt, exact, stepper, {n, n, n}, tmax_spat_conv,
-                            tmax_spat_conv / 100)
+      return runtime::solve(rt, exact, stepper, {n, n, n}, tmax_spatial,
+                            tmax_spatial / 100)
           .error;
     };
-    std::size_t n_min = full_range ? 2 : n_spat_conv / 2;
-    std::size_t n_max = full_range ? 128 : n_spat_conv;
+    std::size_t n_min = full_range ? 2 : n_spatial / 2;
+    std::size_t n_max = full_range ? 128 : n_spatial;
     verification::print_order_verification_result(
         verification::order_verification(spatial_error_f, n_min, n_max));
 
     std::cout << "Temporal convergence:" << std::endl;
     auto spacetime_error_f = [&](std::size_t n) {
-      return runtime::solve(rt, exact, stepper, {32, 32, 1024}, tmax_temp_conv,
-                            tmax_temp_conv / n)
+      return runtime::solve(rt, exact, stepper, {32, 32, 1024}, tmax_temporal,
+                            tmax_temporal / n)
           .error;
     };
-    n_min = full_range ? 2 : n_temp_conv / 2;
-    n_max = full_range ? 128 : n_temp_conv;
+    n_min = full_range ? 2 : n_temporal / 2;
+    n_max = full_range ? 128 : n_temporal;
     verification::print_order_verification_result(
         verification::order_verification(spacetime_error_f, n_min, n_max));
   };
