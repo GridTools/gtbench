@@ -176,7 +176,7 @@ struct stage_advection_w_forward {
     real_t d2v = -cv;
 
     real_t f = eval(av / b(0, 0, -1));
-    eval(b()) = bv - f * cv;
+    eval(b()) = bv - f * cv_km1;
     eval(d1()) = eval(d1v - f * d1(0, 0, -1));
     eval(d2()) = eval(d2v - f * d2(0, 0, -1));
   }
