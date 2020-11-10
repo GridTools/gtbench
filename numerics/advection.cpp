@@ -260,11 +260,11 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
   return [grid = std::move(grid), delta](storage_t out, storage_t in,
                                          storage_t in0, storage_t u,
                                          storage_t v, real_t dt) {
-    gt::stencil::run_single_stage(stage_horizontal(), backend_t<>(), grid, out,
-                                  in, in0, u, v,
-                                  gt::stencil::make_global_parameter(delta.x),
-                                  gt::stencil::make_global_parameter(delta.y),
-                                  gt::stencil::make_global_parameter(dt));
+    gt::stencil::run_single_stage(
+        stage_horizontal(), backend_t<GTBENCH_BPARAMS_HADV>(), grid, out, in,
+        in0, u, v, gt::stencil::make_global_parameter(delta.x),
+        gt::stencil::make_global_parameter(delta.y),
+        gt::stencil::make_global_parameter(dt));
   };
 }
 
@@ -297,7 +297,8 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta) {
           d2 = std::move(d2), delta,
           resolution](storage_t out, storage_t in, storage_t in0, storage_t w,
                       real_t dt) {
-    gt::stencil::run(spec, backend_t<>(), grid, out, in, in, in0, w, d1, d2,
+    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VADV>(), grid, out, in, in,
+                     in0, w, d1, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt));
