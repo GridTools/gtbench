@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
             is_float ? 16 : 32, 5e-1, 16);
   run_tests("VERTICAL DIFFUSION",
             verification::analytical::vertical_diffusion{diffusion_coeff},
-            numerics::vdiff_stepper(diffusion_coeff), 5, 64, 100, 32);
+            numerics::vdiff_stepper(diffusion_coeff), 5, 64, 50,
+            is_float ? 8 : 16);
   run_tests("FULL DIFFUSION",
             verification::analytical::full_diffusion{diffusion_coeff},
             numerics::diff_stepper(diffusion_coeff), is_float ? 1e-1 : 1e-3, 32,
