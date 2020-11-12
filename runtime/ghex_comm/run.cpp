@@ -122,7 +122,7 @@ struct local_domain {
   coordinate_t const &last() const { return m_last; }
 };
 
-using context_t = gt::ghex::tl::context<transport>;
+using context_t = typename gt::ghex::tl::context_factory<transport>::context_type;
 using communicator_t = context_t::communicator_type;
 using grid_t = gt::ghex::structured::grid::type<local_domain>;
 using patterns_t =
