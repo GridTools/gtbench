@@ -18,10 +18,9 @@ set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
 set(GTBENCH_BPARAMS_HDIFF "" CACHE STRING "Parameters for GridTools backend for horizontal diffusion")
-set(GTBENCH_BPARAMS_VDIFF1 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 1)")
-set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 2)")
-set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
-set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
+set(GTBENCH_BPARAMS_VDIFF "" CACHE STRING "Parameters for GridTools backend for vertical diffusion")
+set(GTBENCH_BPARAMS_HADV "" CACHE STRING "Parameters for GridTools backend for horizontal advection")
+set(GTBENCH_BPARAMS_VADV "" CACHE STRING "Parameters for GridTools backend for vertical advection")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")

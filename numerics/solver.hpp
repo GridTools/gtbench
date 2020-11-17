@@ -81,7 +81,7 @@ inline auto hadv_stepper() {
             exchange = std::move(exchange)](solver_state &state,
                                             real_t dt) mutable {
       exchange(state.data);
-      hadv(state.data1, state.data, state.u, state.v, dt);
+      hadv(state.data1, state.data, state.data, state.u, state.v, dt);
       std::swap(state.data1, state.data);
     };
   };
@@ -91,7 +91,7 @@ inline auto vadv_stepper() {
   return [](solver_state const &state, exchange_t) {
     return [vadv = advection::vertical(state.resolution, state.delta)](
                solver_state &state, real_t dt) mutable {
-      vadv(state.data1, state.data, state.w, dt);
+      vadv(state.data1, state.data, state.data, state.w, dt);
       std::swap(state.data1, state.data);
     };
   };
@@ -99,50 +99,32 @@ inline auto vadv_stepper() {
 
 inline auto rkadv_stepper() {
   return [](solver_state const &state, exchange_t exchange) {
-    return [rkstep = advection::runge_kutta_step(state.resolution, state.delta),
+    return [hadv = advection::horizontal(state.resolution, state.delta),
+            vadv = advection::vertical(state.resolution, state.delta),
             exchange = std::move(exchange)](solver_state &state,
                                             real_t dt) mutable {
       exchange(state.data);
-      rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
-             dt / 3);
+      hadv(state.data1, state.data, state.data, state.u, state.v, dt / 3);
+      vadv(state.data1, state.data, state.data1, state.w, dt / 3);
       exchange(state.data1);
-      rkstep(state.data2, state.data1, state.data, state.u, state.v, state.w,
-             dt / 2);
+      hadv(state.data2, state.data1, state.data, state.u, state.v, dt / 2);
+      vadv(state.data2, state.data1, state.data2, state.w, dt / 2);
       exchange(state.data2);
-      rkstep(state.data, state.data2, state.data, state.u, state.v, state.w,
-             dt);
+      hadv(state.data1, state.data2, state.data, state.u, state.v, dt);
+      vadv(state.data, state.data2, state.data1, state.w, dt);
     };
   };
 }
 
 inline auto advdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](solver_state const &state, exchange_t exchange) {
-    return [hdiff = diffusion::horizontal(state.resolution, state.delta,
-                                          diffusion_coeff),
-            vdiff = diffusion::vertical(state.resolution, state.delta,
-                                        diffusion_coeff),
-            rkstep = advection::runge_kutta_step(state.resolution, state.delta),
-            exchange = std::move(exchange)](solver_state &state,
-                                            real_t dt) mutable {
-      // VDIFF
-      vdiff(state.data1, state.data, dt);
-      std::swap(state.data1, state.data);
-
-      // ADV
-      exchange(state.data);
-      rkstep(state.data1, state.data, state.data, state.u, state.v, state.w,
-             dt / 3);
-      exchange(state.data1);
-      rkstep(state.data2, state.data1, state.data, state.u, state.v, state.w,
-             dt / 2);
-      exchange(state.data2);
-      rkstep(state.data, state.data2, state.data, state.u, state.v, state.w,
-             dt);
-
-      // HDIFF
-      exchange(state.data);
-      hdiff(state.data1, state.data, dt);
-      std::swap(state.data1, state.data);
+    return [hdiff = hdiff_stepper(diffusion_coeff)(state, exchange),
+            vdiff = vdiff_stepper(diffusion_coeff)(state, exchange),
+            rkadv = rkadv_stepper()(state, exchange)](solver_state &state,
+                                                      real_t dt) mutable {
+      hdiff(state, dt);
+      rkadv(state, dt);
+      vdiff(state, dt);
     };
   };
 }

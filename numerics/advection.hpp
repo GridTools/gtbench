@@ -14,16 +14,12 @@
 namespace numerics {
 namespace advection {
 
-std::function<void(storage_t, storage_t, storage_t, storage_t, real_t)>
+std::function<void(storage_t, storage_t, storage_t, storage_t, storage_t,
+                   real_t)>
 horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta);
 
-std::function<void(storage_t, storage_t, storage_t, real_t)>
+std::function<void(storage_t, storage_t, storage_t, storage_t, real_t)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta);
-
-std::function<void(storage_t, storage_t, storage_t, storage_t, storage_t,
-                   storage_t, real_t)>
-runge_kutta_step(vec<std::size_t, 3> const &resolution,
-                 vec<real_t, 3> const &delta);
 
 } // namespace advection
 } // namespace numerics

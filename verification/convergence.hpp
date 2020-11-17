@@ -43,9 +43,9 @@ order_verification_result_t order_verification(F &&f, std::size_t n_min,
 
 void print_order_verification_result(
     order_verification_result_t const &result) {
-  std::vector<std::size_t> ns;
-  std::vector<double> errors, orders;
-  std::tie(ns, errors, orders) = result;
+  auto const &ns = std::get<0>(result);
+  auto const &errors = std::get<1>(result);
+  auto const &orders = std::get<2>(result);
 
   const auto initial_flags = std::cout.flags();
   const auto initial_precision = std::cout.precision();
@@ -65,6 +65,17 @@ void print_order_verification_result(
 
   std::cout.flags(initial_flags);
   std::cout.precision(initial_precision);
+}
+
+bool check_order(order_verification_result_t const &result,
+                 real_t expected_order, real_t atol, real_t rtol) {
+  auto const &orders = std::get<2>(result);
+  for (auto order : orders) {
+    if (std::abs(order - expected_order) <=
+        atol + rtol * std::abs(expected_order))
+      return true;
+  }
+  return false;
 }
 
 } // namespace verification

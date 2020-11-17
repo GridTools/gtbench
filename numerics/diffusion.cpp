@@ -71,132 +71,138 @@ struct stage_horizontal {
 };
 
 struct stage_diffusion_w_forward {
-  using c = inout_accessor<0, extent<0, 0, 0, 0, -1, 0>>;
-  using d = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
-  using c2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
-  using d2 = inout_accessor<3, extent<0, 0, 0, 0, -1, 0>>;
+  using b = inout_accessor<0, extent<0, 0, 0, 0, -1, 0>>;
+  using d1 = inout_accessor<1, extent<0, 0, 0, 0, -1, 0>>;
+  using d2 = inout_accessor<2, extent<0, 0, 0, 0, -1, 0>>;
 
-  using data = in_accessor<4, extent<0, 0, 0, 0, -1, 1>>;
-  using data_uncached =
-      in_accessor<5, extent<0, 0, 0, 0, -infinite_extent, infinite_extent>>;
+  using in = in_accessor<3, extent<0, 0, 0, 0, -1, 1>>;
+  using in_uncached = in_accessor<4, extent<0, 0, 0, 0, 0, infinite_extent>>;
 
-  using dz = in_accessor<6>;
-  using dt = in_accessor<7>;
-  using coeff = in_accessor<8>;
-
-  using k_size = in_accessor<9>;
+  using dz = in_accessor<5>;
+  using dt = in_accessor<6>;
+  using coeff = in_accessor<7>;
+  using k_size = in_accessor<8>;
 
   using param_list =
-      make_param_list<c, d, c2, d2, data, data_uncached, dz, dt, coeff, k_size>;
+      make_param_list<b, d1, d2, in, in_uncached, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     auto k_offset = eval(k_size()) - 1;
 
-    auto ac = eval(-coeff() / (2_r * dz() * dz()));
-    auto b = eval(1_r / dt() - 2 * ac);
+    real_t av = eval(-coeff() / (2_r * dz() * dz()));
+    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t d1v = eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                              (in_uncached(0, 0, k_offset) -
+                                               2_r * in() + in(0, 0, 1)) /
+                                              (dz() * dz()));
+    real_t d2v = -av;
 
-    eval(d()) = eval(1_r / dt() * data() + 0.5_r * coeff() *
-                                               (data_uncached(0, 0, k_offset) -
-                                                2_r * data() + data(0, 0, 1)) /
-                                               (dz() * dz()));
-
-    b *= 2;
-    eval(c()) = ac / b;
-    eval(d()) = eval(d() / b);
-
-    eval(c2()) = eval(c() / b);
-    eval(d2()) = -0.5_r;
+    eval(b()) = bv;
+    eval(d1()) = d1v;
+    eval(d2()) = d2v;
   }
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    auto ac = eval(-coeff() / (2_r * dz() * dz()));
-    auto b = eval(1_r / dt() - 2 * ac);
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -2>) {
+    real_t av = eval(-coeff() / (2_r * dz() * dz()));
+    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t cv = av;
+    real_t d1v =
+        eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
+                                     (dz() * dz()));
+    real_t d2v = 0_r;
 
-    eval(d()) =
-        eval(1_r / dt() * data() +
-             0.5_r * coeff() * (data(0, 0, -1) - 2_r * data() + data(0, 0, 1)) /
-                 (dz() * dz()));
-
-    eval(c()) = eval(ac / (b - c(0, 0, -1) * ac));
-    eval(d()) = eval((d() - ac * d(0, 0, -1)) / (b - c(0, 0, -1) * ac));
-
-    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * ac));
-    eval(d2()) = eval((-ac * d2(0, 0, -1)) / (b - c2(0, 0, -1) * ac));
+    real_t f = eval(av / b(0, 0, -1));
+    eval(b()) = bv - f * cv;
+    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
+    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
   }
+
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    auto k_offset = eval(k_size()) - 1;
+  GT_FUNCTION static void apply(Evaluation eval,
+                                full_t::last_level::shift<-1>) {
+    real_t av = eval(-coeff() / (2_r * dz() * dz()));
+    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t cv = av;
+    real_t d1v =
+        eval(1_r / dt() * in() + 0.5_r * coeff() *
+                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
+                                     (dz() * dz()));
+    real_t d2v = -cv;
 
-    auto ac = eval(-coeff() / (2_r * dz() * dz()));
-    auto b = eval(1_r / dt() - 2 * ac);
-
-    eval(d()) =
-        eval(1_r / dt() * data() + 0.5_r * coeff() *
-                                       (data(0, 0, -1) - 2_r * data() +
-                                        data_uncached(0, 0, -k_offset)) /
-                                       (dz() * dz()));
-
-    b += ac * ac / b;
-    eval(c()) = eval(ac / (b - c(0, 0, -1) * ac));
-    eval(d()) = eval((d() - ac * d(0, 0, -1)) / (b - c(0, 0, -1) * ac));
-
-    eval(c2()) = eval(c() / (b - c2(0, 0, -1) * ac));
-    eval(d2()) = eval((ac - ac * d2(0, 0, -1)) / (b - c2(0, 0, -1) * ac));
+    real_t f = eval(av / b(0, 0, -1));
+    eval(b()) = bv - f * cv;
+    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
+    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
   }
 };
+
 struct stage_diffusion_w_backward {
-  using c = inout_accessor<0>;
-  using d = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
-  using c2 = inout_accessor<2>;
-  using d2 = inout_accessor<3, extent<0, 0, 0, 0, 0, 1>>;
+  using b = in_accessor<0>;
+  using d1 = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using d2 = inout_accessor<2, extent<0, 0, 0, 0, 0, 1>>;
 
-  using fact = inout_accessor<4>;
+  using dz = in_accessor<3>;
+  using coeff = in_accessor<4>;
 
-  using d_uncached = in_accessor<5, extent<0, 0, 0, 0, 0, infinite_extent>>;
-  using d2_uncached = in_accessor<6, extent<0, 0, 0, 0, 0, infinite_extent>>;
-
-  using dz = in_accessor<7>;
-  using dt = in_accessor<8>;
-  using coeff = in_accessor<9>;
-  using k_size = in_accessor<10>;
-
-  using param_list = make_param_list<c, d, c2, d2, fact, d_uncached,
-                                     d2_uncached, dz, dt, coeff, k_size>;
+  using param_list = make_param_list<b, d1, d2, dz, coeff>;
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
-    auto k_offset = eval(k_size() - 1);
-    auto beta = eval(-coeff() / (2_r * dz() * dz()));
-    auto gamma = -eval(1_r / dt() - 2 * beta);
-
-    eval(d()) = eval(d() - c() * d(0, 0, 1));
-    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
-
-    eval(fact()) =
-        eval((d() + beta * d_uncached(0, 0, k_offset) / gamma) /
-             (1_r + d2() + beta * d2_uncached(0, 0, k_offset) / gamma));
+  GT_FUNCTION static void apply(Evaluation eval,
+                                full_t::last_level::shift<-1>) {
+    real_t f = eval(1_r / b());
+    eval(d1()) *= f;
+    eval(d2()) *= f;
   }
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -1>) {
-    eval(d()) = eval(d() - c() * d(0, 0, 1));
-    eval(d2()) = eval(d2() - c2() * d2(0, 0, 1));
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -2>) {
+    real_t cv = eval(-coeff() / (2_r * dz() * dz()));
+    real_t f = eval(1_r / b());
+    eval(d1()) = eval((d1() - cv * d1(0, 0, 1)) * f);
+    eval(d2()) = eval((d2() - cv * d2(0, 0, 1)) * f);
   }
 };
 
 struct stage_diffusion_w3 {
   using out = inout_accessor<0>;
-  using x = in_accessor<1>;
-  using z = in_accessor<2>;
-  using fact = in_accessor<3>;
+  using out_top = inout_accessor<1, extent<0, 0, 0, 0, 0, 1>>;
+  using in = in_accessor<2, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d1 = in_accessor<3, extent<0, 0, 0, 0, -infinite_extent, 0>>;
+  using d2 = in_accessor<4, extent<0, 0, 0, 0, -infinite_extent, 0>>;
 
-  using param_list = make_param_list<out, x, z, fact>;
+  using dz = in_accessor<5>;
+  using dt = in_accessor<6>;
+  using coeff = in_accessor<7>;
+  using k_size = in_accessor<8>;
+
+  using param_list =
+      make_param_list<out, out_top, in, d1, d2, dz, dt, coeff, k_size>;
 
   template <typename Evaluation>
-  GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    eval(out()) = eval(x() - fact() * z());
+  GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
+    auto k_offset = eval(k_size() - 1);
+
+    real_t av = eval(-coeff() / (2_r * dz() * dz()));
+    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t cv = av;
+    real_t d1v = eval(1_r / dt() * in() +
+                      0.5_r * coeff() *
+                          (in(0, 0, -1) - 2_r * in() + in(0, 0, -k_offset)) /
+                          (dz() * dz()));
+
+    eval(out_top()) =
+        eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /
+             (bv + cv * d2(0, 0, -k_offset) + av * d2(0, 0, -1)));
+    eval(out()) = eval(out_top());
+  }
+
+  template <typename Evaluation>
+  GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
+    eval(out_top()) = eval(out_top(0, 0, 1));
+    eval(out()) = eval(d1() + d2() * out_top());
   }
 };
 
@@ -221,49 +227,35 @@ std::function<void(storage_t, storage_t, real_t dt)>
 vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
          real_t coeff) {
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
-  auto const spec = [](auto out, auto in, auto in_uncached, auto fact, auto d,
-                       auto d2, auto d_uncached, auto d2_uncached, auto k_size,
-                       auto dz, auto dt, auto coeff) {
+  auto const spec = [](auto out, auto in, auto in_uncached, auto d1, auto d2,
+                       auto k_size, auto dz, auto dt, auto coeff) {
     using namespace gt::stencil;
-    GT_DECLARE_TMP(real_t, c, c2);
+    GT_DECLARE_TMP(real_t, b, out_top);
     return multi_pass(
         execute_forward()
             .k_cached(cache_io_policy::fill(), in)
-            .k_cached(cache_io_policy::flush(), c, d, c2, d2)
-            .stage(stage_diffusion_w_forward(), c, d, c2, d2, in, in_uncached,
-                   dz, dt, coeff, k_size),
+            .k_cached(cache_io_policy::flush(), b, d1, d2)
+            .stage(stage_diffusion_w_forward(), b, d1, d2, in, in_uncached, dz,
+                   dt, coeff, k_size),
         execute_backward()
-            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d, d2)
-            .stage(stage_diffusion_w_backward(), c, d, c2, d2, fact, d_uncached,
-                   d2_uncached, dz, dt, coeff, k_size));
+            .k_cached(cache_io_policy::fill(), cache_io_policy::flush(), d1, d2)
+            .stage(stage_diffusion_w_backward(), b, d1, d2, dz, coeff),
+        execute_backward().k_cached(out_top).stage(stage_diffusion_w3(), out,
+                                                   out_top, in, d1, d2, dz, dt,
+                                                   coeff, k_size));
   };
 
   auto field = storage_builder(resolution);
-
-  auto ij_slice = gt::storage::builder<storage_tr>
-    .type<real_t>()
-    .id<1>()
-    .halos(halo, halo)
-    .dimensions(resolution.x + 2 * halo, resolution.y + 2 * halo);
-
-  auto alpha = ij_slice();
-  auto gamma = ij_slice();
-  auto fact = ij_slice();
-  auto d = field();
   auto d2 = field();
 
-  return [grid = std::move(grid), spec = std::move(spec),
-          fact = std::move(fact), d = std::move(d), d2 = std::move(d2), delta,
-          resolution, coeff](storage_t out, storage_t in, real_t dt) {
-    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF1>(), grid, out, in,
-                     in, fact, d, d2, d, d2,
+  return [grid = std::move(grid), spec = std::move(spec), d2 = std::move(d2),
+          delta, resolution, coeff](storage_t out, storage_t in, real_t dt) {
+    gt::stencil::run(spec, backend_t<GTBENCH_BPARAMS_VDIFF>(), grid, out, in,
+                     in, out /* out is used as temporary storage d1 */, d2,
                      gt::stencil::make_global_parameter(resolution.z),
                      gt::stencil::make_global_parameter(delta.z),
                      gt::stencil::make_global_parameter(dt),
                      gt::stencil::make_global_parameter(coeff));
-    gt::stencil::run_single_stage(stage_diffusion_w3(),
-                                  backend_t<GTBENCH_BPARAMS_VDIFF2>(), grid,
-                                  out, d, d2, fact);
   };
 }
 
