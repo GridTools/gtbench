@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.14.5)
-project(GTBench LANGUAGES CXX)
+
+file(STRINGS "version.txt" __GTBENCH_VERSION)
+project(GTBench VERSION ${__GTBENCH_VERSION} LANGUAGES CXX)
+unset(__GTBENCH_VERSION)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -66,39 +69,23 @@ function(compile_as_cuda)
   endif()
 endfunction()
 
-add_library(common INTERFACE)
-target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
-
-target_compile_definitions(common INTERFACE
-  GTBENCH_BACKEND=${GTBENCH_BACKEND}
-  GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
-  GTBENCH_FLOAT=${GTBENCH_FLOAT}
-  )
-target_link_libraries(common INTERFACE
+add_library(gtbench)
+add_library(GTBench::gtbench ALIAS gtbench)
+target_compile_features(gtbench PRIVATE cxx_std_14)
+set_target_properties(gtbench PROPERTIES CXX_EXTENSIONS OFF)
+target_include_directories(gtbench PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(gtbench PUBLIC
   GridTools::gridtools
   GridTools::stencil_${GTBENCH_BACKEND}
   GridTools::storage_${GTBENCH_BACKEND}
-  )
+)
+target_compile_definitions(gtbench PUBLIC
+  GTBENCH_BACKEND=${GTBENCH_BACKEND}
+  GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
+  GTBENCH_FLOAT=${GTBENCH_FLOAT}
+)
 
-add_library(common_runtime INTERFACE)
-target_compile_definitions(common_runtime INTERFACE
-  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
-  )
-target_link_libraries(common_runtime INTERFACE
-  common
-  )
-
-# Subdirectories
-add_subdirectory(common)
-add_subdirectory(io)
-add_subdirectory(runtime)
-add_subdirectory(numerics)
-
-# Current directory
-compile_as_cuda(convergence_tests.cpp benchmark.cpp)
-
-add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion options runtime device io)
-
-add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion options runtime device io)
+add_subdirectory(src)
