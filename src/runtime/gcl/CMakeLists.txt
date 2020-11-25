@@ -1,7 +1,7 @@
 if(GTBENCH_BACKEND STREQUAL "gpu")
-    set(GTBENCH_GCL_ARCH "gpu")
+  set(GTBENCH_GCL_ARCH "gpu")
 else()
-    set(GTBENCH_GCL_ARCH "cpu")
+  set(GTBENCH_GCL_ARCH "cpu")
 endif()
 
 compile_as_cuda(run.cpp)
