@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.14.5)
 
-file(STRINGS "version.txt" __GTBENCH_VERSION)
-project(GTBench VERSION ${__GTBENCH_VERSION} LANGUAGES CXX)
-unset(__GTBENCH_VERSION)
+file(STRINGS "version.txt" _gtbench_version)
+project(GTBench VERSION ${_gtbench_version} LANGUAGES CXX)
+unset(_gtbench_version)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
