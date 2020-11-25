@@ -20,11 +20,11 @@ RUN wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}
     rm -rf cmake-${CMAKE_VERSION}-Linux-x86_64*
 
 ARG BOOST_VERSION=1.67.0
-RUN export BOOST_VERSION_UNERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
-    wget -q https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_UNERLINE}.tar.gz && \
-    tar xzf boost_${BOOST_VERSION_UNERLINE}.tar.gz && \
-    cp -r boost_${BOOST_VERSION_UNERLINE}/boost /usr/local/include/ && \
-    rm -rf boost_${BOOST_VERSION_UNERLINE}*
+RUN export BOOST_VERSION_UNDERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
+    wget -q https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_UNDERLINE}.tar.gz && \
+    tar xzf boost_${BOOST_VERSION_UNDERLINE}.tar.gz && \
+    cp -r boost_${BOOST_VERSION_UNDERLINE}/boost /usr/local/include/ && \
+    rm -rf boost_${BOOST_VERSION_UNDERLINE}*
 
 FROM base
 ARG GTBENCH_BACKEND=cpu_ifirst
