@@ -39,8 +39,7 @@ RUN cd /gtbench && \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
     -DGTBENCH_RUNTIME=${GTBENCH_RUNTIME} \
     .. && \
-    make -j $(nproc) && \
-    cp benchmark convergence_tests /usr/bin/ && \
+    make -j $(nproc) install && \
     rm -rf /gtbench/build
 
-CMD ["/usr/bin/convergence_tests"]
+CMD ["convergence_tests"]
