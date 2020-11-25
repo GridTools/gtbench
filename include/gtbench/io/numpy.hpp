@@ -11,6 +11,7 @@
 
 #include "./io.hpp"
 
+namespace gtbench {
 namespace io {
 namespace numpy {
 
@@ -22,3 +23,4 @@ write_time_series(std::string const &filename,
 
 } // namespace numpy
 } // namespace io
+} // namespace gtbench

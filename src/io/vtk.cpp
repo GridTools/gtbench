@@ -22,6 +22,7 @@
 #include <gtbench/io/util.hpp>
 #include <gtbench/io/vtk.hpp>
 
+namespace gtbench {
 namespace io {
 namespace vtk {
 
@@ -306,3 +307,4 @@ write_time_series(std::string const &filename,
 } // namespace vtk
 
 } // namespace io
+} // namespace gtbench

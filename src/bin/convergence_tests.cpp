@@ -15,6 +15,8 @@
 #include <gtbench/verification/convergence.hpp>
 
 int main(int argc, char **argv) {
+  using namespace gtbench;
+
   constexpr auto rt_tag = runtime::GTBENCH_RUNTIME();
 
   options opts;

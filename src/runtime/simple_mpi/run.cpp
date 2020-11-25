@@ -11,6 +11,7 @@
 
 #include <gtbench/runtime/simple_mpi/run.hpp>
 
+namespace gtbench {
 namespace runtime {
 namespace simple_mpi_impl {
 
@@ -210,3 +211,4 @@ result process_grid::collect_results(result r) const {
 
 } // namespace simple_mpi_impl
 } // namespace runtime
+} // namespace gtbench

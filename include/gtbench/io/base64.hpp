@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <ostream>
 
+namespace gtbench {
 namespace io {
 class base64_encoder {
   std::ostream &m_out;
@@ -47,3 +48,4 @@ public:
   }
 };
 } // namespace io
+} // namespace gtbench

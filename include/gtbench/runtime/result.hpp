@@ -9,6 +9,7 @@
  */
 #pragma once
 
+namespace gtbench {
 namespace runtime {
 
 struct result {
@@ -17,3 +18,4 @@ struct result {
 };
 
 } // namespace runtime
+} // namespace gtbench

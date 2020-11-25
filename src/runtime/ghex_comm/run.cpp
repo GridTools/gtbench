@@ -28,9 +28,10 @@ using transport = gridtools::ghex::tl::ucx_tag;
 using transport = gridtools::ghex::tl::mpi_tag;
 #endif
 
-#include <gtbench/runtime/ghex_comm/run.hpp>
 #include <gtbench/runtime/ghex_comm/factorize.hpp>
+#include <gtbench/runtime/ghex_comm/run.hpp>
 
+namespace gtbench {
 namespace runtime {
 
 namespace ghex_comm_impl {
@@ -399,3 +400,4 @@ runtime runtime_init(ghex_comm, options_values const &options) {
 } // namespace ghex_comm_impl
 
 } // namespace runtime
+} // namespace gtbench

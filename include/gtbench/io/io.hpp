@@ -15,6 +15,7 @@
 #include "../common/types.hpp"
 #include "../numerics/solver.hpp"
 
+namespace gtbench {
 namespace io {
 
 std::function<void(real_t, numerics::solver_state const &state)>
@@ -24,3 +25,4 @@ write_time_series(std::string const &filename,
                   vec<std::size_t, 3> const &local_offset);
 
 } // namespace io
+} // namespace gtbench

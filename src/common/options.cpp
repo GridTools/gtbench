@@ -13,6 +13,7 @@
 
 #include <gtbench/common/options.hpp>
 
+namespace gtbench {
 namespace options_impl {
 
 void abort(std::string const &message) {
@@ -111,3 +112,4 @@ std::string options::help_message(std::string const &command) const {
 
   return out.str();
 }
+} // namespace gtbench

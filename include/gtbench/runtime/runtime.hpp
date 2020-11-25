@@ -15,6 +15,7 @@
 #include "./discrete_analytical.hpp"
 #include "./result.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 template <class RuntimeTag>
@@ -37,3 +38,4 @@ result solve(Runtime &&rt, Analytical &&analytical, Stepper &&stepper,
 }
 
 } // namespace runtime
+} // namespace gtbench

@@ -14,6 +14,7 @@
 #include "../../io/io.hpp"
 #include "../runtime.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 struct single_node {};
@@ -76,3 +77,4 @@ using single_node_impl::runtime_register_options;
 using single_node_impl::runtime_solve;
 
 } // namespace runtime
+} // namespace gtbench

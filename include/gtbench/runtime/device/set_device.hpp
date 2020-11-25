@@ -9,8 +9,10 @@
  */
 #pragma once
 
+namespace gtbench {
 namespace runtime {
 
 int set_device(int);
 
 } // namespace runtime
+} // namespace gtbench

@@ -9,6 +9,7 @@
  */
 #include <gtbench/numerics/solver.hpp>
 
+namespace gtbench {
 namespace numerics {
 stepper_t hdiff_stepper(real_t diffusion_coeff) {
   return [diffusion_coeff](solver_state const &state, exchange_t exchange) {
@@ -104,3 +105,4 @@ stepper_t advdiff_stepper(real_t diffusion_coeff) {
 }
 
 } // namespace numerics
+} // namespace gtbench

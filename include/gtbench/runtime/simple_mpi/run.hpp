@@ -17,6 +17,7 @@
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 struct simple_mpi {};
@@ -104,3 +105,4 @@ using simple_mpi_impl::runtime_register_options;
 using simple_mpi_impl::runtime_solve;
 
 } // namespace runtime
+} // namespace gtbench

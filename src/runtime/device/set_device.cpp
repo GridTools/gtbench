@@ -11,6 +11,7 @@
 
 #include <gtbench/runtime/device/set_device.hpp>
 
+namespace gtbench {
 namespace runtime {
 
 #ifdef GT_CUDACC
@@ -40,3 +41,4 @@ int set_device(int) { return 0; }
 #endif
 
 } // namespace runtime
+} // namespace gtbench

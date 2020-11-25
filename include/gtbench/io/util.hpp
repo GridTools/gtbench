@@ -11,6 +11,7 @@
 
 #include "../common/types.hpp"
 
+namespace gtbench {
 namespace io {
 std::size_t rank(vec<std::size_t, 3> const &global_resolution,
                  vec<std::size_t, 3> const &local_resolution,
@@ -19,3 +20,4 @@ std::size_t rank(vec<std::size_t, 3> const &global_resolution,
 std::size_t ranks(vec<std::size_t, 3> const &global_resolution,
                   vec<std::size_t, 3> const &local_resolution);
 } // namespace io
+} // namespace gtbench

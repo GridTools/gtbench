@@ -12,6 +12,7 @@
 #include "../numerics/solver.hpp"
 #include "./discrete_analytical.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 namespace computation {
@@ -79,3 +80,4 @@ double compute_error(numerics::solver_state const &state,
 
 } // namespace computation
 } // namespace runtime
+} // namespace gtbench

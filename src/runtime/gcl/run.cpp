@@ -15,6 +15,7 @@
 
 #include <gtbench/runtime/gcl/run.hpp>
 
+namespace gtbench {
 namespace runtime {
 namespace gcl_impl {
 
@@ -152,3 +153,4 @@ result process_grid::collect_results(result r) const {
 
 } // namespace gcl_impl
 } // namespace runtime
+} // namespace gtbench

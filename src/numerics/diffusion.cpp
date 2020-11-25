@@ -11,9 +11,10 @@
 #include <gridtools/stencil/frontend/run.hpp>
 #include <gridtools/stencil/global_parameter.hpp>
 
-#include <gtbench/numerics/diffusion.hpp>
 #include <gtbench/numerics/computation.hpp>
+#include <gtbench/numerics/diffusion.hpp>
 
+namespace gtbench {
 namespace numerics {
 namespace diffusion {
 
@@ -260,3 +261,4 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
 
 } // namespace diffusion
 } // namespace numerics
+} // namespace gtbench

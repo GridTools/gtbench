@@ -12,6 +12,7 @@
 #include "./advection.hpp"
 #include "./diffusion.hpp"
 
+namespace gtbench {
 namespace numerics {
 
 struct solver_state {
@@ -54,3 +55,4 @@ stepper_t rkadv_stepper();
 stepper_t advdiff_stepper(real_t diffusion_coeff);
 
 } // namespace numerics
+} // namespace gtbench

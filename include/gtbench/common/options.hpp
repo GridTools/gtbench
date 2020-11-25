@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+namespace gtbench {
 namespace options_impl {
 
 void abort(std::string const &message);
@@ -124,3 +125,5 @@ private:
 
   std::vector<option> m_options;
 };
+
+} // namespace gtbench

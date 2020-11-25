@@ -11,6 +11,7 @@
 
 #include "../verification/analytical.hpp"
 
+namespace gtbench {
 namespace runtime {
 namespace discrete_analytical {
 
@@ -97,3 +98,4 @@ inline vec<real_t, 3> delta(Discrete const &discrete) {
 
 } // namespace discrete_analytical
 } // namespace runtime
+} // namespace gtbench

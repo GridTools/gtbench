@@ -15,6 +15,7 @@
 #include <tuple>
 #include <vector>
 
+namespace gtbench {
 namespace verification {
 
 using order_verification_result_t =
@@ -79,3 +80,4 @@ bool check_order(order_verification_result_t const &result,
 }
 
 } // namespace verification
+} // namespace gtbench

@@ -15,6 +15,7 @@
 
 #include "../common/types.hpp"
 
+namespace gtbench {
 namespace numerics {
 
 using axis_t = gt::stencil::axis<1, gt::stencil::axis_config::offset_limit<3>>;
@@ -40,3 +41,4 @@ inline grid_t computation_grid(gt::uint_t resolution_x, gt::uint_t resolution_y,
 constexpr int infinite_extent = 99999;
 
 } // namespace numerics
+} // namespace gtbench

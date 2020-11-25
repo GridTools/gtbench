@@ -11,6 +11,7 @@
 #include <gtbench/io/numpy.hpp>
 #include <gtbench/io/vtk.hpp>
 
+namespace gtbench {
 namespace io {
 
 namespace {
@@ -42,3 +43,4 @@ write_time_series(std::string const &filename,
 }
 
 } // namespace io
+} // namespace gtbench

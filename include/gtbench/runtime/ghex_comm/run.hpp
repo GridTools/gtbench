@@ -20,6 +20,7 @@
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 struct ghex_comm {};
@@ -137,3 +138,4 @@ using ghex_comm_impl::runtime_register_options;
 using ghex_comm_impl::runtime_solve;
 
 } // namespace runtime
+} // namespace gtbench

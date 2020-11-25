@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <vector>
 
+namespace gtbench {
 namespace runtime {
 
 namespace ghex_comm_impl {
@@ -95,3 +96,4 @@ divide_domain(I n, const std::array<J, N> &sizes,
 
 } // namespace ghex_comm_impl
 } // namespace runtime
+} // namespace gtbench

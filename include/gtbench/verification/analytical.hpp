@@ -13,6 +13,7 @@
 
 #include "../common/types.hpp"
 
+namespace gtbench {
 namespace verification {
 namespace analytical {
 
@@ -199,3 +200,4 @@ repeat(Analytical &&analytical, vec<std::size_t, 3> const &repeats) {
 
 } // namespace analytical
 } // namespace verification
+} // namespace gtbench

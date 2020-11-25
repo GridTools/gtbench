@@ -17,6 +17,7 @@
 #include "../function_scope.hpp"
 #include "../runtime.hpp"
 
+namespace gtbench {
 namespace runtime {
 
 struct gcl {};
@@ -102,3 +103,4 @@ using gcl_impl::runtime_register_options;
 using gcl_impl::runtime_solve;
 
 } // namespace runtime
+} // namespace gtbench

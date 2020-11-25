@@ -11,6 +11,7 @@
 
 #include "./computation.hpp"
 
+namespace gtbench {
 namespace numerics {
 namespace advection {
 
@@ -23,3 +24,4 @@ vertical(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta);
 
 } // namespace advection
 } // namespace numerics
+} // namespace gtbench

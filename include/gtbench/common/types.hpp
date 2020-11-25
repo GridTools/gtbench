@@ -27,6 +27,8 @@
 #include <gridtools/storage/gpu.hpp>
 #endif
 
+namespace gtbench {
+
 namespace gt = gridtools;
 
 using real_t = GTBENCH_FLOAT;
@@ -56,3 +58,5 @@ inline auto storage_builder(vec<std::size_t, 3> const &resolution) {
 
 using storage_t =
     decltype(storage_builder(std::declval<vec<std::size_t, 3>>())());
+
+} // namespace gtbench

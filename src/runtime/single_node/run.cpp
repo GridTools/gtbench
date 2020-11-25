@@ -12,6 +12,7 @@
 
 #include <gtbench/runtime/single_node/run.hpp>
 
+namespace gtbench {
 namespace runtime {
 namespace single_node_impl {
 
@@ -59,3 +60,4 @@ numerics::exchange_t exchange_func(vec<std::size_t, 3> const &resolution) {
 
 } // namespace single_node_impl
 } // namespace runtime
+} // namespace gtbench

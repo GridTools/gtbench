@@ -11,6 +11,7 @@
 
 #include <functional>
 
+namespace gtbench {
 namespace runtime {
 
 class function_scope {
@@ -36,3 +37,4 @@ private:
 };
 
 } // namespace runtime
+} // namespace gtbench
