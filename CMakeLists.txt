@@ -25,6 +25,7 @@ set(GTBENCH_BPARAMS_VDIFF "" CACHE STRING "Parameters for GridTools backend for 
 set(GTBENCH_BPARAMS_HADV "" CACHE STRING "Parameters for GridTools backend for horizontal advection")
 set(GTBENCH_BPARAMS_VADV "" CACHE STRING "Parameters for GridTools backend for vertical advection")
 
+set(_gtbench_cuda_enabled OFF)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
   set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")
@@ -33,8 +34,7 @@ else()
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
-    set(CMAKE_CUDA_STANDARD 14)
-    set(CMAKE_CUDA_EXTENSIONS OFF)
+    set(_gtbench_cuda_enabled ON)
   endif()
 endif()
 
@@ -58,13 +58,9 @@ if(NOT GridTools_FOUND)
     set(_gridtools_already_fetched ON CACHE INTERNAL "")
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 # Helper functions
 function(compile_as_cuda)
-  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if("CUDA" IN_LIST languages)
+  if(_gtbench_cuda_enabled)
     set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
   endif()
 endfunction()
@@ -73,6 +69,10 @@ add_library(gtbench)
 add_library(GTBench::gtbench ALIAS gtbench)
 target_compile_features(gtbench PRIVATE cxx_std_14)
 set_target_properties(gtbench PROPERTIES CXX_EXTENSIONS OFF)
+if(_gtbench_cuda_enabled)
+  target_compile_features(gtbench PRIVATE cuda_std_14)
+  set_target_properties(gtbench PROPERTIES CUDA_EXTENSIONS OFF)
+endif()
 target_include_directories(gtbench PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:include>
@@ -89,3 +89,5 @@ target_compile_definitions(gtbench PUBLIC
 )
 
 add_subdirectory(src)
+
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/export.cmake)

@@ -1,0 +1,10 @@
+set(GTBench_VERSION @GTBench_Version@)
+
+@PACKAGE_INIT@
+
+if(NOT @PROJECT_NAME@_BINARY_DIR AND NOT TARGET GTBench::gtbench)
+    include("${GTBENCH_CONFIG_CMAKE_DIR}/GTBenchTargets.cmake")
+endif()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GTBench REQUIRED_VARS GTBench_VERSION VERSION_VAR GTBench_VERSION)
