@@ -10,4 +10,9 @@ FetchContent_MakeAvailable(pybind11)
 
 Python_add_library(gtbenchpy gtbench.cpp)
 target_link_libraries(gtbenchpy PRIVATE pybind11::headers gtbench)
-set_target_properties(gtbenchpy PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(
+  gtbenchpy
+  PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    OUTPUT_NAME gtbench
+)

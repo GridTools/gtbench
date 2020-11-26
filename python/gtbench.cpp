@@ -68,7 +68,7 @@ py::cpp_function py2cpp_stepper(gtbench::numerics::stepper_t &&cpp_stepper) {
 
 } // namespace
 
-PYBIND11_MODULE(gtbenchpy, m) {
+PYBIND11_MODULE(gtbench, m) {
   m.doc() = "GTBench Python bindings";
 
   m.attr("halo") = gtbench::halo;

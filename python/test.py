@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import typing
 
-import gtbenchpy as gtbench
+import gtbench
 import numpy as np
 import pytest
 
