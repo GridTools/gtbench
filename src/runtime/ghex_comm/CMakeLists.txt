@@ -17,7 +17,7 @@ if(NOT GHEX_FOUND)
   set(_ghex_already_fetched ON CACHE INTERNAL "")
 endif()
 
-compile_as_cuda(run.cpp)
+compile_as_cuda(run.cpp TARGET_DIRECTORY gtbench)
 target_sources(gtbench PRIVATE run.cpp)
 target_link_libraries(gtbench PUBLIC GHEX::ghexlib)
 target_compile_options(gtbench PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")

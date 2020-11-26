@@ -4,7 +4,7 @@ else()
   set(GTBENCH_GCL_ARCH "cpu")
 endif()
 
-compile_as_cuda(run.cpp)
+compile_as_cuda(run.cpp TARGET_DIRECTORY gtbench)
 target_sources(gtbench PRIVATE run.cpp)
 target_link_libraries(gtbench PUBLIC GridTools::gcl_${GTBENCH_GCL_ARCH})
 
