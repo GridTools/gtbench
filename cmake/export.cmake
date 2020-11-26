@@ -13,12 +13,18 @@ write_basic_package_version_file(
 )
 
 install(
-  TARGETS gtbench stencil_${GTBENCH_BACKEND} storage_${GTBENCH_BACKEND}
+  TARGETS gtbench
   EXPORT GTBenchTargets
   INCLUDES DESTINATION include
 )
 install(TARGETS benchmark convergence_tests)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Workaround for GT export strategy
+install(
+  TARGETS stencil_${GTBENCH_BACKEND} storage_${GTBENCH_BACKEND}
+  EXPORT GTBenchTargets
+)
 
 include(GNUInstallDirs)
 install(

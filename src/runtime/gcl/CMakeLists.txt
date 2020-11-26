@@ -7,3 +7,6 @@ endif()
 compile_as_cuda(run.cpp)
 target_sources(gtbench PRIVATE run.cpp)
 target_link_libraries(gtbench PUBLIC GridTools::gcl_${GTBENCH_GCL_ARCH})
+
+# Workaround for GT export strategy
+install(TARGETS gcl_${GTBENCH_GCL_ARCH} EXPORT GTBenchTargets)
