@@ -20,8 +20,8 @@ struct solver_state {
                vec<real_t, 3> const &delta, storage_t const &u,
                storage_t const &v, storage_t const &w, storage_t const &data,
                storage_t const &data1, storage_t const &data2)
-      : resolution(resolution), delta(delta), u(u), v(v), w(v), data(data),
-        data1(data), data2(data) {}
+      : resolution(resolution), delta(delta), u(u), v(v), w(w), data(data),
+        data1(data1), data2(data2) {}
   solver_state(vec<std::size_t, 3> const &resolution,
                vec<real_t, 3> const &delta)
       : resolution(resolution), delta(delta) {
