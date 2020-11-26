@@ -36,6 +36,8 @@ else()
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_EXTENSIONS OFF)
     set(_gtbench_cuda_enabled ON)
   endif()
 endif()
@@ -67,33 +69,26 @@ function(compile_as_cuda)
   endif()
 endfunction()
 
-add_library(gtbench)
-add_library(GTBench::gtbench ALIAS gtbench)
-target_compile_features(gtbench PRIVATE cxx_std_14)
-set_target_properties(
-  gtbench
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    POSITION_INDEPENDENT_CODE ON
-)
-if(_gtbench_cuda_enabled)
-  target_compile_features(gtbench PRIVATE cuda_std_14)
-  set_target_properties(gtbench PROPERTIES CUDA_EXTENSIONS OFF)
-endif()
-target_include_directories(gtbench PUBLIC
+add_library(gtbench_common INTERFACE)
+target_include_directories(gtbench_common INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(gtbench PUBLIC
+target_compile_definitions(gtbench_common INTERFACE
+  GTBENCH_BACKEND=${GTBENCH_BACKEND}
+  GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
+  GTBENCH_FLOAT=${GTBENCH_FLOAT}
+  )
+target_link_libraries(gtbench_common INTERFACE
   GridTools::gridtools
   GridTools::stencil_${GTBENCH_BACKEND}
   GridTools::storage_${GTBENCH_BACKEND}
 )
-target_compile_definitions(gtbench PUBLIC
-  GTBENCH_BACKEND=${GTBENCH_BACKEND}
-  GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
-  GTBENCH_FLOAT=${GTBENCH_FLOAT}
-)
+
+add_library(gtbench)
+add_library(GTBench::gtbench ALIAS gtbench)
+target_link_libraries(gtbench PUBLIC gtbench_common)
+set_target_properties(gtbench PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(src)
 
