@@ -17,6 +17,12 @@ namespace numerics {
 
 struct solver_state {
   solver_state(vec<std::size_t, 3> const &resolution,
+               vec<real_t, 3> const &delta, storage_t const &u,
+               storage_t const &v, storage_t const &w, storage_t const &data,
+               storage_t const &data1, storage_t const &data2)
+      : resolution(resolution), delta(delta), u(u), v(v), w(v), data(data),
+        data1(data), data2(data) {}
+  solver_state(vec<std::size_t, 3> const &resolution,
                vec<real_t, 3> const &delta)
       : resolution(resolution), delta(delta) {
     auto builder = storage_builder(resolution);
@@ -32,7 +38,7 @@ struct solver_state {
   vec<std::size_t, 3> resolution;
   vec<real_t, 3> delta;
 
-  storage_t data, u, v, w, data1, data2;
+  storage_t u, v, w, data, data1, data2;
 };
 
 using exchange_t = std::function<void(storage_t &)>;

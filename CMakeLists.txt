@@ -25,6 +25,8 @@ set(GTBENCH_BPARAMS_VDIFF "" CACHE STRING "Parameters for GridTools backend for 
 set(GTBENCH_BPARAMS_HADV "" CACHE STRING "Parameters for GridTools backend for horizontal advection")
 set(GTBENCH_BPARAMS_VADV "" CACHE STRING "Parameters for GridTools backend for vertical advection")
 
+option(GTBENCH_PYTHON_BINDINGS "Build Python bindings" OFF)
+
 set(_gtbench_cuda_enabled OFF)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
@@ -68,7 +70,12 @@ endfunction()
 add_library(gtbench)
 add_library(GTBench::gtbench ALIAS gtbench)
 target_compile_features(gtbench PRIVATE cxx_std_14)
-set_target_properties(gtbench PROPERTIES CXX_EXTENSIONS OFF)
+set_target_properties(
+  gtbench
+  PROPERTIES
+    CXX_EXTENSIONS OFF
+    POSITION_INDEPENDENT_CODE ON
+)
 if(_gtbench_cuda_enabled)
   target_compile_features(gtbench PRIVATE cuda_std_14)
   set_target_properties(gtbench PROPERTIES CUDA_EXTENSIONS OFF)
@@ -91,3 +98,7 @@ target_compile_definitions(gtbench PUBLIC
 add_subdirectory(src)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/export.cmake)
+
+if(GTBENCH_PYTHON_BINDINGS)
+  add_subdirectory(python)
+endif()
