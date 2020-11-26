@@ -47,16 +47,6 @@ gtbench::numerics::exchange_t py2cpp_exchange(py::object exchange) {
       [exchange](gtbench::storage_t &storage) { exchange(py::cast(storage)); };
 }
 
-void reassign_fields(gtbench::numerics::solver_state const &cpp_state,
-                     py::object state) {
-  state.attr("u") = py::cast(cpp_state.u);
-  state.attr("v") = py::cast(cpp_state.v);
-  state.attr("w") = py::cast(cpp_state.w);
-  state.attr("data") = py::cast(cpp_state.data);
-  state.attr("data1") = py::cast(cpp_state.data1);
-  state.attr("data2") = py::cast(cpp_state.data2);
-}
-
 py::cpp_function py2cpp_stepper(gtbench::numerics::stepper_t &&cpp_stepper) {
   return py::cpp_function(
       [cpp_stepper = std::move(cpp_stepper)](py::object state,
@@ -69,7 +59,12 @@ py::cpp_function py2cpp_stepper(gtbench::numerics::stepper_t &&cpp_stepper) {
                                              gtbench::real_t dt) {
               auto cpp_state = py2cpp_solver_state(state);
               cpp_step(cpp_state, dt);
-              reassign_fields(cpp_state, state);
+              state.attr("u") = py::cast(cpp_state.u);
+              state.attr("v") = py::cast(cpp_state.v);
+              state.attr("w") = py::cast(cpp_state.w);
+              state.attr("data") = py::cast(cpp_state.data);
+              state.attr("data1") = py::cast(cpp_state.data1);
+              state.attr("data2") = py::cast(cpp_state.data2);
             },
             py::arg("state"), py::arg("dt"));
       },
