@@ -34,9 +34,10 @@ install(
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 )
 
-install(
-  EXPORT GTBenchTargets
-  FILE GTBenchTargets.cmake
-  NAMESPACE GTBench::
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
-)
+# Currently disabled due to GT dependency issues
+# install(
+#   EXPORT GTBenchTargets
+#   FILE GTBenchTargets.cmake
+#   NAMESPACE GTBench::
+#   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+# )
