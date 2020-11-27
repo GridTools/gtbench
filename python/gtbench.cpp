@@ -76,9 +76,16 @@ py::cpp_function py2cpp_stepper(gtbench::numerics::stepper_t &&cpp_stepper) {
 PYBIND11_MODULE(GTBENCH_PYTHON_MODULE_NAME, m) {
   m.doc() = "GTBench Python bindings";
 
+#define GTBENCH_STR2(var) #var
+#define GTBENCH_STR(var) GTBENCH_STR2(var)
+
   m.attr("halo") = gtbench::halo;
   m.attr("dtype") =
       std::is_same<gtbench::real_t, float>() ? "float32" : "float64";
+  m.attr("backend") = GTBENCH_STR(GTBENCH_BACKEND);
+
+#undef GTBENCH_STR
+#undef GTBENCH_STR2
 
   py::class_<typename gtbench::storage_t::element_type, gtbench::storage_t>(
       m, "Storage", py::buffer_protocol(), py::module_local())
