@@ -81,7 +81,7 @@ PYBIND11_MODULE(GTBENCH_PYTHON_MODULE_NAME, m) {
       std::is_same<gtbench::real_t, float>() ? "float32" : "float64";
 
   py::class_<typename gtbench::storage_t::element_type, gtbench::storage_t>(
-      m, "Storage", py::buffer_protocol())
+      m, "Storage", py::buffer_protocol(), py::module_local())
       .def(py::init([](py::buffer b) {
         py::buffer_info info = b.request();
         if (info.format != py::format_descriptor<gtbench::real_t>::format())
