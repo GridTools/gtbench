@@ -133,14 +133,16 @@ PYBIND11_MODULE(GTBENCH_PYTHON_MODULE_NAME, m) {
       .def_property_readonly(
           "__cuda_array_interface__",
           [](typename gtbench::storage_t::element_type &self) {
-            iface = py::dict();
+            auto iface = py::dict();
             iface["shape"] = py::make_tuple(
                 self.lengths()[0], self.lengths()[1], self.lengths()[2]);
-            iface["typestr"] = "<f" + std::itos(sizeof(gtbench::real_t));
-            iface["data"] = py::make_tuple(self.get_target_ptr(), false);
+            iface["typestr"] = "<f" + std::to_string(sizeof(gtbench::real_t));
+            iface["data"] = py::make_tuple(reinterpret_cast<long>(self.get_target_ptr()), false);
             iface["version"] = 2;
             iface["strides"] = py::make_tuple(
-                self.strides()[0], self.strides()[1], self.strides()[2]);
+                self.strides()[0] * sizeof(gtbench::real_t),
+                self.strides()[1] * sizeof(gtbench::real_t),
+                self.strides()[2] * sizeof(gtbench::real_t));
             return iface;
           })
 #endif

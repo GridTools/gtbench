@@ -10,6 +10,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pybind11)
 
+compile_as_cuda(gtbench.cpp)
 Python_add_library(gtbenchpy gtbench.cpp)
 target_link_libraries(gtbenchpy PRIVATE pybind11::headers gtbench)
 target_compile_definitions(gtbenchpy PRIVATE GTBENCH_PYTHON_MODULE_NAME=${GTBENCH_PYTHON_MODULE_NAME})
