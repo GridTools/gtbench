@@ -21,7 +21,7 @@ jobs:
         docker build
         --cache-from fthaler/gtbench:python-test
         --progress=plain
-        --build-arg BUILD_FROM=python/3.9.0
+        --build-arg BUILD_FROM=python:3.9.0
         --build-arg GTBENCH_BACKEND=cpu_ifirst
         --build-arg GTBENCH_RUNTIME=single_node
         --build-arg GTBENCH_PYTHON_BINDINGS=ON
