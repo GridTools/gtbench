@@ -29,6 +29,7 @@ RUN export BOOST_VERSION_UNDERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && 
 FROM base
 ARG GTBENCH_BACKEND=cpu_ifirst
 ARG GTBENCH_RUNTIME=ghex_comm
+ARG GTBENCH_PYTHON_BINDINGS=OFF
 COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
@@ -38,6 +39,7 @@ RUN cd /gtbench && \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
     -DGTBENCH_RUNTIME=${GTBENCH_RUNTIME} \
+    -DGTBENCH_PYTHON_BINDINGS=${GTBENCH_PYTHON_BINDINGS} \
     .. && \
     make -j $(nproc) install && \
     rm -rf /gtbench/build
