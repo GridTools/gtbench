@@ -20,3 +20,4 @@ set_target_properties(
     POSITION_INDEPENDENT_CODE ON
     OUTPUT_NAME ${GTBENCH_PYTHON_MODULE_NAME}
 )
+install(TARGETS gtbenchpy DESTINATION ${Python_SITEARCH})
