@@ -5,7 +5,7 @@ configure_package_config_file(
   cmake/GTBenchConfig.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/install/GTBenchConfig.cmake"
   PATH_VARS GTBENCH_MODULE_PATH
-  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GTBench"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/GTBench"
 )
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/install/GTBenchConfigVersion.cmake"
@@ -31,7 +31,7 @@ install(
   FILES
     "${CMAKE_CURRENT_BINARY_DIR}/install/GTBenchConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/install/GTBenchConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+  DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}"
 )
 
 # Currently disabled due to GT dependency issues
@@ -39,5 +39,5 @@ install(
 #   EXPORT GTBenchTargets
 #   FILE GTBenchTargets.cmake
 #   NAMESPACE GTBench::
-#   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+#   DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}"
 # )
