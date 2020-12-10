@@ -40,13 +40,15 @@ void write_storage(std::string const &filename, storage_t const &storage) {
   std::string descr =
       "{\"descr\":\"float" + std::to_string(8 * sizeof(real_t)) +
       "\",\"fortran_order\":False,\"shape\":(" + std::to_string(ni) + "," +
-      std::to_string(nj) + "," + std::to_string(nk) + ")}\n";
+      std::to_string(nj) + "," + std::to_string(nk) + ")}";
 
   // size of magic string, version number and 16bit header length
   constexpr std::uint16_t base_header_len =
       sizeof(magic) + sizeof(version) + sizeof(std::uint16_t);
-  // total header length, rounded up to a multiple of 64 for alignment
-  std::uint16_t total_header_len = (base_header_len + descr.size() + 63) & ~63;
+  // total header length (including terminating newline), rounded up to a
+  // multiple of 64 for alignment
+  std::uint16_t total_header_len =
+      (base_header_len + descr.size() + 1 + 63) & ~63;
 
   // header length as stored in the file (size of descr and padding only)
   std::uint16_t header_len = total_header_len - base_header_len;
@@ -57,8 +59,9 @@ void write_storage(std::string const &filename, storage_t const &storage) {
   out.write((const char *)&header_len, sizeof(header_len));
   out << descr;
   // padding
-  while (out.tellp() < total_header_len)
+  while (out.tellp() < total_header_len - 1)
     out << '\x20';
+  out << '\n';
   assert(out.tellp() % 64 == 0);
 
   // write data in C-order
