@@ -61,7 +61,7 @@ result runtime_solve(runtime const &rt, Analytical analytical, Stepper stepper,
 
   computation::sync(state);
   if (write)
-    write(0, state);
+    write(t, state);
 
   auto stop = clock::now();
   double time = std::chrono::duration<double>(stop - start).count();
