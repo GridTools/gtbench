@@ -1,5 +1,4 @@
 compile_as_cuda(io.cpp numpy.cpp util.cpp vtk.cpp)
 add_library(io io.cpp numpy.cpp util.cpp vtk.cpp)
 target_link_libraries(io PUBLIC gtbench_common)
-set_target_properties(io PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(gtbench PUBLIC io)

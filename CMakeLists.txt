@@ -84,11 +84,14 @@ target_link_libraries(gtbench_common INTERFACE
   GridTools::stencil_${GTBENCH_BACKEND}
   GridTools::storage_${GTBENCH_BACKEND}
 )
+set_target_properties(
+  gtbench_common
+  PROPERTIES
+    INTERFACE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(gtbench)
 add_library(GTBench::gtbench ALIAS gtbench)
 target_link_libraries(gtbench PUBLIC gtbench_common)
-set_target_properties(gtbench PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(src)
 
