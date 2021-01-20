@@ -11,8 +11,6 @@
 #include <numeric>
 #include <regex>
 
-//#include <mpi.h>
-//#include <ghex/communication_object_2.hpp>
 #include <ghex/bulk_communication_object.hpp>
 #include <ghex/glue/gridtools/field.hpp>
 #include <ghex/structured/grid.hpp>
