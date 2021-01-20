@@ -1,0 +1,40 @@
+name: Python
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  DOCKER_BUILDKIT: 1
+  OMP_NUM_THREADS: 1
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      name: checkout
+    - name: build
+      run: >
+        docker build
+        --cache-from fthaler/gtbench:python-test
+        --progress=plain
+        --build-arg BUILD_FROM=python:3.9.0
+        --build-arg GTBENCH_BACKEND=cpu_ifirst
+        --build-arg GTBENCH_RUNTIME=single_node
+        --build-arg GTBENCH_PYTHON_BINDINGS=ON
+        --build-arg BUILDKIT_INLINE_CACHE=1
+        -t fthaler/gtbench:python-test
+        .
+    - name: test
+      run: >
+        docker run --rm fthaler/gtbench:python-test bash -c 'pip install numpy pytest && pytest /gtbench/python/test.py'
+    - name: push
+      if: ${{ github.event_name == 'push' && github.repository == 'GridTools/gtbench' }}
+      run: >
+        echo ${{ secrets.DOCKER_TOKEN }} | docker login -u fthaler --password-stdin &&
+        docker push fthaler/gtbench:python-test &&
+        docker logout
+

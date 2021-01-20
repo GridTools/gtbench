@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.14.5)
-project(GTBench LANGUAGES CXX)
+
+file(STRINGS "version.txt" _gtbench_version)
+project(GTBench VERSION ${_gtbench_version} LANGUAGES CXX)
+unset(_gtbench_version)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -18,11 +21,13 @@ set(GTBENCH_RUNTIME "single_node" CACHE STRING "Runtime")
 set_property(CACHE GTBENCH_RUNTIME PROPERTY STRINGS "single_node" "simple_mpi" "gcl" "ghex_comm")
 
 set(GTBENCH_BPARAMS_HDIFF "" CACHE STRING "Parameters for GridTools backend for horizontal diffusion")
-set(GTBENCH_BPARAMS_VDIFF1 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 1)")
-set(GTBENCH_BPARAMS_VDIFF2 "" CACHE STRING "Parameters for GridTools backend for vertical diffusion (computation 2)")
-set(GTBENCH_BPARAMS_RKADV1 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 1)")
-set(GTBENCH_BPARAMS_RKADV2 "" CACHE STRING "Parameters for GridTools backend for Runge-Kutta advection step (computation 2)")
+set(GTBENCH_BPARAMS_VDIFF "" CACHE STRING "Parameters for GridTools backend for vertical diffusion")
+set(GTBENCH_BPARAMS_HADV "" CACHE STRING "Parameters for GridTools backend for horizontal advection")
+set(GTBENCH_BPARAMS_VADV "" CACHE STRING "Parameters for GridTools backend for vertical advection")
 
+option(GTBENCH_PYTHON_BINDINGS "Build Python bindings" OFF)
+
+set(_gtbench_cuda_enabled OFF)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND GTBENCH_BACKEND STREQUAL "gpu")
   set(GT_CLANG_CUDA_MODE "Clang-CUDA" CACHE STRING "Clang-CUDA or NVCC-CUDA")
   set_property(CACHE GT_CLANG_CUDA_MODE PROPERTY STRINGS "Clang-CUDA" "NVCC-CUDA")
@@ -33,6 +38,7 @@ else()
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 14)
     set(CMAKE_CUDA_EXTENSIONS OFF)
+    set(_gtbench_cuda_enabled ON)
   endif()
 endif()
 
@@ -41,65 +47,56 @@ if(NOT _gridtools_already_fetched)
     find_package(GridTools "2" QUIET)
 endif()
 if(NOT GridTools_FOUND)
-    set(_gridtools_repository "https://github.com/GridTools/gridtools.git")
-    set(_gridtools_tag        "release_v2.0")
-    if(NOT _gridtools_already_fetched)
-        message(STATUS "Fetching GridTools ${_gridtools_tag} from ${_gridtools_repository}")
-    endif()
-    include(FetchContent)
-    FetchContent_Declare(
-        gridtools
-        GIT_REPOSITORY ${_gridtools_repository}
-        GIT_TAG        ${_gridtools_tag}
-    )
-    FetchContent_MakeAvailable(gridtools)
-    set(_gridtools_already_fetched ON CACHE INTERNAL "")
+  set(_gridtools_repository "https://github.com/GridTools/gridtools.git")
+  set(_gridtools_tag        "release_v2.0")
+  if(NOT _gridtools_already_fetched)
+    message(STATUS "Fetching GridTools ${_gridtools_tag} from ${_gridtools_repository}")
+  endif()
+  include(FetchContent)
+  FetchContent_Declare(
+    gridtools
+    GIT_REPOSITORY ${_gridtools_repository}
+    GIT_TAG        ${_gridtools_tag}
+  )
+  FetchContent_MakeAvailable(gridtools)
+  set(_gridtools_already_fetched ON CACHE INTERNAL "")
 endif()
-
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Helper functions
 function(compile_as_cuda)
-  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if("CUDA" IN_LIST languages)
+  if(_gtbench_cuda_enabled)
     set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
   endif()
 endfunction()
 
-add_library(common INTERFACE)
-target_compile_options(common INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
-
-target_compile_definitions(common INTERFACE
+add_library(gtbench_common INTERFACE)
+target_include_directories(gtbench_common INTERFACE
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
+  $<INSTALL_INTERFACE:include>
+)
+target_compile_definitions(gtbench_common INTERFACE
   GTBENCH_BACKEND=${GTBENCH_BACKEND}
   GTBENCH_BACKEND_$<UPPER_CASE:${GTBENCH_BACKEND}>
   GTBENCH_FLOAT=${GTBENCH_FLOAT}
   )
-target_link_libraries(common INTERFACE
+target_link_libraries(gtbench_common INTERFACE
   GridTools::gridtools
   GridTools::stencil_${GTBENCH_BACKEND}
   GridTools::storage_${GTBENCH_BACKEND}
-  )
+)
+set_target_properties(
+  gtbench_common
+  PROPERTIES
+    INTERFACE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(common_runtime INTERFACE)
-target_compile_definitions(common_runtime INTERFACE
-  GTBENCH_RUNTIME=${GTBENCH_RUNTIME}
-  )
-target_link_libraries(common_runtime INTERFACE
-  common
-  )
+add_library(gtbench)
+add_library(GTBench::gtbench ALIAS gtbench)
+target_link_libraries(gtbench PUBLIC gtbench_common)
 
-# Subdirectories
-add_subdirectory(common)
-add_subdirectory(io)
-add_subdirectory(runtime)
-add_subdirectory(numerics)
+add_subdirectory(src)
 
-# Current directory
-compile_as_cuda(convergence_tests.cpp benchmark.cpp)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/export.cmake)
 
-add_executable(convergence_tests convergence_tests.cpp)
-target_link_libraries(convergence_tests advection diffusion options runtime device io)
-
-add_executable(benchmark benchmark.cpp)
-target_link_libraries(benchmark advection diffusion options runtime device io)
+if(GTBENCH_PYTHON_BINDINGS)
+  add_subdirectory(python)
+endif()

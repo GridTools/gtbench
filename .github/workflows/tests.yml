@@ -43,10 +43,10 @@ jobs:
     - name: test
       if: ${{ matrix.backend != 'cuda' && matrix.backend != 'hip' }}
       run: >
-        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} /usr/bin/benchmark --domain-size 11 13 17 --runs 1 &&
-        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} /usr/bin/convergence_tests
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} benchmark --domain-size 11 13 17 --runs 1 &&
+        docker run --rm fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} convergence_tests
     - name: push
-      if: ${{ github.event_name == 'push' }}
+      if: ${{ github.event_name == 'push' && github.repository == 'GridTools/gtbench' }}
       run: >
         echo ${{ secrets.DOCKER_TOKEN }} | docker login -u fthaler --password-stdin &&
         docker push fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }} &&
