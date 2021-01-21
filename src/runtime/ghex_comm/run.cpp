@@ -11,14 +11,11 @@
 #include <numeric>
 #include <regex>
 
-#include <mpi.h>
-
-#include <ghex/communication_object_2.hpp>
+#include <ghex/bulk_communication_object.hpp>
 #include <ghex/glue/gridtools/field.hpp>
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
-#include <ghex/threads/atomic/primitives.hpp>
-#include <ghex/threads/std_thread/primitives.hpp>
+#include <ghex/structured/rma_range_generator.hpp>
 
 #ifdef GTBENCH_USE_GHEX_UCP
 #include <ghex/transport_layer/ucx/context.hpp>
@@ -27,6 +24,7 @@ using transport = gridtools::ghex::tl::ucx_tag;
 #include <ghex/transport_layer/mpi/context.hpp>
 using transport = gridtools::ghex::tl::mpi_tag;
 #endif
+#include <ghex/transport_layer/util/barrier.hpp>
 
 #include <gtbench/runtime/ghex_comm/factorize.hpp>
 #include <gtbench/runtime/ghex_comm/run.hpp>
@@ -124,8 +122,8 @@ struct local_domain {
   coordinate_t const &last() const { return m_last; }
 };
 
-using threading = gt::ghex::threads::std_thread::primitives;
-using context_t = gt::ghex::tl::context<transport, threading>;
+using context_t =
+    typename gt::ghex::tl::context_factory<transport>::context_type;
 using communicator_t = context_t::communicator_type;
 using grid_t = gt::ghex::structured::grid::type<local_domain>;
 using patterns_t =
@@ -203,12 +201,8 @@ public: // member types
   using coordinate_type = local_domain::coordinate_type;
   using patterns_type = patterns_t;
   using patterns_ptr_t = std::unique_ptr<patterns_type>;
-  using comm_obj_type =
-      gt::ghex::communication_object<communicator_t, grid_t, domain_id_t>;
-  using comm_obj_ptr_t = std::unique_ptr<comm_obj_type>;
   using domain_vec = std::vector<local_domain>;
   using context_ptr_t = std::unique_ptr<context_t>;
-  using thread_token = context_t::thread_token;
 
 private: // members
   halo_generator m_hg;
@@ -220,7 +214,7 @@ private: // members
   domain_vec m_domains;
   context_ptr_t m_context;
   patterns_ptr_t m_patterns;
-  std::vector<std::unique_ptr<thread_token>> m_tokens;
+  gridtools::ghex::tl::barrier_t m_barrier;
 
 public:
   impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
@@ -230,7 +224,7 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
-        m_tokens(num_sub_domains) {
+        m_barrier(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
@@ -277,9 +271,8 @@ public:
                                          (int)global_resolution.z - 1}});
       }
     }
-
-    m_context = gt::ghex::tl::context_factory<transport, threading>::create(
-        num_sub_domains, MPI_COMM_WORLD);
+    m_context =
+        gt::ghex::tl::context_factory<transport>::create(MPI_COMM_WORLD);
     m_patterns = std::make_unique<patterns_type>(
         gt::ghex::make_pattern<gt::ghex::structured::grid>(*m_context, m_hg,
                                                            m_domains));
@@ -290,10 +283,8 @@ public:
 
   sub_grid operator[](unsigned int i) {
     const auto &dom = m_domains[i];
-    if (!m_tokens[i])
-      m_tokens[i] = std::make_unique<thread_token>(m_context->get_token());
-    auto comm = m_context->get_communicator(*m_tokens[i]);
-    comm.barrier();
+    auto comm = m_context->get_communicator();
+    m_barrier(comm);
 
     vec<std::size_t, 3> local_resolution = {
         (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
@@ -303,10 +294,11 @@ public:
                                         (std::size_t)dom.first()[1],
                                         (std::size_t)dom.first()[2]};
 
-    auto comm_obj = std::make_shared<comm_obj_type>(
-        gt::ghex::make_communication_object<patterns_type>(comm));
+    auto b_comm_obj_map = std::make_shared<
+        std::map<void *, gt::ghex::generic_bulk_communication_object>>();
 
-    auto halo_exchange = [comm_obj = std::move(comm_obj), domain = dom,
+    auto halo_exchange = [b_comm_obj_map = std::move(b_comm_obj_map), comm,
+                          domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
 #ifdef GTBENCH_BACKEND_GPU
       using arch_t = gt::ghex::gpu;
@@ -315,11 +307,25 @@ public:
 #endif
       auto field =
           gt::ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0});
+      auto it = b_comm_obj_map->find(field.data());
+      if (it == b_comm_obj_map->end()) {
+        auto sbco = gt::ghex::bulk_communication_object<
+            gt::ghex::structured::rma_range_generator, patterns_type,
+            decltype(field)>(comm);
+        sbco.add_field(patterns(field));
+        it = b_comm_obj_map
+                 ->insert(
+                     std::make_pair((void *)field.data(),
+                                    gt::ghex::generic_bulk_communication_object(
+                                        std::move(sbco))))
+                 .first;
+      }
+      auto &bco = it->second;
 
 #ifdef GT_CUDACC
       cudaStreamSynchronize(0);
 #endif
-      comm_obj->exchange(patterns(field)).wait();
+      bco.exchange().wait();
     };
 
     return {local_resolution, local_offset, std::move(halo_exchange)};
