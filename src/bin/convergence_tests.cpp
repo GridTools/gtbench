@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
                             tmax_spatial / 100)
           .error;
     };
-    std::size_t n_min = full_range ? 2 : n_spatial / 2;
+    std::size_t n_min = full_range ? 4 : n_spatial / 2;
     std::size_t n_max = full_range ? 128 : n_spatial;
     auto result_spatial =
         verification::order_verification(spatial_error_f, n_min, n_max);
