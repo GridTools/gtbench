@@ -215,7 +215,7 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
-        m_context{std::make_unique<context_t>(MPI_COMM_WORLD)} { // TO DO: thread safe defaulted to true
+        m_context{std::make_unique<context_t>(MPI_COMM_WORLD, (num_sub_domains > 1))} {
         // TO DO: m_barrier(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
