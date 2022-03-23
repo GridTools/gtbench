@@ -1,3 +1,6 @@
+compile_as_cuda(run.cpp TARGET_DIRECTORY runtime)
+target_sources(runtime PRIVATE run.cpp)
+
 if(NOT _ghex_already_fetched)
   find_package(GHEX QUIET)
 endif()
@@ -21,8 +24,6 @@ if(NOT GHEX_FOUND)
   set(_ghex_already_fetched ON CACHE INTERNAL "")
 endif()
 
-compile_as_cuda(run.cpp TARGET_DIRECTORY runtime)
-target_sources(runtime PRIVATE run.cpp)
 target_link_libraries(runtime PUBLIC GHEX::lib)
 if(GHEX_TRANSPORT_BACKEND STREQUAL "LIBFABRIC")
   target_link_libraries(runtime PUBLIC oomph::libfabric)
