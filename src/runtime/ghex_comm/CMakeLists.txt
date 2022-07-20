@@ -32,7 +32,6 @@ elseif(GHEX_TRANSPORT_BACKEND STREQUAL "UCX")
 elseif(GHEX_TRANSPORT_BACKEND STREQUAL "MPI")
   target_link_libraries(runtime PUBLIC oomph::mpi)
 endif()
-target_compile_options(runtime PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:--default-stream per-thread>")
 
 if(GHEX_USE_XPMEM)
     target_compile_definitions(runtime PRIVATE GHEX_USE_XPMEM)
