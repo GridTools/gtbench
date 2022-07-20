@@ -31,8 +31,8 @@ jobs:
         --cache-from fthaler/gtbench:${{ matrix.backend }}-${{ matrix.runtime }}
         --progress=plain
         --build-arg BUILD_FROM=$(
-        if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:11.0-devel-ubuntu18.04;
-        elif [ ${{ matrix.backend }} = hip ]; then echo rocm/dev-ubuntu-18.04;
+        if [ ${{ matrix.backend }} = cuda ]; then echo nvidia/cuda:11.6.2-devel-ubuntu20.04;
+        elif [ ${{ matrix.backend }} = hip ]; then echo rocm/dev-ubuntu-20.04;
         else echo ubuntu:20.04;
         fi)
         --build-arg GTBENCH_BACKEND=$(
