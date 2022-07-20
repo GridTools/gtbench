@@ -42,7 +42,7 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
           },
           MPI_Finalize),
       m_num_threads(num_threads), m_cart_dims(cart_dims),
-      m_thread_cart_dims(thread_cart_dims), m_device_mapping(num_threads, 0),
+      m_thread_cart_dims(thread_cart_dims), m_device_mapping(), m_device(0),
       m_output_filename(output_filename) {
   int size, rank;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -84,16 +84,14 @@ runtime::runtime(int num_threads, std::array<int, 2> cart_dims,
   MPI_Comm_rank(shmem_comm, &shmem_rank);
   MPI_Comm_free(&shmem_comm);
   if (!device_mapping.empty()) {
-    if (device_mapping.size() != shmem_size * num_threads)
+    if (device_mapping.size() != shmem_size)
       throw std::runtime_error("device mapping has wrong size");
     m_device_mapping = device_mapping;
   } else {
-    m_device_mapping.resize(shmem_size * m_num_threads);
+    m_device_mapping.resize(shmem_size);
     std::iota(m_device_mapping.begin(), m_device_mapping.end(), 0);
   }
-  m_device_mapping = std::vector<int>(
-      m_device_mapping.begin() + shmem_rank * num_threads,
-      m_device_mapping.begin() + (shmem_rank + 1) * num_threads);
+  m_device = m_device_mapping[shmem_rank];
 #endif
 }
 
@@ -361,10 +359,10 @@ void runtime_register_options(ghex_comm, options &options) {
           "TX TY", 2);
 #ifdef GT_CUDACC
   options("device-mapping",
-          "node device mapping: device id per sub-domain in the format "
+          "node device mapping: device id per rank in the format "
           "I_0:I_1:...:I_(N-1) "
           "where I_i are cuda device ids "
-          "and N = #ranks-per-node x S",
+          "and N = #ranks-per-node",
           "M");
 #endif
 }
