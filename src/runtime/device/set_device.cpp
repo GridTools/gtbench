@@ -9,6 +9,7 @@
  */
 #include <stdexcept>
 
+#include <gridtools/common/defs.hpp>
 #include <gtbench/runtime/device/set_device.hpp>
 
 namespace gtbench {
