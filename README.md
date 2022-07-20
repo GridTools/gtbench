@@ -10,8 +10,8 @@ be installed automatically when building GT Bench with cmake unless specified ot
 
 Further external dependencies are listed below:
 Required:
-- [CMake](https://cmake.org/) (minimum version 3.14.5)
-- [Boost](https://www.boost.org/) (minimun version 1.73.0)
+- [CMake](https://cmake.org/) (minimum version 3.18.1)
+- [Boost](https://www.boost.org/) (minimum version 1.73.0)
 - MPI (for example [OpenMPI](https://github.com/open-mpi/ompi))
 
 Optional:
