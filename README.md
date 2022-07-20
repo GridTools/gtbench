@@ -35,7 +35,7 @@ The backend can be selected by setting the `GTBENCH_BACKEND` option when configu
 ```console
 $ cmake -DGTBENCH_BACKEND=<BACKEND> ..
 ```
-where `<BACKEND>` must be either `cpu_kfirst`, `cpu_ifirst`, or `gpu`. The `cpu_kfirst` and `cpu_ifirst` backends are two different CPU-backends of GridTools. On modern CPUs with large vector width and/or many cores, the `cpu_ifirst` backend might perform significantly better. On CPUs without vectorization or small vector width and limited parallelism, the `cpu_kfirst` backend might perform better. The `hip` backend currently supports running NVIDIA CUDA-capable GPUs and AMD HIP-capable GPUs.
+where `<BACKEND>` must be either `cpu_kfirst`, `cpu_ifirst`, or `gpu`. The `cpu_kfirst` and `cpu_ifirst` backends are two different CPU-backends of GridTools. On modern CPUs with large vector width and/or many cores, the `cpu_ifirst` backend might perform significantly better. On CPUs without vectorization or small vector width and limited parallelism, the `cpu_kfirst` backend might perform better. The `gpu` backend currently supports running NVIDIA CUDA-capable GPUs and AMD HIP-capable GPUs.
 
 ### Selecting the GPU Compilation Framework
 
@@ -56,7 +56,7 @@ where `RUNTIME` can be `ghex_comm`, `gcl`, `simple_mpi`, `single_node`.
 - The `simple_mpi` implementation uses a simple MPI 2 sided communication for halo exchanges.
 - The `gcl` implementation uses a optimized MPI based communication library shipped with [GridTools](https://gridtools.github.io/gridtools/latest/user_manual/user_manual.html#halo-exchanges).
 - The `ghex_comm` option will use highly optimized distributed communication via the GHEX library, designed for best performance at scale.
- Additionally, this option will enable a multi-threaded version of the benchmark, where a rank may have more than one sub-domain (over-subscription), which are delegated to separate threads. **Note:** The gridtools computations use openmp threads on the CPU targets which will not be affected by this parameter.
+ Additionally, this option will enable a multi-threaded version of the benchmark, where a rank may have more than one sub-domain (over-subscription), which are delegated to separate threads. **Note:** The gridtools computations use OpenMP threads on the CPU targets which will not be affected by this parameter.
 
 #### Selecting the Transport Layer for GHEX
 
