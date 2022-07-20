@@ -88,9 +88,9 @@ To enable xpmem support, pass additionally the following flags
 
 ### Benchmark
 
-The benchmark executable requires the global horizontal domain size as a command line parameter. The simulation will then be performed on a total domain size of `NX×NY×60` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun`, or similar):
+The benchmark executable requires the domain size as a command line parameter. The simulation will then be performed on a total domain size of `NX×NY×NZ` grid points. To launch the benchmark use the appropriate MPI launcher (`mpirun`, `mpiexec`, `srun`, or similar):
 ```console
-$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <NX> <NY>
+$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <NX> <NY> <NZ>
 ```
 
 Example output of a single-node benchmark run:
@@ -106,11 +106,11 @@ Columns per second:      50484.1 (95% confidence: 49908.1 - 50622.6)
 
 For testing, the number of runs (and thus the run time) can be reduced as follows:
 ```console
-$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <N> <NY> --runs <RUNS>
+$ mpi_launcher <LAUNCHER_OPTIONS> ./benchmark --domain-size <NX> <NY> <NZ> --runs <RUNS>
 ```
 For example, run only once:
 ```console
-$ mpi_launcher ./benchmark --domain-size 24000 24000 --runs 1
+$ mpi_launcher ./benchmark --domain-size 24000 24000 60 --runs 1
 Running GTBENCH
 Domain size:             24000x24000x60
 Floating-point type:     float
