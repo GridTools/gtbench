@@ -10,7 +10,8 @@ RUN apt-get update -qq && \
     libmpich-dev \
     tar \
     software-properties-common \
-    wget && \
+    wget \
+    libnuma-dev && \
     rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.18.4
