@@ -213,8 +213,9 @@ public:
                                 (int)global_resolution.y - 1,
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
-        m_context{std::make_unique<context_t>(MPI_COMM_WORLD, (num_sub_domains > 1))} {
-        // TO DO: m_barrier(num_sub_domains) {
+        m_context{std::make_unique<context_t>(MPI_COMM_WORLD,
+                                              (num_sub_domains > 1))} {
+    // TO DO: m_barrier(num_sub_domains) {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
@@ -284,16 +285,16 @@ public:
     auto b_comm_obj_map = std::make_shared<
         std::map<void *, ghex::generic_bulk_communication_object>>();
 
-    auto halo_exchange = [b_comm_obj_map = std::move(b_comm_obj_map), &context = m_context,
-                          domain = dom,
+    auto halo_exchange = [b_comm_obj_map = std::move(b_comm_obj_map),
+                          &context = m_context, domain = dom,
                           &patterns = *m_patterns](storage_t &storage) mutable {
 #ifdef GTBENCH_BACKEND_GPU
       using arch_t = ghex::gpu;
 #else
       using arch_t = ghex::cpu;
 #endif
-      auto field =
-          ghex::wrap_gt_field<arch_t>(domain, storage, {halo, halo, 0}); // TO DO: device id
+      auto field = ghex::wrap_gt_field<arch_t>(
+          domain, storage, {halo, halo, 0}); // TO DO: device id
       auto it = b_comm_obj_map->find(field.data());
       if (it == b_comm_obj_map->end()) {
         auto sbco = ghex::bulk_communication_object<
@@ -301,10 +302,9 @@ public:
             decltype(field)>(*context);
         sbco.add_field(patterns(field));
         it = b_comm_obj_map
-                 ->insert(
-                     std::make_pair((void *)field.data(),
-                                    ghex::generic_bulk_communication_object(
-                                        std::move(sbco))))
+                 ->insert(std::make_pair(
+                     (void *)field.data(),
+                     ghex::generic_bulk_communication_object(std::move(sbco))))
                  .first;
       }
       auto &bco = it->second;
