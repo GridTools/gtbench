@@ -11,6 +11,9 @@
 #include <numeric>
 #include <regex>
 
+#ifdef GT_CUDACC
+#include <ghex/device/cuda/runtime.hpp>
+#endif
 #include <ghex/bulk_communication_object.hpp>
 #include <ghex/glue/gridtools/field.hpp>
 #include <ghex/structured/grid.hpp>
