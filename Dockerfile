@@ -44,5 +44,6 @@ RUN cd /gtbench && \
     .. && \
     make -j $(nproc) install && \
     rm -rf /gtbench/build
+ENV LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
 CMD ["convergence_tests"]
