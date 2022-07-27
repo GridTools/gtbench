@@ -16,9 +16,11 @@ if(NOT GHEX_FOUND)
     GIT_REPOSITORY ${_ghex_repository}
     GIT_TAG        ${_ghex_tag}
   )
-  if(_gtbench_cuda_enabled)
+  if(GTBENCH_RUNTIME STREQUAL "gpu")
     set(GHEX_USE_GPU ON CACHE INTERNAL "")
-    set(GHEX_GPU_TYPE "NVIDIA" CACHE INTERNAL "")
+    if(_gtbench_cuda_enabled)
+      set(GHEX_GPU_TYPE "NVIDIA" CACHE INTERNAL "")
+    endif()
   endif()
   FetchContent_MakeAvailable(ghex)
   set(_ghex_already_fetched ON CACHE INTERNAL "")
