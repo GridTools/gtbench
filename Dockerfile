@@ -35,7 +35,7 @@ COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
-    if [ -d /opt/rocm ]; then export ROCM_PATH=/opt/rocm; export CXX=${ROCM_PATH}/bin/hipcc; fi && \
+    if [ -d /opt/rocm ]; then export ROCM_PATH=/opt/rocm; export PATH=${ROCM_PATH}/bin:${PATH}; export CXX=${ROCM_PATH}/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
