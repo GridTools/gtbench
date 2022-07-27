@@ -17,6 +17,7 @@ if(NOT GHEX_FOUND)
     GIT_TAG        ${_ghex_tag}
   )
   if(GTBENCH_RUNTIME STREQUAL "gpu")
+    message(STATUS "gpu enabled in gtbench")
     set(GHEX_USE_GPU ON CACHE INTERNAL "")
     if(_gtbench_cuda_enabled)
       set(GHEX_GPU_TYPE "NVIDIA" CACHE INTERNAL "")
