@@ -201,7 +201,7 @@ private: // members
   coordinate_type m_first;
   coordinate_type m_last;
   domain_vec m_domains;
-  context_ptr_t m_context; // TO DO: is a pointer still needed here?
+  context_ptr_t m_context;
   patterns_ptr_t m_patterns;
   // TO DO: m_barrier;
 
