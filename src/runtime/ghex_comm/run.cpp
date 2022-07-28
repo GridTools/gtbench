@@ -294,7 +294,9 @@ public:
       using arch_t = ghex::cpu;
 #endif
       auto field = ghex::wrap_gt_field<arch_t>(
-          domain, storage, {halo, halo, 0}); // TO DO: device id
+          domain, storage,
+          {halo, halo, 0}); // device_id is initialized to the current device id
+                            // by default in GHEX
       auto it = b_comm_obj_map->find(field.data());
       if (it == b_comm_obj_map->end()) {
         auto sbco = ghex::bulk_communication_object<
