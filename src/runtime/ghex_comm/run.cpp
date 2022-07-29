@@ -214,8 +214,8 @@ public:
                                 (int)global_resolution.z - 1}},
         m_global_resolution{global_resolution.x, global_resolution.y},
         m_context{std::make_unique<context_t>(MPI_COMM_WORLD,
-                                              (num_sub_domains > 1))} {
-    m_barrier(*m_context, num_sub_domains);
+                                              (num_sub_domains > 1))},
+        m_barrier{*m_context, num_sub_domains} {
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
