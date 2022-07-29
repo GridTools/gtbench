@@ -11,13 +11,12 @@
 #include <numeric>
 #include <regex>
 
+#include <ghex/barrier.hpp>
 #include <ghex/bulk_communication_object.hpp>
 #include <ghex/glue/gridtools/field.hpp>
 #include <ghex/structured/grid.hpp>
 #include <ghex/structured/pattern.hpp>
 #include <ghex/structured/rma_range_generator.hpp>
-
-// TO DO: barrier
 
 #include <gtbench/runtime/ghex_comm/factorize.hpp>
 #include <gtbench/runtime/ghex_comm/run.hpp>
@@ -115,6 +114,7 @@ struct local_domain {
 
 using context_t = ghex::context;
 using communicator_t = context_t::communicator_type;
+using barrier_t = ghex::barrier;
 using grid_t = ghex::structured::grid::type<local_domain>;
 using patterns_t = ghex::pattern_container<grid_t, domain_id_t>;
 
@@ -203,7 +203,7 @@ private: // members
   domain_vec m_domains;
   context_ptr_t m_context;
   patterns_ptr_t m_patterns;
-  // TO DO: m_barrier;
+  barrier_t m_barrier;
 
 public:
   impl(vec<std::size_t, 3> const &global_resolution, int num_sub_domains,
@@ -215,7 +215,7 @@ public:
         m_global_resolution{global_resolution.x, global_resolution.y},
         m_context{std::make_unique<context_t>(MPI_COMM_WORLD,
                                               (num_sub_domains > 1))} {
-    // TO DO: m_barrier(num_sub_domains) {
+    m_barrier(*m_context, num_sub_domains);
     MPI_Comm_size(MPI_COMM_WORLD, &m_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 
@@ -272,7 +272,7 @@ public:
 
   sub_grid operator[](unsigned int i) {
     const auto &dom = m_domains[i];
-    // TO DO: m_barrier(comm);
+    m_barrier();
 
     vec<std::size_t, 3> local_resolution = {
         (std::size_t)(dom.last()[0] - dom.first()[0] + 1),
