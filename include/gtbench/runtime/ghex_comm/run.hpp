@@ -40,6 +40,7 @@ struct runtime {
   std::array<int, 2> m_cart_dims;
   std::array<int, 2> m_thread_cart_dims;
   std::vector<int> m_device_mapping;
+  int m_device;
   std::string m_output_filename;
 };
 
@@ -74,7 +75,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
 
   std::vector<result> results(rt.m_num_threads);
   auto execution_func = [&](int id = 0) {
-    set_device(rt.m_device_mapping[id]);
+    set_device(rt.m_device);
     auto sub_grid = comm_grid[id];
     const auto exact = discrete_analytical::discretize(
         analytical, global_resolution, sub_grid.m_local_resolution,
@@ -116,7 +117,7 @@ result runtime_solve(runtime &rt, Analytical analytical, Stepper stepper,
   threads.reserve(rt.m_num_threads - 1);
   for (int i = 1; i < rt.m_num_threads; ++i)
     threads.emplace_back(execution_func, i);
-  set_device(rt.m_device_mapping[0]);
+  set_device(rt.m_device);
   execution_func(0);
 
   for (auto &thread : threads)

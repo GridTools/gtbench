@@ -9,7 +9,16 @@
  */
 #include <stdexcept>
 
+#include <gridtools/common/defs.hpp>
 #include <gtbench/runtime/device/set_device.hpp>
+
+#ifdef GT_CUDACC
+#include <gridtools/common/cuda_runtime.hpp>
+#if defined(__HIP__)
+#define cudaDeviceCanAccessPeer hipDeviceCanAccessPeer
+#define cudaDeviceEnablePeerAccess hipDeviceEnablePeerAccess
+#endif
+#endif
 
 namespace gtbench {
 namespace runtime {

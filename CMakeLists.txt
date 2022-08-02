@@ -65,7 +65,7 @@ endif()
 # Helper functions
 function(compile_as_cuda)
   if(_gtbench_cuda_enabled)
-    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE CUDA COMPILE_OPTIONS "--default-stream=per-thread")
   endif()
 endfunction()
 

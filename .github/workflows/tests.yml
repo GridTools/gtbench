@@ -19,9 +19,6 @@ jobs:
       matrix:
         backend: [cpu_ifirst, cpu_kfirst, cuda, hip]
         runtime: [single_node, simple_mpi, gcl, ghex_comm]
-        exclude:
-          - backend: hip
-            runtime: ghex_comm
     steps:
     - uses: actions/checkout@v2
       name: checkout

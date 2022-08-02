@@ -10,7 +10,8 @@ RUN apt-get update -qq && \
     libmpich-dev \
     tar \
     software-properties-common \
-    wget && \
+    wget \
+    libnuma-dev && \
     rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.18.4
@@ -34,7 +35,7 @@ COPY . /gtbench
 RUN cd /gtbench && \
     mkdir -p build && \
     cd build && \
-    if [ -d /opt/rocm ]; then export CXX=/opt/rocm/bin/hipcc; fi && \
+    if [ -d /opt/rocm ]; then export ROCM_PATH=/opt/rocm; export PATH=${ROCM_PATH}/bin:${PATH}; export CXX=${ROCM_PATH}/bin/hipcc; fi && \
     cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DGTBENCH_BACKEND=${GTBENCH_BACKEND} \
@@ -43,5 +44,6 @@ RUN cd /gtbench && \
     .. && \
     make -j $(nproc) install && \
     rm -rf /gtbench/build
+ENV LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH}
 
 CMD ["convergence_tests"]
