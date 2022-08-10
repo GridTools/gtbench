@@ -21,10 +21,8 @@ namespace diffusion {
 namespace {
 using gt::stencil::extent;
 using gt::stencil::make_param_list;
-using gt::stencil::cartesian::call_proc;
 using gt::stencil::cartesian::in_accessor;
 using gt::stencil::cartesian::inout_accessor;
-using namespace gt::stencil::cartesian::expressions;
 
 struct stage_horizontal {
   using out = inout_accessor<0>;
@@ -42,31 +40,31 @@ struct stage_horizontal {
     constexpr static real_t weights[] = {-1_r / 90, 5_r / 36,  -49_r / 36,
                                          49_r / 36, -5_r / 36, 1_r / 90};
 
-    auto flx_x0 = eval((weights[0] * in(-3, 0) + weights[1] * in(-2, 0) +
-                        weights[2] * in(-1, 0) + weights[3] * in(0, 0) +
-                        weights[4] * in(1, 0) + weights[5] * in(2, 0)) /
-                       dx());
-    auto flx_x1 = eval((weights[0] * in(-2, 0) + weights[1] * in(-1, 0) +
-                        weights[2] * in(0, 0) + weights[3] * in(1, 0) +
-                        weights[4] * in(2, 0) + weights[5] * in(3, 0)) /
-                       dx());
-    auto flx_y0 = eval((weights[0] * in(0, -3) + weights[1] * in(0, -2) +
-                        weights[2] * in(0, -1) + weights[3] * in(0, 0) +
-                        weights[4] * in(0, 1) + weights[5] * in(0, 2)) /
-                       dy());
-    auto flx_y1 = eval((weights[0] * in(0, -2) + weights[1] * in(0, -1) +
-                        weights[2] * in(0, 0) + weights[3] * in(0, 1) +
-                        weights[4] * in(0, 2) + weights[5] * in(0, 3)) /
-                       dy());
+    auto flx_x0 = (weights[0] * eval(in(-3, 0)) + weights[1] * eval(in(-2, 0)) +
+                   weights[2] * eval(in(-1, 0)) + weights[3] * eval(in(0, 0)) +
+                   weights[4] * eval(in(1, 0)) + weights[5] * eval(in(2, 0))) /
+                  eval(dx());
+    auto flx_x1 = (weights[0] * eval(in(-2, 0)) + weights[1] * eval(in(-1, 0)) +
+                   weights[2] * eval(in(0, 0)) + weights[3] * eval(in(1, 0)) +
+                   weights[4] * eval(in(2, 0)) + weights[5] * eval(in(3, 0))) /
+                  eval(dx());
+    auto flx_y0 = (weights[0] * eval(in(0, -3)) + weights[1] * eval(in(0, -2)) +
+                   weights[2] * eval(in(0, -1)) + weights[3] * eval(in(0, 0)) +
+                   weights[4] * eval(in(0, 1)) + weights[5] * eval(in(0, 2))) /
+                  eval(dy());
+    auto flx_y1 = (weights[0] * eval(in(0, -2)) + weights[1] * eval(in(0, -1)) +
+                   weights[2] * eval(in(0, 0)) + weights[3] * eval(in(0, 1)) +
+                   weights[4] * eval(in(0, 2)) + weights[5] * eval(in(0, 3))) /
+                  eval(dy());
 
-    flx_x0 = flx_x0 * eval(in() - in(-1, 0)) < 0_r ? 0_r : flx_x0;
-    flx_x1 = flx_x1 * eval(in(1, 0) - in()) < 0_r ? 0_r : flx_x1;
-    flx_y0 = flx_y0 * eval(in() - in(0, -1)) < 0_r ? 0_r : flx_y0;
-    flx_y1 = flx_y1 * eval(in(0, 1) - in()) < 0_r ? 0_r : flx_y1;
+    flx_x0 = flx_x0 * (eval(in()) - eval(in(-1, 0))) < 0_r ? 0_r : flx_x0;
+    flx_x1 = flx_x1 * (eval(in(1, 0)) - eval(in())) < 0_r ? 0_r : flx_x1;
+    flx_y0 = flx_y0 * (eval(in()) - eval(in(0, -1))) < 0_r ? 0_r : flx_y0;
+    flx_y1 = flx_y1 * (eval(in(0, 1)) - eval(in())) < 0_r ? 0_r : flx_y1;
 
-    eval(out()) =
-        eval(in() + coeff() * dt() *
-                        ((flx_x1 - flx_x0) / dx() + (flx_y1 - flx_y0) / dy()));
+    eval(out()) = eval(in()) + eval(coeff()) * eval(dt()) *
+                                   ((flx_x1 - flx_x0) / eval(dx()) +
+                                    (flx_y1 - flx_y0) / eval(dy()));
   }
 };
 
@@ -90,12 +88,13 @@ struct stage_diffusion_w_forward {
   GT_FUNCTION static void apply(Evaluation eval, full_t::first_level) {
     auto k_offset = eval(k_size()) - 1;
 
-    real_t av = eval(-coeff() / (2_r * dz() * dz()));
-    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
-    real_t d1v = eval(1_r / dt() * in() + 0.5_r * coeff() *
-                                              (in_uncached(0, 0, k_offset) -
-                                               2_r * in() + in(0, 0, 1)) /
-                                              (dz() * dz()));
+    real_t av = -eval(coeff()) / (2_r * eval(dz()) * eval(dz()));
+    real_t bv = 1_r / eval(dt()) + eval(coeff()) / (eval(dz()) * eval(dz()));
+    real_t d1v = 1_r / eval(dt()) * eval(in()) +
+                 0.5_r * eval(coeff()) *
+                     (eval(in_uncached(0, 0, k_offset)) - 2_r * eval(in()) +
+                      eval(in(0, 0, 1))) /
+                     (eval(dz()) * eval(dz()));
     real_t d2v = -av;
 
     eval(b()) = bv;
@@ -105,37 +104,39 @@ struct stage_diffusion_w_forward {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<1, -2>) {
-    real_t av = eval(-coeff() / (2_r * dz() * dz()));
-    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t av = -eval(coeff()) / (2_r * eval(dz()) * eval(dz()));
+    real_t bv = 1_r / eval(dt()) + eval(coeff()) / (eval(dz()) * eval(dz()));
     real_t cv = av;
     real_t d1v =
-        eval(1_r / dt() * in() + 0.5_r * coeff() *
-                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
-                                     (dz() * dz()));
+        1_r / eval(dt()) * eval(in()) +
+        0.5_r * eval(coeff()) *
+            (eval(in(0, 0, -1)) - 2_r * eval(in()) + eval(in(0, 0, 1))) /
+            (eval(dz()) * eval(dz()));
     real_t d2v = 0_r;
 
-    real_t f = eval(av / b(0, 0, -1));
+    real_t f = av / eval(b(0, 0, -1));
     eval(b()) = bv - f * cv;
-    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
-    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
+    eval(d1()) = d1v - f * eval(d1(0, 0, -1));
+    eval(d2()) = d2v - f * eval(d2(0, 0, -1));
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval,
                                 full_t::last_level::shift<-1>) {
-    real_t av = eval(-coeff() / (2_r * dz() * dz()));
-    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t av = -eval(coeff()) / (2_r * eval(dz()) * eval(dz()));
+    real_t bv = 1_r / eval(dt()) + eval(coeff()) / (eval(dz()) * eval(dz()));
     real_t cv = av;
     real_t d1v =
-        eval(1_r / dt() * in() + 0.5_r * coeff() *
-                                     (in(0, 0, -1) - 2_r * in() + in(0, 0, 1)) /
-                                     (dz() * dz()));
+        1_r / eval(dt()) * eval(in()) +
+        0.5_r * eval(coeff()) *
+            (eval(in(0, 0, -1)) - 2_r * eval(in()) + eval(in(0, 0, 1))) /
+            (eval(dz()) * eval(dz()));
     real_t d2v = -cv;
 
-    real_t f = eval(av / b(0, 0, -1));
+    real_t f = av / eval(b(0, 0, -1));
     eval(b()) = bv - f * cv;
-    eval(d1()) = eval(d1v - f * d1(0, 0, -1));
-    eval(d2()) = eval(d2v - f * d2(0, 0, -1));
+    eval(d1()) = d1v - f * eval(d1(0, 0, -1));
+    eval(d2()) = d2v - f * eval(d2(0, 0, -1));
   }
 };
 
@@ -152,17 +153,17 @@ struct stage_diffusion_w_backward {
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval,
                                 full_t::last_level::shift<-1>) {
-    real_t f = eval(1_r / b());
+    real_t f = 1_r / eval(b());
     eval(d1()) *= f;
     eval(d2()) *= f;
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -2>) {
-    real_t cv = eval(-coeff() / (2_r * dz() * dz()));
-    real_t f = eval(1_r / b());
-    eval(d1()) = eval((d1() - cv * d1(0, 0, 1)) * f);
-    eval(d2()) = eval((d2() - cv * d2(0, 0, 1)) * f);
+    real_t cv = -eval(coeff()) / (2_r * eval(dz()) * eval(dz()));
+    real_t f = 1_r / eval(b());
+    eval(d1()) = (eval(d1()) - cv * eval(d1(0, 0, 1))) * f;
+    eval(d2()) = (eval(d2()) - cv * eval(d2(0, 0, 1))) * f;
   }
 };
 
@@ -183,26 +184,27 @@ struct stage_diffusion_w3 {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::last_level) {
-    auto k_offset = eval(k_size() - 1);
+    auto k_offset = eval(k_size()) - 1;
 
-    real_t av = eval(-coeff() / (2_r * dz() * dz()));
-    real_t bv = eval(1_r / dt() + coeff() / (dz() * dz()));
+    real_t av = -eval(coeff()) / (2_r * eval(dz()) * eval(dz()));
+    real_t bv = 1_r / eval(dt()) + eval(coeff()) / (eval(dz()) * eval(dz()));
     real_t cv = av;
-    real_t d1v = eval(1_r / dt() * in() +
-                      0.5_r * coeff() *
-                          (in(0, 0, -1) - 2_r * in() + in(0, 0, -k_offset)) /
-                          (dz() * dz()));
+    real_t d1v = 1_r / eval(dt()) * eval(in()) +
+                 0.5_r * eval(coeff()) *
+                     (eval(in(0, 0, -1)) - 2_r * eval(in()) +
+                      eval(in(0, 0, -k_offset))) /
+                     (eval(dz()) * eval(dz()));
 
     eval(out_top()) =
-        eval((d1v - cv * d1(0, 0, -k_offset) - av * d1(0, 0, -1)) /
-             (bv + cv * d2(0, 0, -k_offset) + av * d2(0, 0, -1)));
+        (d1v - cv * eval(d1(0, 0, -k_offset)) - av * eval(d1(0, 0, -1))) /
+        (bv + cv * eval(d2(0, 0, -k_offset)) + av * eval(d2(0, 0, -1)));
     eval(out()) = eval(out_top());
   }
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t::modify<0, -1>) {
     eval(out_top()) = eval(out_top(0, 0, 1));
-    eval(out()) = eval(d1() + d2() * out_top());
+    eval(out()) = eval(d1()) + eval(d2()) * eval(out_top());
   }
 };
 
