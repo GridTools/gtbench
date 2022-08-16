@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
       run_tests("FULL DIFFUSION",
                 verification::analytical::full_diffusion{diffusion_coeff},
                 numerics::diff_stepper(diffusion_coeff), 2,
-                is_float ? 1e-1 : 1e-3, 32, 1, 5e-1, 16) &&
+                is_float ? 1e-1 : 1e-3, 32, 1, 5e-1, 8) &&
       run_tests("HORIZONTAL ADVECTION",
                 verification::analytical::horizontal_advection{},
                 numerics::hadv_stepper(), 5, is_float ? 1e-1 : 1e-4,
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
           numerics::vadv_stepper(), 2, 1e-1, 128, 2, 10, 32) &&
       run_tests("RUNGE-KUTTA ADVECTION",
                 verification::analytical::full_advection{},
-                numerics::rkadv_stepper(), 2, 1e-2, 64, 1, 1, 8) &&
+                numerics::rkadv_stepper(), 2, 1e-2, 32, 1, 1, 8) &&
       run_tests("ADVECTION-DIFFUSION",
                 verification::analytical::advection_diffusion{diffusion_coeff},
                 numerics::advdiff_stepper(diffusion_coeff), 2,
