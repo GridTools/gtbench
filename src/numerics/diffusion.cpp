@@ -37,24 +37,28 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    constexpr static real_t weights[] = {-1_r / 90, 5_r / 36,  -49_r / 36,
-                                         49_r / 36, -5_r / 36, 1_r / 90};
+    constexpr real_t weight0 = -1_r / 90;
+    constexpr real_t weight1 = 5_r / 36;
+    constexpr real_t weight2 = -49_r / 36;
+    constexpr real_t weight3 = 49_r / 36;
+    constexpr real_t weight4 = -5_r / 36;
+    constexpr real_t weight5 = 1_r / 90;
 
-    auto flx_x0 = (weights[0] * eval(in(-3, 0)) + weights[1] * eval(in(-2, 0)) +
-                   weights[2] * eval(in(-1, 0)) + weights[3] * eval(in(0, 0)) +
-                   weights[4] * eval(in(1, 0)) + weights[5] * eval(in(2, 0))) /
+    auto flx_x0 = (weight0 * eval(in(-3, 0)) + weight1 * eval(in(-2, 0)) +
+                   weight2 * eval(in(-1, 0)) + weight3 * eval(in(0, 0)) +
+                   weight4 * eval(in(1, 0)) + weight5 * eval(in(2, 0))) /
                   eval(dx());
-    auto flx_x1 = (weights[0] * eval(in(-2, 0)) + weights[1] * eval(in(-1, 0)) +
-                   weights[2] * eval(in(0, 0)) + weights[3] * eval(in(1, 0)) +
-                   weights[4] * eval(in(2, 0)) + weights[5] * eval(in(3, 0))) /
+    auto flx_x1 = (weight0 * eval(in(-2, 0)) + weight1 * eval(in(-1, 0)) +
+                   weight2 * eval(in(0, 0)) + weight3 * eval(in(1, 0)) +
+                   weight4 * eval(in(2, 0)) + weight5 * eval(in(3, 0))) /
                   eval(dx());
-    auto flx_y0 = (weights[0] * eval(in(0, -3)) + weights[1] * eval(in(0, -2)) +
-                   weights[2] * eval(in(0, -1)) + weights[3] * eval(in(0, 0)) +
-                   weights[4] * eval(in(0, 1)) + weights[5] * eval(in(0, 2))) /
+    auto flx_y0 = (weight0 * eval(in(0, -3)) + weight1 * eval(in(0, -2)) +
+                   weight2 * eval(in(0, -1)) + weight3 * eval(in(0, 0)) +
+                   weight4 * eval(in(0, 1)) + weight5 * eval(in(0, 2))) /
                   eval(dy());
-    auto flx_y1 = (weights[0] * eval(in(0, -2)) + weights[1] * eval(in(0, -1)) +
-                   weights[2] * eval(in(0, 0)) + weights[3] * eval(in(0, 1)) +
-                   weights[4] * eval(in(0, 2)) + weights[5] * eval(in(0, 3))) /
+    auto flx_y1 = (weight0 * eval(in(0, -2)) + weight1 * eval(in(0, -1)) +
+                   weight2 * eval(in(0, 0)) + weight3 * eval(in(0, 1)) +
+                   weight4 * eval(in(0, 2)) + weight5 * eval(in(0, 3))) /
                   eval(dy());
 
     flx_x0 = flx_x0 * (eval(in()) - eval(in(-1, 0))) < 0_r ? 0_r : flx_x0;
