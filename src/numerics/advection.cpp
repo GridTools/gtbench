@@ -38,41 +38,41 @@ struct stage_horizontal {
 
   template <typename Evaluation>
   GT_FUNCTION static void apply(Evaluation eval, full_t) {
-    static constexpr real_t weights[] = {1_r / 30, -1_r / 4, 1_r,
-                                         -1_r / 3, -1_r / 2, 1_r / 20};
+    constexpr real_t weight0 = 1_r / 30;
+    constexpr real_t weight1 = -1_r / 4;
+    constexpr real_t weight2 = 1_r;
+    constexpr real_t weight3 = -1_r / 3;
+    constexpr real_t weight4 = -1_r / 2;
+    constexpr real_t weight5 = 1_r / 20;
 
     real_t flx_x, flx_y;
     if (eval(u()) > 0_r) {
-      flx_x =
-          eval(u()) *
-          -(weights[0] * eval(in(-3, 0, 0)) + weights[1] * eval(in(-2, 0, 0)) +
-            weights[2] * eval(in(-1, 0, 0)) + weights[3] * eval(in()) +
-            weights[4] * eval(in(1, 0, 0)) + weights[5] * eval(in(2, 0, 0))) /
-          eval(dx());
+      flx_x = eval(u()) *
+              -(weight0 * eval(in(-3, 0, 0)) + weight1 * eval(in(-2, 0, 0)) +
+                weight2 * eval(in(-1, 0, 0)) + weight3 * eval(in()) +
+                weight4 * eval(in(1, 0, 0)) + weight5 * eval(in(2, 0, 0))) /
+              eval(dx());
     } else if (eval(u()) < 0_r) {
-      flx_x =
-          eval(u()) *
-          (weights[5] * eval(in(-2, 0, 0)) + weights[4] * eval(in(-1, 0, 0)) +
-           weights[3] * eval(in()) + weights[2] * eval(in(1, 0, 0)) +
-           weights[1] * eval(in(2, 0, 0)) + weights[0] * eval(in(3, 0, 0))) /
-          eval(dx());
+      flx_x = eval(u()) *
+              (weight5 * eval(in(-2, 0, 0)) + weight4 * eval(in(-1, 0, 0)) +
+               weight3 * eval(in()) + weight2 * eval(in(1, 0, 0)) +
+               weight1 * eval(in(2, 0, 0)) + weight0 * eval(in(3, 0, 0))) /
+              eval(dx());
     } else {
       flx_x = 0_r;
     }
     if (eval(v()) > 0_r) {
-      flx_y =
-          eval(v()) *
-          -(weights[0] * eval(in(0, -3, 0)) + weights[1] * eval(in(0, -2, 0)) +
-            weights[2] * eval(in(0, -1, 0)) + weights[3] * eval(in()) +
-            weights[4] * eval(in(0, 1, 0)) + weights[5] * eval(in(0, 2, 0))) /
-          eval(dy());
+      flx_y = eval(v()) *
+              -(weight0 * eval(in(0, -3, 0)) + weight1 * eval(in(0, -2, 0)) +
+                weight2 * eval(in(0, -1, 0)) + weight3 * eval(in()) +
+                weight4 * eval(in(0, 1, 0)) + weight5 * eval(in(0, 2, 0))) /
+              eval(dy());
     } else if (eval(v()) < 0_r) {
-      flx_y =
-          eval(v()) *
-          (weights[5] * eval(in(0, -2, 0)) + weights[4] * eval(in(0, -1, 0)) +
-           weights[3] * eval(in()) + weights[2] * eval(in(0, 1, 0)) +
-           weights[1] * eval(in(0, 2, 0)) + weights[0] * eval(in(0, 3, 0))) /
-          eval(dy());
+      flx_y = eval(v()) *
+              (weight5 * eval(in(0, -2, 0)) + weight4 * eval(in(0, -1, 0)) +
+               weight3 * eval(in()) + weight2 * eval(in(0, 1, 0)) +
+               weight1 * eval(in(0, 2, 0)) + weight0 * eval(in(0, 3, 0))) /
+              eval(dy());
     } else {
       flx_y = 0_r;
     }
