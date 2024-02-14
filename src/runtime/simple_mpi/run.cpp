@@ -43,9 +43,7 @@ runtime runtime_init(simple_mpi, options_values const &options) {
                  options.get_or<std::string>("output", ""));
 }
 
-template <class T> struct halo_info {
-  T lower, upper;
-};
+template <class T> struct halo_info { T lower, upper; };
 
 struct process_grid::impl {
   impl(vec<std::size_t, 3> const &global_resolution,
