@@ -220,12 +220,12 @@ horizontal(vec<std::size_t, 3> const &resolution, vec<real_t, 3> const &delta,
   auto grid = computation_grid(resolution.x, resolution.y, resolution.z);
   return [grid = std::move(grid), delta, coeff](storage_t out, storage_t in,
                                                 real_t dt) {
-    gt::stencil::run_single_stage(
-        stage_horizontal(), backend_t<GTBENCH_BPARAMS_HDIFF>(), grid, out, in,
-        gt::stencil::global_parameter{delta.x},
-        gt::stencil::global_parameter{delta.y},
-        gt::stencil::global_parameter{dt},
-        gt::stencil::global_parameter{coeff});
+    gt::stencil::run_single_stage(stage_horizontal(),
+                                  backend_t<GTBENCH_BPARAMS_HDIFF>(), grid, out,
+                                  in, gt::stencil::global_parameter{delta.x},
+                                  gt::stencil::global_parameter{delta.y},
+                                  gt::stencil::global_parameter{dt},
+                                  gt::stencil::global_parameter{coeff});
   };
 }
 
