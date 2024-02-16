@@ -57,6 +57,7 @@ if(NOT GridTools_FOUND)
     gridtools
     GIT_REPOSITORY ${_gridtools_repository}
     GIT_TAG        ${_gridtools_tag}
+    OVERRIDE_FIND_PACKAGE
   )
   FetchContent_MakeAvailable(gridtools)
   set(_gridtools_already_fetched ON CACHE INTERNAL "")
