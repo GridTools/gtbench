@@ -35,7 +35,7 @@ for backend in cpu_ifirst cpu_kfirst gpu; do
 
                     cmake .. -DGTBENCH_BACKEND=$backend -DGTBENCH_RUNTIME=$gt_runtime -DCMAKE_INSTALL_PREFIX=./install -DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_BUILD_TYPE=Custom -DCMAKE_CXX_FLAGS="-g -mcpu=neoverse-v2 -Ofast -msve-vector-bits=128 -fopt-info-vec-missed -fvect-cost-model=unlimited" -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER} -DGHEX_TRANSPORT_BACKEND=$ghex_backend ${GHEX_CMAKE_OPTIONS} ${XPMEM_CMAKE_FLAGS}
                     set +x
-                    #cmake --build . --target install --parallel 1 --verbose 2>&1 | tee build_output.txt
+                    cmake --build . --target install --parallel 1 --verbose 2>&1 | tee build_output.txt
                     popd
                 done
             done
@@ -46,7 +46,7 @@ for backend in cpu_ifirst cpu_kfirst gpu; do
             set -x
             cmake .. -DGTBENCH_BACKEND=$backend -DGTBENCH_RUNTIME=$gt_runtime -DCMAKE_INSTALL_PREFIX=./install -DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_BUILD_TYPE=Custom -DCMAKE_CXX_FLAGS="-g -mcpu=neoverse-v2 -Ofast -msve-vector-bits=128 -fopt-info-vec-missed -fvect-cost-model=unlimited" -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}
             set +x
-            #cmake --build . --target install --parallel 1 --verbose 2>&1 | tee build_output.txt
+            cmake --build . --target install --parallel 1 --verbose 2>&1 | tee build_output.txt
             popd
         fi
     done
