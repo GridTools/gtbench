@@ -2,8 +2,8 @@
 
 set -e
 
-BOOST_ROOT=$(spack location -i boost+thread)
-UCX_DIR=$(spack location -i ucx)
+export BOOST_ROOT=$(spack location -i boost+thread)
+export UCX_DIR=$(spack location -i ucx)
 XPMEM_DIR=/opt/cray/xpmem/default
 LIBFABRIC_DIR=/opt/cray/libfabric/1.15.2.0
 
