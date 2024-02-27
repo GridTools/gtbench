@@ -2,8 +2,10 @@
 
 set -e
 
-export BOOST_ROOT=$(spack location -i boost+thread)
-export UCX_DIR=$(spack location -i ucx)
+BOOST_ROOT=$(spack location -i boost+thread)
+UCX_DIR=$(spack location -i ucx)
+XPMEM_DIR=/opt/cray/xpmem/default
+LIBFABRIC_DIR=/opt/cray/libfabric/1.15.2.0
 
 for backend in cpu_ifirst cpu_kfirst gpu; do
     CXX_CMAKE_ARCHITECTURE_OPTIONS=""
@@ -18,12 +20,12 @@ for backend in cpu_ifirst cpu_kfirst gpu; do
             for ghex_backend in MPI UCX LIBFABRIC; do
                 for xpmem in ON OFF; do
                     if [[ $xpmem == "ON" ]]; then
-                        XPMEM_CMAKE_FLAGS="-DGHEX_USE_XPMEM=ON -DXPMEM_DIR=/opt/cray/xpmem/default"
+                        XPMEM_CMAKE_FLAGS="-DGHEX_USE_XPMEM=ON -DXPMEM_DIR=${XPMEM_DIR}"
                     else
                         XPMEM_CMAKE_FLAGS=""
                     fi
                     if [[ $ghex_backend == "LIBFABRIC" ]]; then
-			            GHEX_CMAKE_OPTIONS="$GHEX_CMAKE_OPTIONS -DLIBFABRIC_DIR=/opt/cray/libfabric/1.15.2.0"
+			            GHEX_CMAKE_OPTIONS="$GHEX_CMAKE_OPTIONS -DLIBFABRIC_DIR=${LIBFABRIC_DIR}"
                     fi
                     BUILD_DIR=build_${backend}_${gt_runtime}_${ghex_backend}
                     if [[ $xpmem == "ON" ]]; then
