@@ -69,17 +69,14 @@ def parse_input_file(file_path):
     return domain_data
 
 def create_plot(data, labels, output_name, title, x_key, y_key, upper_key, lower_key, xlabel, ylabel, xscale='linear', yscale='linear'):
-    min_x = 0
-    max_x = 0
     # Plotting with for loop
     plt.figure(figsize=(10, 6))
     for idx, (cpu, cpu_data) in enumerate(data.items()):
         for idx2, (key, value) in enumerate(cpu_data.items()):
             df = pd.DataFrame(value)
-            min_x = min(df[x_key])
-            max_x = max(df[x_key])
             sns.lineplot(data=df, x=x_key, y=y_key, marker='o', label=labels[idx] + ' ' + key)
             plt.errorbar(df[x_key], df[y_key], yerr=[df[y_key] - df[lower_key], df[upper_key] - df[y_key]], fmt='o', capsize=5)
+            x_axis_ticks = df[x_key]
 
     # Setting labels and title
     plt.xlabel(xlabel)
@@ -92,12 +89,8 @@ def create_plot(data, labels, output_name, title, x_key, y_key, upper_key, lower
     # Displaying the plot
     plt.xscale(xscale)
 
-    # plt.xticks([16, 32, 64, 128, 256, 512, 1024], rotation=0, fontsize=7)
-    # Dynamically determining the range of xticks
-    min_pow = math.floor(math.log2(min_x))
-    max_pow = math.ceil(math.log2(max_x))
-    xticks = [2 ** i for i in range(min_pow, max_pow + 1)]
-    plt.xticks(xticks)
+    # Use the x axis values as ticks
+    plt.xticks(x_axis_ticks)
 
     plt.grid(True)
     plt.legend()
