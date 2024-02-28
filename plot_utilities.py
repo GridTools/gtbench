@@ -8,6 +8,9 @@ def parse_input_file(file_path):
     # Initialize dictionaries to store the parsed data
     domain_data = {
         'Domain size': [],
+        'Domain X size': [],
+        'Domain Y size': [],
+        'Domain Z size': [],
         'Median runtime': [],
         'Median Time 95% Confidence Lower': [],
         'Median Time 95% Confidence Upper': [],
@@ -36,15 +39,25 @@ def parse_input_file(file_path):
         cols_per_second_match = cols_per_second_pattern.search(line)
 
         if domain_size_match:
-            current_domain_size = domain_size_match.group(1)
+            current_domain_x_size = int(domain_size_match.group(1))
+            current_domain_y_size = int(domain_size_match.group(2))
+            current_domain_z_size = int(domain_size_match.group(3))
+            current_total_domain_size = current_domain_x_size * current_domain_y_size * current_domain_z_size
+            current_domain_size = "{}x{}x{}".format(current_domain_x_size, current_domain_y_size, current_domain_z_size)
+            domain_data['Domain size'].append(current_domain_size)
+            domain_data['Domain X size'].append(current_domain_x_size)
+            domain_data['Domain Y size'].append(current_domain_y_size)
+            domain_data['Domain Z size'].append(current_domain_z_size)
         elif median_time_match and current_domain_size:
             median_time = float(median_time_match.group(1))
             conf_lower = float(median_time_match.group(2))
             conf_upper = float(median_time_match.group(3))
-            domain_data['Domain size'].append(int(current_domain_size))
             domain_data['Median runtime'].append(median_time)
             domain_data['Median Time 95% Confidence Lower'].append(conf_lower)
             domain_data['Median Time 95% Confidence Upper'].append(conf_upper)
+            domain_data['Elements per Second'].append(current_total_domain_size/median_time)
+            domain_data['Elements per Second 95% Confidence Lower'].append(current_total_domain_size/conf_upper)
+            domain_data['Elements per Second 95% Confidence Upper'].append(current_total_domain_size/conf_lower)
         elif cols_per_second_match and current_domain_size:
             cols_per_second = float(cols_per_second_match.group(1))
             conf_lower = float(cols_per_second_match.group(2))
@@ -52,9 +65,6 @@ def parse_input_file(file_path):
             domain_data['Columns per Second'].append(cols_per_second)
             domain_data['Columns per Second 95% Confidence Lower'].append(conf_lower)
             domain_data['Columns per Second 95% Confidence Upper'].append(conf_upper)
-            domain_data['Elements per Second'].append(cols_per_second/int(current_domain_size))
-            domain_data['Elements per Second 95% Confidence Lower'].append(conf_lower/int(current_domain_size))
-            domain_data['Elements per Second 95% Confidence Upper'].append(conf_upper/int(current_domain_size))
 
     return domain_data
 
