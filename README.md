@@ -145,17 +145,3 @@ Convergence orders should be close to the following theoretical numbers:
 | Runge-Kutta Advection | 2             | 1              |
 
 Note that the expected convergence orders of some tests do not exactly match the theoretical order. This is either due to limited numerical precision or to suboptimal range of tested spatial or temporal resolutions for a specific discretization. Deviations are expected to be larger when compiled with single-precision than with double-precision floating point numbers.
-
-### GH200 build instructions
-
-For building `gtbench` with all the different backends for GH200 CPU and GPU (H100) you can use the `santis_build.sh` in the root directory of the repository.
-Requirements to run the script are:
-
-1. spack installation
-2. `spack install boost+thread`
-3. `spack install ucx`
-4. Modern g++ compiler
-5. nvcc compiler
-6. libfabric library from the system (cray)
-7. XPMEM library from the system (cray)
-
