@@ -48,7 +48,7 @@ if(NOT _gridtools_already_fetched)
 endif()
 if(NOT GridTools_FOUND)
   set(_gridtools_repository "https://github.com/GridTools/gridtools.git")
-  set(_gridtools_tag        "release_v2.2")
+  set(_gridtools_tag        "release_v2.3")
   if(NOT _gridtools_already_fetched)
     message(STATUS "Fetching GridTools ${_gridtools_tag} from ${_gridtools_repository}")
   endif()
@@ -57,6 +57,7 @@ if(NOT GridTools_FOUND)
     gridtools
     GIT_REPOSITORY ${_gridtools_repository}
     GIT_TAG        ${_gridtools_tag}
+    OVERRIDE_FIND_PACKAGE
   )
   FetchContent_MakeAvailable(gridtools)
   set(_gridtools_already_fetched ON CACHE INTERNAL "")
