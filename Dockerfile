@@ -20,7 +20,7 @@ RUN wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}
     cp -r cmake-${CMAKE_VERSION}-linux-x86_64/bin cmake-${CMAKE_VERSION}-linux-x86_64/share /usr/local/ && \
     rm -rf cmake-${CMAKE_VERSION}-linux-x86_64*
 
-ARG BOOST_VERSION=1.67.0
+ARG BOOST_VERSION=1.73.0
 RUN export BOOST_VERSION_UNDERLINE=$(echo ${BOOST_VERSION} | sed 's/\./_/g') && \
     wget -q https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_UNDERLINE}.tar.gz && \
     tar xzf boost_${BOOST_VERSION_UNDERLINE}.tar.gz && \
